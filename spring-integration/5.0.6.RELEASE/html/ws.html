@@ -1,0 +1,231 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>36.&nbsp;Web Services Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="web-sockets.html" title="35.&nbsp;WebSockets Support"><link rel="next" href="xml.html" title="37.&nbsp;XML Support - Dealing with XML Payloads"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">36.&nbsp;Web Services Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="web-sockets.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="xml.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="ws" href="#ws"></a>36.&nbsp;Web Services Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webservices-outbound" href="#webservices-outbound"></a>36.1&nbsp;Outbound Web Service Gateways</h2></div></div></div>
+
+<p>To invoke a Web Service upon sending a message to a channel, there are two options - both of which build upon the <a class="ulink" href="http://projects.spring.io/spring-ws/" target="_top">Spring Web Services</a> project: <code class="literal">SimpleWebServiceOutboundGateway</code> and <code class="literal">MarshallingWebServiceOutboundGateway</code>.
+The former will accept either a <code class="literal">String</code> or <code class="literal">javax.xml.transform.Source</code> as the message payload.
+The latter provides support for any implementation of the <code class="literal">Marshaller</code> and <code class="literal">Unmarshaller</code> interfaces.
+Both require a Spring Web Services <code class="literal">DestinationProvider</code> for determining the URI of the Web Service to be called.</p>
+<pre class="programlisting"> simpleGateway = <span class="hl-keyword">new</span> SimpleWebServiceOutboundGateway(destinationProvider);
+
+ marshallingGateway = <span class="hl-keyword">new</span> MarshallingWebServiceOutboundGateway(destinationProvider, marshaller);</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When using the namespace support described below, you will only need to set a URI.
+Internally, the parser will configure a fixed URI <code class="literal">DestinationProvider</code> implementation.
+If you do need dynamic resolution of the URI at runtime, however, then the <code class="literal">DestinationProvider</code> can provide such behavior as looking up the URI from a registry.
+See the Spring Web Services <a class="ulink" href="http://docs.spring.io/spring-ws/docs/current/api/org/springframework/ws/client/support/destination/DestinationProvider.html" target="_top">DestinationProvider</a> JavaDoc for more information about this strategy.</p>
+</td></tr></table></div>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span> the <code class="literal">SimpleWebServiceOutboundGateway</code> and <code class="literal">MarshallingWebServiceOutboundGateway</code> can be supplied with an external <code class="literal">WebServiceTemplate</code> instance, which may be configured for any custom properties, including <code class="literal">checkConnectionForFault</code> allowing your application to deal with non-conforming services.</p>
+<p>For more detail on the inner workings, see the Spring Web Services reference guide&#8217;s chapter covering <a class="ulink" href="http://docs.spring.io/spring-ws/docs/current/reference/html/client.html" target="_top">client access</a> as well as the chapter covering <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/oxm.html" target="_top">Object/XML mapping</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webservices-inbound" href="#webservices-inbound"></a>36.2&nbsp;Inbound Web Service Gateways</h2></div></div></div>
+
+<p>To send a message to a channel upon receiving a Web Service invocation, there are two options again: <code class="literal">SimpleWebServiceInboundGateway</code> and <code class="literal">MarshallingWebServiceInboundGateway</code>.
+The former will extract a <code class="literal">javax.xml.transform.Source</code> from the <code class="literal">WebServiceMessage</code> and set it as the message payload.
+The latter provides support for implementation of the <code class="literal">Marshaller</code> and <code class="literal">Unmarshaller</code> interfaces.
+If the incoming web service message is a SOAP message the SOAP Action header will be added to the headers of the`Message` that is forwarded onto the request channel.</p>
+<pre class="programlisting"> simpleGateway = <span class="hl-keyword">new</span> SimpleWebServiceInboundGateway();
+ simpleGateway.setRequestChannel(forwardOntoThisChannel);
+ simpleGateway.setReplyChannel(listenForResponseHere); <span class="hl-comment">//Optional</span>
+
+ marshallingGateway = <span class="hl-keyword">new</span> MarshallingWebServiceInboundGateway(marshaller);
+ <span class="hl-comment">//set request and optionally reply channel</span></pre>
+<p>Both gateways implement the Spring Web Services <code class="literal">MessageEndpoint</code> interface, so they can be configured with a <code class="literal">MessageDispatcherServlet</code> as per standard Spring Web Services configuration.</p>
+<p>For more detail on how to use these components, see the Spring Web Services reference guide&#8217;s chapter covering <a class="ulink" href="http://docs.spring.io/spring-ws/docs/current/reference/html/server.html" target="_top">creating a Web Service</a>.
+The chapter covering <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/oxm.html" target="_top">Object/XML mapping</a> is also applicable again.</p>
+<p>To include the <code class="literal">SimpleWebServiceInboundGateway</code> and <code class="literal">MarshallingWebServiceInboundGateway</code> configurations to the Spring WS
+infrastructure you should add the <code class="literal">EndpointMapping</code> definition between <code class="literal">MessageDispatcherServlet</code> and the target
+<code class="literal">MessageEndpoint</code> implementations like you do that with normal Spring WS application.
+For this purpose (from Spring Integration perspective), the Spring WS provides these convenient <code class="literal">EndpointMapping</code>
+implementations:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">o.s.ws.server.endpoint.mapping.UriEndpointMapping</code>
+</li><li class="listitem">
+<code class="literal">o.s.ws.server.endpoint.mapping.PayloadRootQNameEndpointMapping</code>
+</li><li class="listitem">
+<code class="literal">o.s.ws.soap.server.endpoint.mapping.SoapActionEndpointMapping</code>
+</li><li class="listitem">
+<code class="literal">o.s.ws.server.endpoint.mapping.XPathPayloadEndpointMapping</code>
+</li></ul></div>
+<p>The beans for these classes must be specified in the application context referencing to the
+<code class="literal">SimpleWebServiceInboundGateway</code> and/or <code class="literal">MarshallingWebServiceInboundGateway</code> bean definitions according to the WS
+mapping algorithm.</p>
+<p>Please, refer to the <a class="ulink" href="http://docs.spring.io/spring-ws/docs/current/reference/html/server.html#server-endpoint-mapping" target="_top">Endpoint mappings</a>
+for the more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webservices-namespace" href="#webservices-namespace"></a>36.3&nbsp;Web Service Namespace Support</h2></div></div></div>
+
+<p>To configure an outbound Web Service Gateway, use the "outbound-gateway" element from the "ws" namespace:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-ws:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"simpleGateway"</span>
+                     <span class="hl-attribute">request-channel</span>=<span class="hl-value">"inputChannel"</span>
+                     <span class="hl-attribute">uri</span>=<span class="hl-value">"http://example.org"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Notice that this example does not provide a <span class="emphasis"><em>reply-channel</em></span>.
+If the Web Service were to return a non-empty response, the Message containing that response would be sent to the reply
+channel provided in the request Message&#8217;s <code class="literal">REPLY_CHANNEL</code> header, and if that were not available a channel resolution Exception would be thrown.
+If you want to send the reply to another channel instead, then provide a <span class="emphasis"><em>reply-channel</em></span> attribute on the <span class="emphasis"><em>outbound-gateway</em></span> element.</p>
+</td></tr></table></div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>When invoking a Web Service that returns an empty response after using a String payload for the request Message, <span class="emphasis"><em>no reply Message will be sent by default</em></span>.
+Therefore you don&#8217;t need to set a <span class="emphasis"><em>reply-channel</em></span> or have a REPLY_CHANNEL header in the request Message.
+If for any reason you actually <span class="emphasis"><em>do</em></span> want to receive the empty response as a Message, then provide the <span class="emphasis"><em>ignore-empty-responses</em></span> attribute with a value of <span class="emphasis"><em>false</em></span> (this only applies for Strings, because using a Source or Document object simply leads to a NULL response and will therefore <span class="emphasis"><em>never</em></span> generate a reply Message).</p>
+</td></tr></table></div>
+<p>To set up an inbound Web Service Gateway, use the "inbound-gateway":</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-ws:inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"simpleGateway"</span>
+                    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"inputChannel"</span><span class="hl-tag">/&gt;</span></pre>
+<p>To use Spring OXM Marshallers and/or Unmarshallers, provide bean references.
+For outbound:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-ws:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"marshallingGateway"</span>
+                     <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requestChannel"</span>
+                     <span class="hl-attribute">uri</span>=<span class="hl-value">"http://example.org"</span>
+                     <span class="hl-attribute">marshaller</span>=<span class="hl-value">"someMarshaller"</span>
+                     <span class="hl-attribute">unmarshaller</span>=<span class="hl-value">"someUnmarshaller"</span><span class="hl-tag">/&gt;</span></pre>
+<p>And for inbound:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-ws:inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"marshallingGateway"</span>
+                    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requestChannel"</span>
+                    <span class="hl-attribute">marshaller</span>=<span class="hl-value">"someMarshaller"</span>
+                    <span class="hl-attribute">unmarshaller</span>=<span class="hl-value">"someUnmarshaller"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Most <code class="literal">Marshaller</code> implementations also implement the <code class="literal">Unmarshaller</code> interface.
+When using such a <code class="literal">Marshaller</code>, only the "marshaller" attribute is necessary.
+Even when using a <code class="literal">Marshaller</code>, you may also provide a reference for the "request-callback" on the outbound gateways.</p>
+</td></tr></table></div>
+<p>For either outbound gateway type, a "destination-provider" attribute can be specified instead of the "uri" (exactly one of them is required).
+You can then reference any Spring Web Services DestinationProvider implementation (e.g.
+to lookup the URI at runtime from a registry).</p>
+<p>For either outbound gateway type, the "message-factory" attribute can also be configured with a reference to any Spring Web Services <code class="literal">WebServiceMessageFactory</code> implementation.</p>
+<p>For the simple inbound gateway type, the "extract-payload" attribute can be set to false to forward the entire <code class="literal">WebServiceMessage</code> instead of just its payload as a <code class="literal">Message</code> to the request channel.
+This might be useful, for example, when a custom Transformer works against the <code class="literal">WebServiceMessage</code> directly.</p>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span> the <code class="literal">web-service-template</code> reference attribute is presented for the injection of a <code class="literal">WebServiceTemplate</code> with any possible custom properties.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="outbound-uri" href="#outbound-uri"></a>36.4&nbsp;Outbound URI Configuration</h2></div></div></div>
+
+<p>For all URI-schemes supported by Spring Web Services (<a class="ulink" href="http://docs.spring.io/spring-ws/docs/current/reference/html/client.html#client-transports" target="_top">URIs and Transports</a>) <code class="literal">&lt;uri-variable/&gt;</code> substitution is provided:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;ws:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gateway"</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"input"</span>
+        <span class="hl-attribute">uri</span>=<span class="hl-value">"http://springsource.org/{foo}-{bar}"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;ws:uri-variable</span> <span class="hl-attribute">name</span>=<span class="hl-value">"foo"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.substring(1,7)"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;ws:uri-variable</span> <span class="hl-attribute">name</span>=<span class="hl-value">"bar"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers.x"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/ws:outbound-gateway&gt;</span>
+
+<span class="hl-tag">&lt;ws:outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"inputJms"</span>
+        <span class="hl-attribute">uri</span>=<span class="hl-value">"jms:{destination}?deliveryMode={deliveryMode}&amp;amp;priority={priority}"</span>
+        <span class="hl-attribute">message-sender</span>=<span class="hl-value">"jmsMessageSender"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;ws:uri-variable</span> <span class="hl-attribute">name</span>=<span class="hl-value">"destination"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers.jmsQueue"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;ws:uri-variable</span> <span class="hl-attribute">name</span>=<span class="hl-value">"deliveryMode"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers.deliveryMode"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;ws:uri-variable</span> <span class="hl-attribute">name</span>=<span class="hl-value">"priority"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers.jms_priority"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/ws:outbound-gateway&gt;</span></pre>
+<p>If a <code class="literal">DestinationProvider</code> is supplied, variable substitution is not supported and a configuration error will result if variables are provided.</p>
+<p><span class="emphasis"><em>Controlling URI Encoding</em></span></p>
+<p>By default, the URL string is encoded (see <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/web/util/UriComponentsBuilder.html" target="_top">UriComponentsBuilder</a>) to the URI object before sending the request.
+In some scenarios with a non-standard URI it is undesirable to perform the encoding.
+Since <span class="emphasis"><em>version 4.1</em></span> the <code class="literal">&lt;ws:outbound-gateway/&gt;</code> provides an <code class="literal">encode-uri</code> attribute.
+To disable encoding the URL, this attribute should be set to <code class="literal">false</code> (by default it is <code class="literal">true</code>).
+If you wish to partially encode some of the URL, this can be achieved using an <code class="literal">expression</code> within a <code class="literal">&lt;uri-variable/&gt;</code>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;ws:outbound-gateway</span> <span class="hl-attribute">url</span>=<span class="hl-value">"http://somehost/%2f/fooApps?bar={param}"</span> <span class="hl-attribute">encode-uri</span>=<span class="hl-value">"false"</span><span class="hl-tag">&gt;</span>
+          <span class="hl-tag">&lt;http:uri-variable</span> <span class="hl-attribute">name</span>=<span class="hl-value">"param"</span>
+            <span class="hl-attribute">expression</span>=<span class="hl-value">"T(org.apache.commons.httpclient.util.URIUtil)
+                                             .encodeWithinQuery('Hello World!')"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/ws:outbound-gateway&gt;</span></pre>
+<p>Note, <code class="literal">encode-uri</code> is ignored, if <code class="literal">DestinationProvider</code> is supplied.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ws-message-headers" href="#ws-message-headers"></a>36.5&nbsp;WS Message Headers</h2></div></div></div>
+
+<p>The Spring Integration WebService Gateways will map the SOAP Action header automatically.
+It will be copied by default to and from Spring Integration <code class="literal">MessageHeaders</code> using the
+<a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/ws/DefaultSoapHeaderMapper.html" target="_top">DefaultSoapHeaderMapper</a>.</p>
+<p>Of course, you can pass in your own implementation of SOAP specific header mappers, as the gateways have respective
+properties to support that.</p>
+<p>Any user-defined SOAP headers will NOT
+be copied to or from a SOAP Message, unless explicitly specified by the <span class="emphasis"><em>requestHeaderNames</em></span> and/or
+<span class="emphasis"><em>replyHeaderNames</em></span> properties of the <code class="literal">DefaultSoapHeaderMapper</code>.</p>
+<p>When using the XML namespace for configuration, these properties can be set using the <code class="literal">mapped-request-headers</code> and
+<code class="literal">mapped-reply-headers</code>, or a custom mapper can be provided using the <code class="literal">header-mapper</code> attribute.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>When mapping user-defined headers, the values can also contain simple wildcard patterns (e.g. "foo*" or "*foo") to be matched.
+For example, if you need to copy all user-defined headers simply use the wildcard character <code class="literal">*</code>.</p>
+</td></tr></table></div>
+<p>Starting with <span class="emphasis"><em>version 4.1</em></span>, the <code class="literal">AbstractHeaderMapper</code> (a <code class="literal">DefaultSoapHeaderMapper</code> superclass) allows the
+<code class="literal">NON_STANDARD_HEADERS</code> token to be configured for the <span class="emphasis"><em>requestHeaderNames</em></span> and/or <span class="emphasis"><em>replyHeaderNames</em></span>
+properties (in addition to existing <code class="literal">STANDARD_REQUEST_HEADERS</code> and <code class="literal">STANDARD_REPLY_HEADERS</code>) to map all
+user-defined headers.
+Note, it is recommended to use the combination like this <code class="literal">STANDARD_REPLY_HEADERS, NON_STANDARD_HEADERS</code> instead of a
+<code class="literal">*</code>, to avoid mapping of <span class="emphasis"><em>request</em></span> headers to the reply.</p>
+<p>Starting with <span class="emphasis"><em>version 4.3</em></span>, patterns in the header mappings can be negated by preceding the pattern with <code class="literal">!</code>.
+Negated patterns get priority, so a list such as
+<code class="literal">STANDARD_REQUEST_HEADERS,foo,ba*,!bar,!baz,qux,!foo</code> will <span class="strong"><strong>NOT</strong></span> map <code class="literal">foo</code>
+(nor <code class="literal">bar</code> nor <code class="literal">baz</code>); the standard headers plus <code class="literal">bad</code>, <code class="literal">qux</code> will be mapped.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If you have a user defined header that begins with <code class="literal">!</code> that you <span class="strong"><strong>do</strong></span> wish to map, you need to escape it with
+<code class="literal">\</code> thus: <code class="literal">STANDARD_REQUEST_HEADERS,\!myBangHeader</code> and it <span class="strong"><strong>WILL</strong></span> be mapped.</p>
+</td></tr></table></div>
+<p>Inbound SOAP headers (request headers for the inbound gateway, reply-headers for the outbound gateway) are mapped as
+<code class="literal">SoapHeaderElement</code> objects.
+The contents can be explored by accessing the <code class="literal">Source</code>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;soapenv:Envelope</span> <span class="hl-attribute">xmlns:soapenv</span>=<span class="hl-value">"http://schemas.xmlsoap.org/soap/envelope/"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;soapenv:Header&gt;</span>
+        <span class="hl-tag">&lt;auth&gt;</span>
+            <span class="hl-tag">&lt;username&gt;</span>user<span class="hl-tag">&lt;/username&gt;</span>
+            <span class="hl-tag">&lt;password&gt;</span>pass<span class="hl-tag">&lt;/password&gt;</span>
+        <span class="hl-tag">&lt;/auth&gt;</span>
+        <span class="hl-tag">&lt;bar&gt;</span>BAR<span class="hl-tag">&lt;/bar&gt;</span>
+        <span class="hl-tag">&lt;baz&gt;</span>BAZ<span class="hl-tag">&lt;/baz&gt;</span>
+        <span class="hl-tag">&lt;qux&gt;</span>qux<span class="hl-tag">&lt;/qux&gt;</span>
+    <span class="hl-tag">&lt;/soapenv:Header&gt;</span>
+    <span class="hl-tag">&lt;soapenv:Body&gt;</span>
+        ...
+    <span class="hl-tag">&lt;/soapenv:Body&gt;</span>
+<span class="hl-tag">&lt;/soapenv:Envelope&gt;</span></pre>
+<p>If <code class="literal">mapped-request-headers</code> is <code class="literal">"auth, ba*"</code>, the <code class="literal">auth</code>, <code class="literal">bar</code> and <code class="literal">baz</code> headers are mapped but <code class="literal">qux</code> is not.</p>
+<pre class="programlisting">...
+SoapHeaderElement header = (SoapHeaderElement) headers.get(<span class="hl-string">"auth"</span>);
+DOMSource source = (DOMSource) header.getSource();
+NodeList nodeList = source.getNode().getChildNodes();
+assertEquals(<span class="hl-string">"username"</span>, nodeList.item(<span class="hl-number">0</span>).getNodeName());
+assertEquals(<span class="hl-string">"user"</span>, nodeList.item(<span class="hl-number">0</span>).getFirstChild().getNodeValue());
+...</pre>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span>, the <code class="literal">DefaultSoapHeaderMapper</code> supports user-defined headers of type <code class="literal">javax.xml.transform.Source</code> and populates them as child nodes of the <code class="literal">&lt;soapenv:Header&gt;</code>:</p>
+<pre class="programlisting">Map&lt;String, Object&gt; headers = <span class="hl-keyword">new</span> HashMap&lt;&gt;();
+
+String authXml =
+     <span class="hl-string">"&lt;auth xmlns='http://test.auth.org'&gt;"</span>
+           + <span class="hl-string">"&lt;username&gt;user&lt;/username&gt;"</span>
+           + <span class="hl-string">"&lt;password&gt;pass&lt;/password&gt;"</span>
+           + <span class="hl-string">"&lt;/auth&gt;"</span>;
+headers.put(<span class="hl-string">"auth"</span>, <span class="hl-keyword">new</span> StringSource(authXml));
+...
+DefaultSoapHeaderMapper mapper = <span class="hl-keyword">new</span> DefaultSoapHeaderMapper();
+mapper.setRequestHeaderNames(<span class="hl-string">"auth"</span>);</pre>
+<p>And in the end we have SOAP envelope as:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;soapenv:Envelope</span> <span class="hl-attribute">xmlns:soapenv</span>=<span class="hl-value">"http://schemas.xmlsoap.org/soap/envelope/"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;soapenv:Header&gt;</span>
+        <span class="hl-tag">&lt;auth</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://test.auth.org"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;username&gt;</span>user<span class="hl-tag">&lt;/username&gt;</span>
+            <span class="hl-tag">&lt;password&gt;</span>pass<span class="hl-tag">&lt;/password&gt;</span>
+        <span class="hl-tag">&lt;/auth&gt;</span>
+    <span class="hl-tag">&lt;/soapenv:Header&gt;</span>
+    <span class="hl-tag">&lt;soapenv:Body&gt;</span>
+        ...
+    <span class="hl-tag">&lt;/soapenv:Body&gt;</span>
+<span class="hl-tag">&lt;/soapenv:Envelope&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="mtom-support" href="#mtom-support"></a>36.6&nbsp;MTOM Support</h2></div></div></div>
+
+<p>The Marshalling Inbound and Outbound WebService Gateways support attachments directly via built-in functionality of the marshaller, e.g. <code class="literal">Jaxb2Marshaller</code> provides the <code class="literal">mtomEnabled</code> option.
+Starting with <span class="emphasis"><em>version 5.0</em></span>, the Simple WebService Gateways can operate with inbound and outbound <code class="literal">MimeMessage</code> s directly, which have an API to manipulate attachments.
+When you need to send WebService message with attachments (either a reply from a server, or a client request) you should use the <code class="literal">WebServiceMessageFactory</code> directly and send a <code class="literal">WebServiceMessage</code> with attachments as a <code class="literal">payload</code> to the request or reply channel of the gateway:</p>
+<pre class="programlisting">WebServiceMessageFactory messageFactory = <span class="hl-keyword">new</span> SaajSoapMessageFactory(MessageFactory.newInstance());
+MimeMessage webServiceMessage = (MimeMessage) messageFactory.createWebServiceMessage();
+
+String request = <span class="hl-string">"&lt;test&gt;foo&lt;/test&gt;"</span>;
+
+TransformerFactory transformerFactory = TransformerFactory.newInstance();
+Transformer transformer = transformerFactory.newTransformer();
+transformer.transform(<span class="hl-keyword">new</span> StringSource(request), webServiceMessage.getPayloadResult());
+
+webServiceMessage.addAttachment(<span class="hl-string">"myAttachment"</span>, <span class="hl-keyword">new</span> ByteArrayResource(<span class="hl-string">"my_data"</span>.getBytes()), <span class="hl-string">"plain/text"</span>);
+
+<span class="hl-keyword">this</span>.webServiceChannel.send(<span class="hl-keyword">new</span> GenericMessage&lt;&gt;(webServiceMessage));</pre>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="web-sockets.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="xml.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">35.&nbsp;WebSockets Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;37.&nbsp;XML Support - Dealing with XML Payloads</td></tr></table></div></body></html>

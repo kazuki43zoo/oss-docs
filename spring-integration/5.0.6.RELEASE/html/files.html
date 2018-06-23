@@ -1,0 +1,865 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>15.&nbsp;File Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="feed.html" title="14.&nbsp;Feed Adapter"><link rel="next" href="ftp.html" title="16.&nbsp;FTP/FTPS Adapters"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">15.&nbsp;File Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="feed.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ftp.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="files" href="#files"></a>15.&nbsp;File Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="file-intro" href="#file-intro"></a>15.1&nbsp;Introduction</h2></div></div></div>
+
+<p>Spring Integration&#8217;s File support extends the Spring Integration Core with a dedicated vocabulary to deal with reading, writing, and transforming files.
+It provides a namespace that enables elements defining Channel Adapters dedicated to files and support for Transformers that can read file contents into strings or byte arrays.</p>
+<p>This section will explain the workings of <code class="literal">FileReadingMessageSource</code> and <code class="literal">FileWritingMessageHandler</code> and how to configure them as <span class="emphasis"><em>beans</em></span>.
+Also the support for dealing with files through file specific implementations of <code class="literal">Transformer</code> will be discussed.
+Finally the file specific namespace will be explained.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="file-reading" href="#file-reading"></a>15.2&nbsp;Reading Files</h2></div></div></div>
+
+<p>A <code class="literal">FileReadingMessageSource</code> can be used to consume files from the filesystem.
+This is an implementation of <code class="literal">MessageSource</code> that creates messages from a file system directory.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"pollableFileSource"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.file.FileReadingMessageSource"</span>
+    <span class="hl-attribute">p:directory</span>=<span class="hl-value">"${input.directory}"</span><span class="hl-tag">/&gt;</span></pre>
+<p>To prevent creating messages for certain files, you may supply a <code class="literal">FileListFilter</code>.
+By default the following 2 filters are used:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">IgnoreHiddenFileListFilter</code>
+</li><li class="listitem">
+<code class="literal">AcceptOnceFileListFilter</code>
+</li></ul></div>
+<p>The <code class="literal">IgnoreHiddenFileListFilter</code> ensures that <span class="strong"><strong>hidden</strong></span> files are not being processed.
+Please keep in mind that the exact definition of <span class="strong"><strong>hidden</strong></span> is system-dependent. For example,
+on <span class="emphasis"><em>UNIX</em></span>-based systems, a file beginning with a period character is considered to be hidden.
+<span class="emphasis"><em>Microsoft Windows</em></span>, on the other hand, has a dedicated file attribute to indicate
+hidden files.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">IgnoreHiddenFileListFilter</code> was introduced with <span class="emphasis"><em>version 4.2</em></span>. In prior versions hidden files were included.
+With the default configuration, the <code class="literal">IgnoreHiddenFileListFilter</code> will be triggered first, then the <code class="literal">AcceptOnceFileListFilter</code>.</p>
+</td></tr></table></div>
+<p>The <code class="literal">AcceptOnceFileListFilter</code> ensures files are picked up only once from the directory.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">AcceptOnceFileListFilter</code> stores its state in memory.
+If you wish the state to survive a system restart, consider using the <code class="literal">FileSystemPersistentAcceptOnceFileListFilter</code> instead.
+This filter stores the accepted file names in a <code class="literal">MetadataStore</code> implementation (<a class="xref" href="system-management-chapter.html#metadata-store" title="10.5&nbsp;Metadata Store">Section&nbsp;10.5, &#8220;Metadata Store&#8221;</a>).
+This filter matches on the filename and modified time.</p>
+<p>Since <span class="emphasis"><em>version 4.0</em></span>, this filter requires a <code class="literal">ConcurrentMetadataStore</code>.
+When used with a shared data store (such as <code class="literal">Redis</code> with the <code class="literal">RedisMetadataStore</code>) this allows filter keys to be shared across multiple application instances, or when a network file share is being used by multiple servers.</p>
+<p>Since <span class="emphasis"><em>version 4.1.5</em></span>, this filter has a new property <code class="literal">flushOnUpdate</code> which will cause it to flush the
+metadata store on every update (if the store implements <code class="literal">Flushable</code>).</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"pollableFileSource"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.file.FileReadingMessageSource"</span>
+    <span class="hl-attribute">p:inputDirectory</span>=<span class="hl-value">"${input.directory}"</span>
+    <span class="hl-attribute">p:filter-ref</span>=<span class="hl-value">"customFilterBean"</span><span class="hl-tag">/&gt;</span></pre>
+<p>A common problem with reading files is that a file may be detected before it is ready.
+The default <code class="literal">AcceptOnceFileListFilter</code> does not prevent this.
+In most cases, this can be prevented if the file-writing process renames each file as soon as it is ready for reading.
+A <code class="literal">filename-pattern</code> or <code class="literal">filename-regex</code> filter that accepts only files that are ready (e.g.
+based on a known suffix), composed with the default <code class="literal">AcceptOnceFileListFilter</code> allows for this.
+The <code class="literal">CompositeFileListFilter</code> enables the composition.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"pollableFileSource"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.file.FileReadingMessageSource"</span>
+    <span class="hl-attribute">p:inputDirectory</span>=<span class="hl-value">"${input.directory}"</span>
+    <span class="hl-attribute">p:filter-ref</span>=<span class="hl-value">"compositeFilter"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"compositeFilter"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.file.filters.CompositeFileListFilter"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;list&gt;</span>
+            <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.file.filters.AcceptOnceFileListFilter"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.file.filters.RegexPatternFileListFilter"</span><span class="hl-tag">&gt;</span>
+                <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"^test.*$"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;/bean&gt;</span>
+        <span class="hl-tag">&lt;/list&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>If it is not possible to create the file with a temporary name and rename to the final name, another alternative is
+provided.
+The <code class="literal">LastModifiedFileListFilter</code> was added in <span class="emphasis"><em>version 4.2</em></span>.
+This filter can be configured with an <code class="literal">age</code> property and only files older than this will be passed by the filter.
+The age defaults to 60 seconds, but you should choose an age that is large enough to avoid picking up a file early, due
+to, say, network glitches.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filter"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.file.filters.LastModifiedFileListFilter"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"age"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"120"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>Starting with <span class="emphasis"><em>version 4.3.7</em></span> a <code class="literal">ChainFileListFilter</code> (an extension of <code class="literal">CompositeFileListFilter</code>) has been introduced to allow scenarios when subsequent filters should only see the result of the previous filter.
+(With the <code class="literal">CompositeFileListFilter</code>, all filters see all the files, but only files that pass all filters are passed by the <code class="literal">CompositeFileListFilter</code>).
+An example of where the new behavior is required is a combination of <code class="literal">LastModifiedFileListFilter</code> and <code class="literal">AcceptOnceFileListFilter</code>, when we do not wish to accept the file until some amount of time has elapsed.
+With the <code class="literal">CompositeFileListFilter</code>, since the <code class="literal">AcceptOnceFileListFilter</code> sees all the files on the first pass, it won&#8217;t pass it later when the other filter does.
+The <code class="literal">CompositeFileListFilter</code> approach is useful when a pattern filter is combined with a custom filter that looks for a secondary indicating file transfer is complete.
+The pattern filter might only pass the primary file (e.g. <code class="literal">foo.txt</code>) but the "done" filter needs to see if, say <code class="literal">foo.done</code> is present.</p>
+<p>Say we have files <code class="literal">a.txt</code>, <code class="literal">a.done</code>, and <code class="literal">b.txt</code>.</p>
+<p>The pattern filter only passes <code class="literal">a.txt</code> and <code class="literal">b.txt</code>, the "done" filter will see all three files and only pass <code class="literal">a.txt</code>.
+The final result of the composite filter is only <code class="literal">a.txt</code> is released.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>With the <code class="literal">ChainFileListFilter</code>, if any filter in the chain returns an empty list, the remaining filters are not invoked.</p>
+</td></tr></table></div>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span> an <code class="literal">ExpressionFileListFilter</code> has been introduced to allow to execute SpEL expression against file as a context evaluation root object.
+For this purpose all the XML components for file handling (local and remote), alongside with an existing <code class="literal">filter</code> attribute, have been supplied with the <code class="literal">filter-expression</code> option:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:inbound-channel-adapter</span>
+        <span class="hl-attribute">directory</span>=<span class="hl-value">"${inputdir}"</span>
+        <span class="hl-attribute">filter-expression</span>=<span class="hl-value">"name matches '.text'"</span>
+        <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Starting with <span class="emphasis"><em>version 5.0.5</em></span>, a <code class="literal">DiscardAwareFileListFilter</code> is provided for implementations when there is an interest in the event of the rejected files.
+For this purpose such a filter implementation should be supplied with a callback via <code class="literal">addDiscardCallback(Consumer&lt;File&gt;)</code>.
+In the Framework this functionality is used from the <code class="literal">FileReadingMessageSource.WatchServiceDirectoryScanner</code> in combination with <code class="literal">LastModifiedFileListFilter</code>.
+Unlike the regular <code class="literal">DirectoryScanner</code>, the <code class="literal">WatchService</code> provides files for processing according the events on the target file system.
+At the moment of polling an internal queue with those files, the <code class="literal">LastModifiedFileListFilter</code> may discard them because they are too young in regards to its configured <code class="literal">age</code>.
+Therefore we lose the file for the future possible considerations.
+The discard callback hook allows us to retain the file in the internal queue, so it is available to be checked against the <code class="literal">age</code> in the subsequent polls.
+The <code class="literal">CompositeFileListFilter</code> also implements a <code class="literal">DiscardAwareFileListFilter</code> and populates provided discard callback to all its <code class="literal">DiscardAwareFileListFilter</code> delegates.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Since <code class="literal">CompositeFileListFilter</code> matches the files against all delegates, the <code class="literal">discardCallback</code> may be called several times for the same file.</p>
+</td></tr></table></div>
+<p><span class="strong"><strong>Message Headers</strong></span></p>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span> the <code class="literal">FileReadingMessageSource</code>, in addition to the <code class="literal">payload</code> as a polled <code class="literal">File</code>, populates these headers to the outbound <code class="literal">Message</code>:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">FileHeaders.FILENAME</code> - the <code class="literal">File.getName()</code> of the file to send.
+Can be used for subsequent rename or copy logic;
+</li><li class="listitem">
+<code class="literal">FileHeaders.ORIGINAL_FILE</code> - the <code class="literal">File</code> object itself.
+Typically this header is populated automatically by Framework components, like <a class="xref" href="files.html#file-splitter" title="15.5&nbsp;File Splitter">Section&nbsp;15.5, &#8220;File Splitter&#8221;</a> or <a class="xref" href="files.html#file-transforming" title="15.4&nbsp;File Transformers">Section&nbsp;15.4, &#8220;File Transformers&#8221;</a>, when we lose the original <code class="literal">File</code> object.
+But for consistency and convenience with any other custom use-cases this header can be useful to get access to the original file;
+</li><li class="listitem">
+<code class="literal">FileHeaders.RELATIVE_PATH</code> - a new header introduced to represent the part of file path relative to the root directory for the scan.
+This header can be useful when the requirement is to restore a source directory hierarchy in the other places.
+For this purpose the <code class="literal">DefaultFileNameGenerator</code> (<a class="xref" href="files.html#file-writing-file-names" title="15.3.1&nbsp;Generating File Names">Section&nbsp;15.3.1, &#8220;Generating File Names&#8221;</a>) can be configured to use this header.
+</li></ul></div>
+<p><span class="strong"><strong>Directory scanning and polling</strong></span></p>
+<p>The <code class="literal">FileReadingMessageSource</code> doesn&#8217;t produce messages for files from the directory immediately.
+It uses an internal queue for <span class="emphasis"><em>eligible files</em></span> returned by the <code class="literal">scanner</code>.
+The <code class="literal">scanEachPoll</code> option is used to ensure that the internal queue is refreshed with the latest input directory
+content on each poll.
+By default (<code class="literal">scanEachPoll = false</code>), the <code class="literal">FileReadingMessageSource</code> empties its queue before scanning the directory
+again.
+This default behavior is particularly useful to reduce scans of large numbers of files in a directory.
+However, in cases where custom ordering is required, it is important to consider the effects of setting this flag to
+<code class="literal">true</code>; the order in which files are processed may not be as expected.
+By default, files in the queue are processed in their natural (<code class="literal">path</code>) order.
+New files added by a scan, even when the queue already has files, are inserted in the appropriate position to maintain
+that natural order.
+To customize the order, the <code class="literal">FileReadingMessageSource</code> can accept a <code class="literal">Comparator&lt;File&gt;</code> as a constructor argument.
+It is used by the internal (<code class="literal">PriorityBlockingQueue</code>) to reorder its content according to the business requirements.
+Therefore, to process files in a specific order, you should provide a comparator to the <code class="literal">FileReadingMessageSource</code>,
+rather than ordering the list produced by a custom <code class="literal">DirectoryScanner</code>.</p>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span>, a new <code class="literal">RecursiveDirectoryScanner</code> is presented to perform file tree visiting.
+The implementation is based on the <code class="literal">Files.walk(Path start, int maxDepth, FileVisitOption... options)</code> functionality.
+The root directory (<code class="literal">DirectoryScanner.listFiles(File)</code> argument) is excluded from the result.
+All other sub-directories includes/excludes are based on the target <code class="literal">FileListFilter</code> implementation.
+For example the <code class="literal">SimplePatternFileListFilter</code> filters directories by default.
+See <code class="literal">AbstractDirectoryAwareFileListFilter</code> and its implementations for more information.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-namespace-support" href="#file-namespace-support"></a>15.2.1&nbsp;Namespace Support</h3></div></div></div>
+
+<p>The configuration for file reading can be simplified using the file specific namespace.
+To do this use the following template.</p>
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;beans</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://www.springframework.org/schema/beans"</span>
+  <span class="hl-attribute">xmlns:xsi</span>=<span class="hl-value">"http://www.w3.org/2001/XMLSchema-instance"</span>
+  <span class="hl-attribute">xmlns:int</span>=<span class="hl-value">"http://www.springframework.org/schema/integration"</span>
+  <span class="hl-attribute">xmlns:int-file</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/file"</span>
+  <span class="hl-attribute">xsi:schemaLocation</span>=<span class="hl-value">"http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/integration
+    http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/file
+    http://www.springframework.org/schema/integration/file/spring-integration-file.xsd"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;/beans&gt;</span></pre>
+<p>Within this namespace you can reduce the <code class="literal">FileReadingMessageSource</code> and wrap it in an inbound Channel Adapter like this:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filesIn1"</span>
+    <span class="hl-attribute">directory</span>=<span class="hl-value">"file:${input.directory}"</span> <span class="hl-attribute">prevent-duplicates</span>=<span class="hl-value">"true"</span> <span class="hl-attribute">ignore-hidden</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-file:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filesIn2"</span>
+    <span class="hl-attribute">directory</span>=<span class="hl-value">"file:${input.directory}"</span>
+    <span class="hl-attribute">filter</span>=<span class="hl-value">"customFilterBean"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-file:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filesIn3"</span>
+    <span class="hl-attribute">directory</span>=<span class="hl-value">"file:${input.directory}"</span>
+    <span class="hl-attribute">filename-pattern</span>=<span class="hl-value">"test*"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-file:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filesIn4"</span>
+    <span class="hl-attribute">directory</span>=<span class="hl-value">"file:${input.directory}"</span>
+    <span class="hl-attribute">filename-regex</span>=<span class="hl-value">"test[0-9]+\.txt"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>The first channel adapter example is relying on the default <code class="literal">FileListFilter</code> s:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">IgnoreHiddenFileListFilter</code> (Do not process hidden files)
+</li><li class="listitem">
+<code class="literal">AcceptOnceFileListFilter</code> (Prevents duplication)
+</li></ul></div>
+<p>Therefore, you can also leave off the 2 attributes <code class="literal">prevent-duplicates</code> and <code class="literal">ignore-hidden</code> as they are <code class="literal">true</code> by default.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">ignore-hidden</code> attribute was introduced with <span class="emphasis"><em>Spring Integration 4.2</em></span>. In prior versions hidden files were included.</p>
+</td></tr></table></div>
+<p>The second channel adapter example is using a custom filter, the third is using the <span class="emphasis"><em>filename-pattern</em></span> attribute to
+add an <code class="literal">AntPathMatcher</code> based filter, and the fourth is using the <span class="emphasis"><em>filename-regex</em></span> attribute to add a regular expression Pattern based filter to the <code class="literal">FileReadingMessageSource</code>.
+The <span class="emphasis"><em>filename-pattern</em></span> and <span class="emphasis"><em>filename-regex</em></span> attributes are each mutually exclusive with the regular <span class="emphasis"><em>filter</em></span> reference attribute.
+However, you can use the <span class="emphasis"><em>filter</em></span> attribute to reference an instance of <code class="literal">CompositeFileListFilter</code> that combines any number of filters, including one or more pattern based filters to fit your particular needs.</p>
+<p>When multiple processes are reading from the same directory it can be desirable to lock files to prevent them from being picked up concurrently.
+To do this you can use a <code class="literal">FileLocker</code>.
+There is a java.nio based implementation available out of the box, but it is also possible to implement your own locking scheme.
+The nio locker can be injected as follows</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filesIn"</span>
+    <span class="hl-attribute">directory</span>=<span class="hl-value">"file:${input.directory}"</span> <span class="hl-attribute">prevent-duplicates</span>=<span class="hl-value">"true"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-file:nio-locker/&gt;</span>
+<span class="hl-tag">&lt;/int-file:inbound-channel-adapter&gt;</span></pre>
+<p>A custom locker you can configure like this:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filesIn"</span>
+    <span class="hl-attribute">directory</span>=<span class="hl-value">"file:${input.directory}"</span> <span class="hl-attribute">prevent-duplicates</span>=<span class="hl-value">"true"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-file:locker</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"customLocker"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-file:inbound-channel-adapter&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When a file inbound adapter is configured with a locker, it will take the responsibility to acquire a lock before the file is allowed to be received.
+<span class="strong"><strong>It will not assume the responsibility to unlock the file.</strong></span> If you have processed the file and keeping the locks hanging around you have a memory leak.
+If this is a problem in your case you should call <code class="literal">FileLocker.unlock(File file)</code> yourself at the appropriate time.</p>
+</td></tr></table></div>
+<p>When filtering and locking files is not enough it might be needed to control the way files are listed entirely.
+To implement this type of requirement you can use an implementation of <code class="literal">DirectoryScanner</code>.
+This scanner allows you to determine entirely what files are listed each poll.
+This is also the interface that Spring Integration uses internally to wire <code class="literal">FileListFilter</code> s and <code class="literal">FileLocker</code> to the <code class="literal">FileReadingMessageSource</code>.
+A custom <code class="literal">DirectoryScanner</code> can be injected into the <code class="literal">&lt;int-file:inbound-channel-adapter/&gt;</code> on the <code class="literal">scanner</code> attribute.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filesIn"</span> <span class="hl-attribute">directory</span>=<span class="hl-value">"file:${input.directory}"</span>
+     <span class="hl-attribute">scanner</span>=<span class="hl-value">"customDirectoryScanner"</span><span class="hl-tag">/&gt;</span></pre>
+<p>This gives you full freedom to choose the ordering, listing and locking strategies.</p>
+<p>It is also important to understand that filters (including <code class="literal">patterns</code>, <code class="literal">regex</code>, <code class="literal">prevent-duplicates</code> etc) and <code class="literal">locker</code> s,
+are actually used by the <code class="literal">scanner</code>.
+Any of these attributes set on the adapter are subsequently injected into the internal <code class="literal">scanner</code>.
+For the case of an external <code class="literal">scanner</code>, all filter and locker attributes are prohibited on the
+<code class="literal">FileReadingMessageSource</code>; they must be specified (if required) on that custom <code class="literal">DirectoryScanner</code>.
+In other words, if you inject a <code class="literal">scanner</code> into the <code class="literal">FileReadingMessageSource</code>, you should supply <code class="literal">filter</code> and <code class="literal">locker</code>
+on that <code class="literal">scanner</code> not on the <code class="literal">FileReadingMessageSource</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">DefaultDirectoryScanner</code> uses a <code class="literal">IgnoreHiddenFileListFilter</code> and <code class="literal">AcceptOnceFileListFilter</code> by default.
+To prevent their use, you should configure your own filter (e.g. <code class="literal">AcceptAllFileListFilter</code>) or even set it to <code class="literal">null</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="watch-service-directory-scanner" href="#watch-service-directory-scanner"></a>15.2.2&nbsp;WatchServiceDirectoryScanner</h3></div></div></div>
+
+<p>The <code class="literal">FileReadingMessageSource.WatchServiceDirectoryScanner</code> relies on file system events when new files are added to the directory.
+During initialization, the directory is registered to generate events; the initial file list is also built.
+While walking the directory tree, any subdirectories encountered are also registered to generate events.
+On the first poll, the initial file list from walking the directory is returned.
+On subsequent polls, files from new creation events are returned.
+If a new subdirectory is added, its creation event is used to walk the new subtree to find existing files, as well
+as registering any new subdirectories found.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>There is a case with <code class="literal">WatchKey</code>, when its internal events <code class="literal">queue</code> isn&#8217;t drained by the program as quickly as
+the directory modification events occur.
+If the queue size is exceeded, a <code class="literal">StandardWatchEventKinds.OVERFLOW</code> is emitted to indicate that
+some file system events may be lost.
+In this case, the root directory is re-scanned completely.
+To avoid duplicates consider using an appropriate <code class="literal">FileListFilter</code> such as the <code class="literal">AcceptOnceFileListFilter</code> and/or
+remove files when processing is completed.</p>
+</td></tr></table></div>
+<p>The <code class="literal">WatchServiceDirectoryScanner</code> can be enable via <code class="literal">FileReadingMessageSource.use-watch-service</code> option, which is mutually exclusive with the <code class="literal">scanner</code> option.
+An internal <code class="literal">FileReadingMessageSource.WatchServiceDirectoryScanner</code> instance is populated for the provided <code class="literal">directory</code>.</p>
+<p>In addition, now the <code class="literal">WatchService</code> polling logic can track the <code class="literal">StandardWatchEventKinds.ENTRY_MODIFY</code> and
+<code class="literal">StandardWatchEventKinds.ENTRY_DELETE</code>, too.</p>
+<p>The <code class="literal">ENTRY_MODIFY</code> events logic should be implemented properly in the <code class="literal">FileListFilter</code> to track not only new files but
+also the modification, if that is requirement.
+Otherwise the files from those events are treated the same way.</p>
+<p>The <code class="literal">ENTRY_DELETE</code> events have effect for the <code class="literal">ResettableFileListFilter</code> implementations and, therefore, their files
+are provided for the <code class="literal">remove()</code> operation.
+This means that (when this event is enabled), filters such as the <code class="literal">AcceptOnceFileListFilter</code> will have the file removed,
+meaning that, if a file with the same name appears, it will pass the filter and be sent as a message.</p>
+<p>For this purpose the <code class="literal">watch-events</code>
+(<code class="literal">FileReadingMessageSource.setWatchEvents(WatchEventType... watchEvents)</code>) has been introduced
+(<code class="literal">WatchEventType</code> is a public inner enum in <code class="literal">FileReadingMessageSource</code>).
+With such an option we can implement some scenarios, when we would like to do one downstream flow logic for new files,
+and other for modified.
+We can achieve that with different <code class="literal">&lt;int-file:inbound-channel-adapter&gt;</code> definitions, but for the same directory:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"newFiles"</span>
+     <span class="hl-attribute">directory</span>=<span class="hl-value">"${input.directory}"</span>
+     <span class="hl-attribute">use-watch-service</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-file:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"modifiedFiles"</span>
+     <span class="hl-attribute">directory</span>=<span class="hl-value">"${input.directory}"</span>
+     <span class="hl-attribute">use-watch-service</span>=<span class="hl-value">"true"</span>
+     <span class="hl-attribute">filter</span>=<span class="hl-value">"acceptAllFilter"</span>
+     <span class="hl-attribute">watch-events</span>=<span class="hl-value">"MODIFY"</span><span class="hl-tag">/&gt;</span> <span class="hl-comment">&lt;!-- CREATE by default --&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_limiting_memory_consumption" href="#_limiting_memory_consumption"></a>15.2.3&nbsp;Limiting Memory Consumption</h3></div></div></div>
+
+<p>A <code class="literal">HeadDirectoryScanner</code> can be used to limit the number of files retained in memory.
+This can be useful when scanning large directories.
+With XML configuration, this is enabled using the <code class="literal">queue-size</code> property on the inbound channel adapter.</p>
+<p>Prior to <span class="emphasis"><em>version 4.2</em></span>, this setting was incompatible with the use of any other filters.
+Any other filters (including <code class="literal">prevent-duplicates="true"</code>) overwrote the filter used to limit the size.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The use of a <code class="literal">HeadDirectoryScanner</code> is incompatible with an <code class="literal">AcceptOnceFileListFilter</code>.
+Since all filters are consulted during the poll decision, the <code class="literal">AcceptOnceFileListFilter</code> does not know
+that other filters might be temporarily filtering files.
+Even if files that were previously filtered by the <code class="literal">HeadDirectoryScanner.HeadFilter</code> are now available, the
+<code class="literal">AcceptOnceFileListFilter</code> will filter them.</p>
+<p>Generally, instead of using an <code class="literal">AcceptOnceFileListFilter</code> in this case, one would simply remove the processed
+files so that the previously filtered files will be available on a future poll.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_8" href="#_configuring_with_java_configuration_8"></a>15.2.4&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using Java configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FileReadingJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(FileReadingJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel fileInputChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter(value = "fileInputChannel", poller = @Poller(fixedDelay = "1000"))</span></em>
+    <span class="hl-keyword">public</span> MessageSource&lt;File&gt; fileReadingMessageSource() {
+         FileReadingMessageSource source = <span class="hl-keyword">new</span> FileReadingMessageSource();
+         source.setDirectory(<span class="hl-keyword">new</span> File(INBOUND_PATH));
+         source.setFilter(<span class="hl-keyword">new</span> SimplePatternFileListFilter(<span class="hl-string">"*.txt"</span>));
+         <span class="hl-keyword">return</span> source;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel = "fileInputChannel", outputChannel = "processFileChannel")</span></em>
+    <span class="hl-keyword">public</span> FileToStringTransformer fileToStringTransformer() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> FileToStringTransformer();
+    }
+
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_8" href="#_configuring_with_the_java_dsl_8"></a>15.2.5&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using the Java DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FileReadingJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(FileReadingJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow fileReadingFlow() {
+         <span class="hl-keyword">return</span> IntegrationFlows
+                  .from(s -&gt; s.file(<span class="hl-keyword">new</span> File(INBOUND_PATH))
+                              .patternFilter(<span class="hl-string">"*.txt"</span>),
+                          e -&gt; e.poller(Pollers.fixedDelay(<span class="hl-number">1000</span>)))
+                  .transform(Files.toStringTransformer())
+                  .channel(<span class="hl-string">"processFileChannel"</span>)
+                  .get();
+        }
+
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-tailing" href="#file-tailing"></a>15.2.6&nbsp;'Tail&#8217;ing Files</h3></div></div></div>
+
+<p>Another popular use case is to get <span class="emphasis"><em>lines</em></span> from the end (or tail) of a file, capturing new lines when they are added.
+Two implementations are provided; the first, <code class="literal">OSDelegatingFileTailingMessageProducer</code>, uses the native <code class="literal">tail</code> command (on operating systems that have one).
+This is likely the most efficient implementation on those platforms.
+For operating systems that do not have a <code class="literal">tail</code> command, the second implementation <code class="literal">ApacheCommonsFileTailingMessageProducer</code>
+which uses the Apache <code class="literal">commons-io</code> <code class="literal">Tailer</code> class.</p>
+<p>In both cases, file system events, such as files being unavailable etc, are published as <code class="literal">ApplicationEvent</code> s using the normal Spring event publishing mechanism.
+Examples of such events are:</p>
+<p><code class="literal">[message=tail: cannot open `/tmp/foo' for reading:
+               No such file or directory, file=/tmp/foo]</code></p>
+<p><code class="literal">[message=tail: `/tmp/foo' has become accessible, file=/tmp/foo]</code></p>
+<p><code class="literal">[message=tail: `/tmp/foo' has become inaccessible:
+               No such file or directory, file=/tmp/foo]</code></p>
+<p><code class="literal">[message=tail: `/tmp/foo' has appeared;
+               following end of new file, file=/tmp/foo]</code></p>
+<p>This sequence of events might occur, for example, when a file is rotated.</p>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span>, a <code class="literal">FileTailingIdleEvent</code> is emitted when there is no data in the file during <code class="literal">idleEventInterval</code>.</p>
+<p><code class="literal">[message=Idle timeout, file=/tmp/foo] [idle time=5438]</code></p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Not all platforms supporting a <code class="literal">tail</code> command provide these status messages.</p>
+</td></tr></table></div>
+<p>Messages emitted from these endpoints have the following headers:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">FileHeaders.ORIGINAL_FILE</code> - the <code class="literal">File</code> object
+</li><li class="listitem">
+<code class="literal">FileHeaders.FILENAME</code> - the file name (<code class="literal">File.getName()</code>)
+</li></ul></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>In versions prior to <span class="emphasis"><em>version 5.0</em></span>, the <code class="literal">FileHeaders.FILENAME</code> header contained a string representation of the file&#8217;s absolute path.
+You can now obtain that by calling <code class="literal">getAbsolutePath()</code> on the original file header.</p>
+</td></tr></table></div>
+<p>Example configurations:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:tail-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"native"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"input"</span>
+	<span class="hl-attribute">task-executor</span>=<span class="hl-value">"exec"</span>
+	<span class="hl-attribute">file</span>=<span class="hl-value">"/tmp/foo"</span><span class="hl-tag">/&gt;</span></pre>
+<p>This creates a native adapter with default <span class="emphasis"><em>-F -n 0</em></span> options (follow the file name from the current end).</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:tail-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"native"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"input"</span>
+	<span class="hl-attribute">native-options</span>=<span class="hl-value">"-F -n +0"</span>
+	<span class="hl-attribute">task-executor</span>=<span class="hl-value">"exec"</span>
+	<span class="hl-attribute">file-delay</span>=<span class="hl-value">10000</span>
+	<span class="hl-attribute">file</span>=<span class="hl-value">"/tmp/foo"</span><span class="hl-tag">/&gt;</span></pre>
+<p>This creates a native adapter with <span class="emphasis"><em>-F -n +0</em></span> options (follow the file name, emitting all existing lines).
+If the tail command fails (on some platforms, a missing file causes the <code class="literal">tail</code> to fail, even with <code class="literal">-F</code> specified), the command will be retried every 10 seconds.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:tail-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"native"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"input"</span>
+	<span class="hl-attribute">enable-status-reader</span>=<span class="hl-value">"false"</span>
+	<span class="hl-attribute">task-executor</span>=<span class="hl-value">"exec"</span>
+	<span class="hl-attribute">file</span>=<span class="hl-value">"/tmp/foo"</span><span class="hl-tag">/&gt;</span></pre>
+<p>By default native adapter capture from standard output and send them as messages and from standard error to raise events.
+Starting with <span class="emphasis"><em>version 4.3.6</em></span>, you can discard the standard error events by setting the <code class="literal">enable-status-reader</code> to <code class="literal">false</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:tail-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"native"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"input"</span>
+	<span class="hl-attribute">idle-event-interval</span>=<span class="hl-value">"5000"</span>
+	<span class="hl-attribute">task-executor</span>=<span class="hl-value">"exec"</span>
+	<span class="hl-attribute">file</span>=<span class="hl-value">"/tmp/foo"</span><span class="hl-tag">/&gt;</span></pre>
+<p><code class="literal">IdleEventInterval</code> is set to 5000 then, if no lines are written for 5 second, <code class="literal">FileTailingIdleEvent</code> will be triggered every 5 second.
+This can be useful if we need to stop the adapter.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:tail-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"apache"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"input"</span>
+	<span class="hl-attribute">task-executor</span>=<span class="hl-value">"exec"</span>
+	<span class="hl-attribute">file</span>=<span class="hl-value">"/tmp/bar"</span>
+	<span class="hl-attribute">delay</span>=<span class="hl-value">"2000"</span>
+	<span class="hl-attribute">end</span>=<span class="hl-value">"false"</span>
+	<span class="hl-attribute">reopen</span>=<span class="hl-value">"true"</span>
+	<span class="hl-attribute">file-delay</span>=<span class="hl-value">"10000"</span><span class="hl-tag">/&gt;</span></pre>
+<p>This creates an Apache commons-io <code class="literal">Tailer</code> adapter that examines the file for new lines every 2 seconds, and checks for existence of a missing file every 10 seconds.
+The file will be tailed from the beginning (<code class="literal">end="false"</code>) instead of the end (which is the default).
+The file will be reopened for each chunk (the default is to keep the file open).</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Specifying the <code class="literal">delay</code>, <code class="literal">end</code> or <code class="literal">reopen</code> attributes, forces the use of the Apache commons-io adapter and the <code class="literal">native-options</code> attribute is not allowed.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-incomplete" href="#file-incomplete"></a>15.2.7&nbsp;Dealing With Incomplete Data</h3></div></div></div>
+
+<p>A common problem in file transfer scenarios is how to determine that the transfer is complete, so you don&#8217;t start reading an incomplete file.
+A common technique to solve this problem is to write the file with a temporary name and then atomically rename it to the final name.
+This, together with a filter that masks the temporary file from being picked up by the consumer provides a robust solution.
+This technique is used by Spring Integration components that write files (locally or remotely); by default, they append <code class="literal">.writing</code> to the file name and remove it when the transfer is complete.</p>
+<p>Another common technique is to write a second "marker" file to indicate the file transfer is complete.
+In this scenario, say, you should not consider <code class="literal">foo.txt</code> to be available for use until <code class="literal">foo.txt.complete</code> is also present.
+Spring Integration <span class="emphasis"><em>version 5.0</em></span> introduces new filters to support this mechanism.
+Implementations are provided for the file system (<code class="literal">FileSystemMarkerFilePresentFileListFilter</code>), <a class="link" href="ftp.html#ftp-incomplete" title="16.4.4&nbsp;Dealing With Incomplete Data">FTP</a> and <a class="link" href="sftp.html#sftp-incomplete" title="28.7.4&nbsp;Dealing With Incomplete Data">SFTP</a>.
+They are configurable such that the marker file can have any name, although it will usually be related to the file being transferred.
+See the javadocs for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="file-writing" href="#file-writing"></a>15.3&nbsp;Writing files</h2></div></div></div>
+
+<p>To write messages to the file system you can use a <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/file/FileWritingMessageHandler.html" target="_top">FileWritingMessageHandler</a>.
+This class can deal with the following payload types:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>File</em></span>,
+</li><li class="listitem">
+<span class="emphasis"><em>String</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>byte array</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>InputStream</em></span> (since <span class="emphasis"><em>version 4.2</em></span>)
+</li></ul></div>
+<p>You can configure the encoding and the charset that will be used in case of a String payload.</p>
+<p>To make things easier, you can configure the <code class="literal">FileWritingMessageHandler</code> as part of an <span class="emphasis"><em>Outbound Channel Adapter</em></span> or
+<span class="emphasis"><em>Outbound Gateway</em></span> using the provided XML namespace support.</p>
+<p>Starting with <span class="emphasis"><em>version 4.3</em></span>, you can specify the buffer size to use when writing files.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-writing-file-names" href="#file-writing-file-names"></a>15.3.1&nbsp;Generating File Names</h3></div></div></div>
+
+<p>In its simplest form, the <code class="literal">FileWritingMessageHandler</code> only requires a destination directory for writing the files.
+The name of the file to be written is determined by the handler&#8217;s <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/file/FileNameGenerator.html" target="_top">FileNameGenerator</a>.
+The <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/file/DefaultFileNameGenerator.html" target="_top">default implementation</a> looks for a Message header whose key matches the constant defined as <a class="ulink" href="http://docs.spring.io/spring-integration/api/constant-values.html#org.springframework.integration.file.FileHeaders.FILENAME" target="_top">FileHeaders.FILENAME</a>.</p>
+<p>Alternatively, you can specify an expression to be evaluated against the Message in order to generate a file name, e.g. <span class="emphasis"><em>headers[<span class="emphasis"><em>myCustomHeader</em></span>] + '.foo'</em></span>.
+The expression must evaluate to a <code class="literal">String</code>.
+For convenience, the <code class="literal">DefaultFileNameGenerator</code> also provides the <span class="emphasis"><em>setHeaderName</em></span> method, allowing you to explicitly specify the Message header whose value shall be used as the filename.</p>
+<p>Once setup, the <code class="literal">DefaultFileNameGenerator</code> will employ the following resolution steps to determine the filename for a given Message payload:</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+Evaluate the expression against the Message and, if the result is a non-empty <code class="literal">String</code>, use it as the filename.
+</li><li class="listitem">
+Otherwise, if the payload is a <code class="literal">java.io.File</code>, use the file&#8217;s filename.
+</li><li class="listitem">
+Otherwise, use the Message ID appended with .<code class="literal">msg</code> as the filename.
+</li></ol></div>
+<p>When using the XML namespace support, both, the <span class="emphasis"><em>File Outbound Channel Adapter</em></span> and the <span class="emphasis"><em>File Outbound Gateway</em></span> support the following two mutually exclusive configuration attributes:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">filename-generator</code> (a reference to a <code class="literal">FileNameGenerator</code> implementation)
+</li><li class="listitem">
+<code class="literal">filename-generator-expression</code> (an expression evaluating to a <code class="literal">String</code>)
+</li></ul></div>
+<p>While writing files, a temporary file suffix will be used (default: <code class="literal">.writing</code>).
+It is appended to the filename while the file is being written.
+To customize the suffix, you can set the <span class="emphasis"><em>temporary-file-suffix</em></span> attribute on both the <span class="emphasis"><em>File Outbound Channel Adapter</em></span> and the <span class="emphasis"><em>File Outbound Gateway</em></span>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When using the <span class="emphasis"><em>APPEND</em></span> file <span class="emphasis"><em>mode</em></span>, the <span class="emphasis"><em>temporary-file-suffix</em></span> attribute is ignored, since the data is appended to the file directly.</p>
+</td></tr></table></div>
+<p>Starting with <span class="emphasis"><em>version 4.2.5</em></span> the generated file name (as a result of <code class="literal">filename-generator</code>/<code class="literal">filename-generator-expression</code>
+evaluation) can represent a <span class="emphasis"><em>sub-path</em></span> together with the target file name.
+It is used as a second constructor argument for <code class="literal">File(File parent, String child)</code> as before, but in the past we didn&#8217;t
+created (<code class="literal">mkdirs()</code>) directories for <span class="emphasis"><em>sub-path</em></span> assuming only the <span class="emphasis"><em>file name</em></span>.
+This approach is useful for cases when we need to restore the file system tree according the source directory.
+For example we unzipping the archive and want to save all file in the target directory at the same order.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-writing-output-directory" href="#file-writing-output-directory"></a>15.3.2&nbsp;Specifying the Output Directory</h3></div></div></div>
+
+<p>Both, the <span class="emphasis"><em>File Outbound Channel Adapter</em></span> and the <span class="emphasis"><em>File Outbound Gateway</em></span> provide two configuration attributes for specifying the output directory:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>directory</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>directory-expression</em></span>
+</li></ul></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <span class="emphasis"><em>directory-expression</em></span> attribute is available since Spring Integration 2.2.</p>
+</td></tr></table></div>
+<p><span class="strong"><strong>Using the directory attribute</strong></span></p>
+<p>When using the <span class="emphasis"><em>directory</em></span> attribute, the output directory will be set to a fixed value, that is set at initialization time of the <code class="literal">FileWritingMessageHandler</code>.
+If you don&#8217;t specify this attribute, then you must use the <span class="emphasis"><em>directory-expression</em></span> attribute.</p>
+<p><span class="strong"><strong>Using the directory-expression attribute</strong></span></p>
+<p>If you want to have full SpEL support you would choose the <span class="emphasis"><em>directory-expression</em></span> attribute.
+This attribute accepts a SpEL expression that is evaluated for each message being processed.
+Thus, you have full access to a Message&#8217;s payload and its headers to dynamically specify the output file directory.</p>
+<p>The SpEL expression must resolve to either a <code class="literal">String</code> or to <code class="literal">java.io.File</code>.
+Furthermore the resulting <code class="literal">String</code> or <code class="literal">File</code> must point to a directory.
+If you don&#8217;t specify the <span class="emphasis"><em>directory-expression</em></span> attribute, then you must set the <span class="emphasis"><em>directory</em></span> attribute.</p>
+<p><span class="strong"><strong>Using the auto-create-directory attribute</strong></span></p>
+<p>If the destination directory does not exists, yet, by default the respective destination directory and any non-existing parent directories are being created automatically.
+You can set the <span class="emphasis"><em>auto-create-directory</em></span> attribute to <span class="emphasis"><em>false</em></span> in order to prevent that.
+This attribute applies to both, the <span class="emphasis"><em>directory</em></span> and the <span class="emphasis"><em>directory-expression</em></span> attribute.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When using the <span class="emphasis"><em>directory</em></span> attribute and <span class="emphasis"><em>auto-create-directory</em></span> is <code class="literal">false</code>, the following change was made starting with Spring Integration 2.2:</p>
+<p>Instead of checking for the existence of the destination directory at initialization time of the adapter, this check is now performed for each message being processed.</p>
+<p>Furthermore, if <span class="emphasis"><em>auto-create-directory</em></span> is <code class="literal">true</code> and the directory was deleted between the processing of messages, the directory will be re-created for each message being processed.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-writing-destination-exists" href="#file-writing-destination-exists"></a>15.3.3&nbsp;Dealing with Existing Destination Files</h3></div></div></div>
+
+<p>When writing files and the destination file already exists, the default behavior is to overwrite that target file.
+This behavior, though, can be changed by setting the <span class="emphasis"><em>mode</em></span> attribute on the respective File Outbound components.
+The following options exist:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+REPLACE (Default)
+</li><li class="listitem">
+REPLACE_IF_MODIFIED
+</li><li class="listitem">
+APPEND
+</li><li class="listitem">
+APPEND_NO_FLUSH
+</li><li class="listitem">
+FAIL
+</li><li class="listitem">
+IGNORE
+</li></ul></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <span class="emphasis"><em>mode</em></span> attribute and the options <span class="emphasis"><em>APPEND</em></span>, <span class="emphasis"><em>FAIL</em></span> and <span class="emphasis"><em>IGNORE</em></span>, are available since <span class="emphasis"><em>Spring Integration 2.2</em></span>.</p>
+</td></tr></table></div>
+<p><span class="emphasis"><em>REPLACE</em></span></p>
+<p>If the target file already exists, it will be overwritten.
+If the <span class="emphasis"><em>mode</em></span> attribute is not specified, then this is the default behavior when writing files.</p>
+<p><span class="emphasis"><em>REPLACE_IF_MODIFIED</em></span></p>
+<p>If the target file already exists, it will be overwritten only if the last modified timestamp is different to the source file.
+For <code class="literal">File</code> payloads, the payload <code class="literal">lastModified</code> time is compared to the existing file.
+For other payloads, the <code class="literal">FileHeaders.SET_MODIFIED</code> (<code class="literal">file_setModified</code>) header is compared to the existing file.
+If the header is missing, or has a value that is not a <code class="literal">Number</code>, the file is always replaced.</p>
+<p><span class="emphasis"><em>APPEND</em></span></p>
+<p>This mode allows you to append Message content to the existing file instead of creating a new file each time.
+Note that this attribute is mutually exclusive with <span class="emphasis"><em>temporary-file-suffix</em></span> attribute since when appending content to
+the existing file, the adapter no longer uses a temporary file.
+The file is closed after each message.</p>
+<p><span class="emphasis"><em>APPEND_NO_FLUSH</em></span></p>
+<p>This has the same semantics as <span class="strong"><strong>APPEND</strong></span> but the data is not flushed and the file is not closed after each message.
+This can provide a significant performance at the risk of data loss in the case of a failure.
+See <a class="xref" href="files.html#file-flushing" title="15.3.4&nbsp;Flushing Files When using APPEND_NO_FLUSH">Section&nbsp;15.3.4, &#8220;Flushing Files When using APPEND_NO_FLUSH&#8221;</a> for more information.</p>
+<p><span class="emphasis"><em>FAIL</em></span></p>
+<p>If the target file exists, a <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/messaging/MessageHandlingException.html" target="_top">MessageHandlingException</a> is thrown.</p>
+<p><span class="emphasis"><em>IGNORE</em></span></p>
+<p>If the target file exists, the message payload is silently ignored.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When using a temporary file suffix (default: <code class="literal">.writing</code>), the <span class="emphasis"><em>IGNORE</em></span> mode will apply if the final file name exists, or the temporary file name exists.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-flushing" href="#file-flushing"></a>15.3.4&nbsp;Flushing Files When using APPEND_NO_FLUSH</h3></div></div></div>
+
+<p>The <span class="strong"><strong>APPEND_NO_FLUSH</strong></span> mode was added in <span class="emphasis"><em>version 4.3</em></span>.
+This can improve performance because the file is not closed after each message.
+However, this can cause data loss in the event of a failure.</p>
+<p>Several flushing strategies, to mitigate this data loss, are provided:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">flushInterval</code> - if a file is not written to for this period of time, it is automatically flushed.
+This is approximate and may be up to <code class="literal">1.33x</code> this time (with an average of <code class="literal">1.167x</code>).
+</li><li class="listitem">
+Send a message to the message handler&#8217;s <code class="literal">trigger</code> method containing a regular expression.
+Files with absolute path names matching the pattern will be flushed.
+</li><li class="listitem">
+Provide the handler with a custom <code class="literal">MessageFlushPredicate</code> implementation to modify the action taken when a message
+is sent to the <code class="literal">trigger</code> method.
+</li><li class="listitem">
+Invoke one of the handler&#8217;s <code class="literal">flushIfNeeded</code> methods passing in a custom <code class="literal">FileWritingMessageHandler.FlushPredicate</code>
+or <code class="literal">FileWritingMessageHandler.MessageFlushPredicate</code> implementation.
+</li></ul></div>
+<p>The predicates are called for each open file.
+See the java docs for these interfaces for more information.
+Note that, since <span class="emphasis"><em>version 5.0</em></span>, the predicate methods provide another parameter - the time that the current file was first written to if new or previously closed.</p>
+<p>When using <code class="literal">flushInterval</code>, the interval starts at the last write - the file is flushed only if it is idle for the interval.
+Starting with <span class="emphasis"><em>version 4.3.7</em></span>, and additional property <code class="literal">flushWhenIdle</code> can be set to <code class="literal">false</code>, meaning that the interval starts with the first write to a previously flushed (or new) file.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-timestamps" href="#file-timestamps"></a>15.3.5&nbsp;File Timestamps</h3></div></div></div>
+
+<p>By default, the destination file <code class="literal">lastModified</code> timestamp will be the time the file was created (except a rename
+in-place will retain the current timestamp).
+Starting with <span class="emphasis"><em>version 4.3</em></span>, you can now configure <code class="literal">preserve-timestamp</code> (or <code class="literal">setPreserveTimestamp(true)</code> when using
+Java configuration).
+For <code class="literal">File</code> payloads, this will transfer the timestamp from the inbound file to the outbound (regardless of whether a
+copy was required).
+For other payloads, if the <code class="literal">FileHeaders.SET_MODIFIED</code> header (<code class="literal">file_setModified</code>) is present, it will be used to set
+the destination file&#8217;s <code class="literal">lastModified</code> timestamp, as long as the header is a <code class="literal">Number</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-permissions" href="#file-permissions"></a>15.3.6&nbsp;File Permissions</h3></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span>, when writing files to a file system that supports Posix permissions, you can specify those permissions on the outbound channel adapter or gateway.
+The property is an integer and is usually supplied in the familiar octal format; e.g. <code class="literal">0640</code> meaning the owner has read/write permissions, the group has read only permission and others have no access.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-outbound-channel-adapter" href="#file-outbound-channel-adapter"></a>15.3.7&nbsp;File Outbound Channel Adapter</h3></div></div></div>
+
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filesOut"</span> <span class="hl-attribute">directory</span>=<span class="hl-value">"${input.directory.property}"</span><span class="hl-tag">/&gt;</span></pre>
+<p>The namespace based configuration also supports a <code class="literal">delete-source-files</code> attribute.
+If set to <code class="literal">true</code>, it will trigger the deletion of the original source files after writing to a destination.
+The default value for that flag is <code class="literal">false</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filesOut"</span>
+    <span class="hl-attribute">directory</span>=<span class="hl-value">"${output.directory}"</span>
+    <span class="hl-attribute">delete-source-files</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">delete-source-files</code> attribute will only have an effect if the inbound Message has a File payload or if the <code class="literal">FileHeaders.ORIGINAL_FILE</code> header value contains either the source File instance or a String representing the original file path.</p>
+</td></tr></table></div>
+<p>Starting with <span class="emphasis"><em>version 4.2</em></span> The <code class="literal">FileWritingMessageHandler</code> supports an <code class="literal">append-new-line</code> option.
+If set to <code class="literal">true</code>, a new line is appended to the file after a message is written.
+The default attribute value is <code class="literal">false</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"newlineAdapter"</span>
+	<span class="hl-attribute">append-new-line</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">directory</span>=<span class="hl-value">"${output.directory}"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="file-writing-output-gateway" href="#file-writing-output-gateway"></a>15.3.8&nbsp;Outbound Gateway</h3></div></div></div>
+
+<p>In cases where you want to continue processing messages based on the written file, you can use the <code class="literal">outbound-gateway</code> instead.
+It plays a very similar role as the <code class="literal">outbound-channel-adapter</code>.
+However, after writing the file, it will also send it to the reply channel as the payload of a Message.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"mover"</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"moveInput"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">directory</span>=<span class="hl-value">"${output.directory}"</span>
+    <span class="hl-attribute">mode</span>=<span class="hl-value">"REPLACE"</span> <span class="hl-attribute">delete-source-files</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span></pre>
+<p>As mentioned earlier, you can also specify the <span class="emphasis"><em>mode</em></span> attribute, which defines the behavior of how to deal with situations where the destination file already exists.
+Please see <a class="xref" href="files.html#file-writing-destination-exists" title="15.3.3&nbsp;Dealing with Existing Destination Files">Section&nbsp;15.3.3, &#8220;Dealing with Existing Destination Files&#8221;</a> for further details.
+Generally, when using the <span class="emphasis"><em>File Outbound Gateway</em></span>, the result file is returned as the Message payload on the reply channel.</p>
+<p>This also applies when specifying the <span class="emphasis"><em>IGNORE</em></span> mode.
+In that case the pre-existing destination file is returned.
+If the payload of the request message was a file, you still have access to that original file through the Message Header <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/file/FileHeaders.html" target="_top">FileHeaders.ORIGINAL_FILE</a>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <span class="emphasis"><em>outbound-gateway</em></span> works well in cases where you want to first move a file and then send it through a processing pipeline.
+In such cases, you may connect the file namespace&#8217;s <code class="literal">inbound-channel-adapter</code> element to the <code class="literal">outbound-gateway</code> and then connect that gateway&#8217;s <code class="literal">reply-channel</code> to the beginning of the pipeline.</p>
+</td></tr></table></div>
+<p>If you have more elaborate requirements or need to support additional payload types as input to be converted to file content you could extend the <code class="literal">FileWritingMessageHandler</code>, but a much better option is to rely on a <code class="literal">Transformer</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_9" href="#_configuring_with_java_configuration_9"></a>15.3.9&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using Java configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FileWritingJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        ConfigurableApplicationContext context =
+                      <span class="hl-keyword">new</span> SpringApplicationBuilder(FileWritingJavaApplication.<span class="hl-keyword">class</span>)
+                              .web(false)
+                              .run(args);
+             MyGateway gateway = context.getBean(MyGateway.<span class="hl-keyword">class</span>);
+             gateway.writeToFile(<span class="hl-string">"foo.txt"</span>, <span class="hl-keyword">new</span> File(tmpDir.getRoot(), <span class="hl-string">"fileWritingFlow"</span>), <span class="hl-string">"foo"</span>);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "writeToFileChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler fileWritingMessageHandler() {
+         Expression directoryExpression = <span class="hl-keyword">new</span> SpelExpressionParser().parseExpression(<span class="hl-string">"headers.directory"</span>);
+         FileWritingMessageHandler handler = <span class="hl-keyword">new</span> FileWritingMessageHandler(directoryExpression);
+         handler.setFileExistsMode(FileExistsMode.APPEND);
+         <span class="hl-keyword">return</span> handler;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway(defaultRequestChannel = "writeToFileChannel")</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MyGateway {
+
+        <span class="hl-keyword">void</span> writeToFile(<em><span class="hl-annotation" style="color: gray">@Header(FileHeaders.FILENAME)</span></em> String fileName,
+                       <em><span class="hl-annotation" style="color: gray">@Header(FileHeaders.FILENAME)</span></em> File directory, String data);
+
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_9" href="#_configuring_with_the_java_dsl_9"></a>15.3.10&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using the Java DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FileWritingJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        ConfigurableApplicationContext context =
+                 <span class="hl-keyword">new</span> SpringApplicationBuilder(FileWritingJavaApplication.<span class="hl-keyword">class</span>)
+                         .web(false)
+                         .run(args);
+        MessageChannel fileWritingInput = context.getBean(<span class="hl-string">"fileWritingInput"</span>, MessageChannel.<span class="hl-keyword">class</span>);
+        fileWritingInput.send(<span class="hl-keyword">new</span> GenericMessage&lt;&gt;(<span class="hl-string">"foo"</span>));
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+   	<span class="hl-keyword">public</span> IntegrationFlow fileWritingFlow() {
+   	    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"fileWritingInput"</span>)
+   		        .enrichHeaders(h -&gt; h.header(FileHeaders.FILENAME, <span class="hl-string">"foo.txt"</span>)
+   		                  .header(<span class="hl-string">"directory"</span>, <span class="hl-keyword">new</span> File(tmpDir.getRoot(), <span class="hl-string">"fileWritingFlow"</span>)))
+   	            .handleWithAdapter(a -&gt; a.fileGateway(m -&gt; m.getHeaders().get(<span class="hl-string">"directory"</span>)))
+   	            .channel(MessageChannels.queue(<span class="hl-string">"fileWritingResultChannel"</span>))
+   	            .get();
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="file-transforming" href="#file-transforming"></a>15.4&nbsp;File Transformers</h2></div></div></div>
+
+<p>To transform data read from the file system to objects and the other way around you need to do some work.
+Contrary to <code class="literal">FileReadingMessageSource</code> and to a lesser extent <code class="literal">FileWritingMessageHandler</code>, it is very likely that you will need your own mechanism to get the job done.
+For this you can implement the <code class="literal">Transformer</code> interface.
+Or extend the <code class="literal">AbstractFilePayloadTransformer</code> for inbound messages.
+Some obvious implementations have been provided.</p>
+<p><code class="literal">FileToByteArrayTransformer</code> transforms Files into <code class="literal">byte[]</code> using Spring&#8217;s <code class="literal">FileCopyUtils</code>.
+It is often better to use a sequence of transformers than to put all transformations in a single class.
+In that case the <code class="literal">File</code> to <code class="literal">byte[]</code> conversion might be a logical first step.</p>
+<p><code class="literal">FileToStringTransformer</code> will convert Files to Strings as the name suggests.
+If nothing else, this can be useful for debugging (consider using with a Wire Tap).</p>
+<p>To configure File specific transformers you can use the appropriate elements from the file namespace.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:file-to-bytes-transformer</span>  <span class="hl-attribute">input-channel</span>=<span class="hl-value">"input"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">delete-files</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-file:file-to-string-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"input"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">delete-files</span>=<span class="hl-value">"true"</span> <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span><span class="hl-tag">/&gt;</span></pre>
+<p>The <span class="emphasis"><em>delete-files</em></span> option signals to the transformer that it should delete the inbound File after the transformation is complete.
+This is in no way a replacement for using the <code class="literal">AcceptOnceFileListFilter</code> when the <code class="literal">FileReadingMessageSource</code> is being used in a multi-threaded environment (e.g.
+Spring Integration in general).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="file-splitter" href="#file-splitter"></a>15.5&nbsp;File Splitter</h2></div></div></div>
+
+<p>The <code class="literal">FileSplitter</code> was added in <span class="emphasis"><em>version 4.1.2</em></span> and namespace support was added in <span class="emphasis"><em>version 4.2</em></span>.
+The <code class="literal">FileSplitter</code> splits text files into individual lines, based on <code class="literal">BufferedReader.readLine()</code>.
+By default, the splitter uses an <code class="literal">Iterator</code> to emit lines one-at-a-time as they are read from the file.
+Setting the <code class="literal">iterator</code> property to <code class="literal">false</code> causes it to read all the lines into memory before emitting them as messages.
+One use case for this might be if you want to detect I/O errors on the file before sending any messages containing
+lines.
+However, it is only practical for relatively short files.</p>
+<p>Inbound payloads can be <code class="literal">File</code>, <code class="literal">String</code> (a <code class="literal">File</code> path), <code class="literal">InputStream</code>, or <code class="literal">Reader</code>.
+Other payload types will be emitted unchanged.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-file:splitter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"splitter"</span> <a name="CO22-1" href="#CO22-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    iterator="" <a name="CO22-2" href="#CO22-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    markers="" <a name="CO22-3" href="#CO22-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    markers-json="" <a name="CO22-4" href="#CO22-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    apply-sequence="" <a name="CO22-5" href="#CO22-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    requires-reply="" <a name="CO22-6" href="#CO22-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+    charset="" <a name="CO22-7" href="#CO22-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+    first-line-as-header="" <a name="CO22-8" href="#CO22-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+    input-channel="" <a name="CO22-9" href="#CO22-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+    output-channel="" <a name="CO22-10" href="#CO22-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+    send-timeout="" <a name="CO22-11" href="#CO22-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+    auto-startup="" <a name="CO22-12" href="#CO22-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+    order="" <a name="CO22-13" href="#CO22-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+    phase="" /&gt; <a name="CO22-14" href="#CO22-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The bean name of the splitter.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set to <code class="literal">true</code> to use an iterator (default); <code class="literal">false</code> to load the file into memory before sending lines.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set to <code class="literal">true</code> to emit start/end of file marker messages before and after the file data.
+Markers are messages with <code class="literal">FileSplitter.FileMarker</code> payloads (with <code class="literal">START</code> and <code class="literal">END</code> values in the <code class="literal">mark</code> property).
+Markers might be used when sequentially processing files in a downstream flow where some lines are filtered.
+They enable the downstream processing to know when a file has been completely processed.
+In addition, a header <code class="literal">file_marker</code> containing <code class="literal">START</code> or <code class="literal">END</code> are added to these messages.
+The <code class="literal">END</code> marker includes a line count.
+If the file is empty, only <code class="literal">START</code> and <code class="literal">END</code> markers are emitted with <code class="literal">0</code> as the <code class="literal">lineCount</code>.
+Default: <code class="literal">false</code>.
+When <code class="literal">true</code>, <code class="literal">apply-sequence</code> is <code class="literal">false</code> by default.
+Also see <code class="literal">markers-json</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When <code class="literal">markers</code> is true, set this to <code class="literal">true</code> and the <code class="literal">FileMarker</code> objects will be converted to a JSON String.
+Requires a supported JSON processor library on the classpath (Jackson, Boon).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set to <code class="literal">false</code> to disable the inclusion of <code class="literal">sequenceSize</code> and <code class="literal">sequenceNumber</code> headers in messages.
+Default: <code class="literal">true</code>, unless <code class="literal">markers</code> is <code class="literal">true</code>.
+When <code class="literal">true</code> and <code class="literal">markers</code> is <code class="literal">true</code>, the markers are included in the sequencing.
+When <code class="literal">true</code> and <code class="literal">iterator</code> is <code class="literal">true</code>, the <code class="literal">sequenceSize</code> header is set to <code class="literal">0</code> because the size is unknown.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set to <code class="literal">true</code> to cause a <code class="literal">RequiresReplyException</code> to be thrown if there are no lines in the file.
+Default: <code class="literal">false</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set the charset name to be used when reading the text data into <code class="literal">String</code> payloads.
+Default: platform charset.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The header name for the first line to be carried as a header in the messages emitted for the remaining lines.
+Since <span class="emphasis"><em>version 5.0</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set the input channel used to send messages to the splitter.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set the output channel to which messages will be sent.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set the send timeout - only applies if the <code class="literal">output-channel</code> can block - such as a full <code class="literal">QueueChannel</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set to <code class="literal">false</code> to disable automatically starting the splitter when the context is refreshed.
+Default: <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set the order of this endpoint if the <code class="literal">input-channel</code> is a <code class="literal">&lt;publish-subscribe-channel/&gt;</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set the startup phase for the splitter (used when <code class="literal">auto-startup</code> is <code class="literal">true</code>).</p>
+</td></tr></table></div>
+<p>The <code class="literal">FileSplitter</code> will also split any text-based <code class="literal">InputStream</code> into lines.
+When used in conjunction with an FTP or SFTP streaming inbound channel adapter, or an FTP or SFTP outbound gateway
+using the <code class="literal">stream</code> option to retrieve a file, starting with <span class="emphasis"><em>version 4.3</em></span>, the splitter will automatically close
+the session supporting the stream, when the file is completely consumed.
+See <a class="xref" href="ftp.html#ftp-streaming" title="16.5&nbsp;FTP Streaming Inbound Channel Adapter">Section&nbsp;16.5, &#8220;FTP Streaming Inbound Channel Adapter&#8221;</a> and <a class="xref" href="sftp.html#sftp-streaming" title="28.8&nbsp;SFTP Streaming Inbound Channel Adapter">Section&nbsp;28.8, &#8220;SFTP Streaming Inbound Channel Adapter&#8221;</a> as well as <a class="xref" href="ftp.html#ftp-outbound-gateway" title="16.8&nbsp;FTP Outbound Gateway">Section&nbsp;16.8, &#8220;FTP Outbound Gateway&#8221;</a> and <a class="xref" href="sftp.html#sftp-outbound-gateway" title="28.11&nbsp;SFTP Outbound Gateway">Section&nbsp;28.11, &#8220;SFTP Outbound Gateway&#8221;</a> for more
+information about these facilities.</p>
+<p>When using Java configuration, an additional constructor is available:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> FileSplitter(<span class="hl-keyword">boolean</span> iterator, <span class="hl-keyword">boolean</span> markers, <span class="hl-keyword">boolean</span> markersJson)</pre>
+<p>When <code class="literal">markersJson</code> is true, the markers will be represented as a JSON string, as long as a suitable JSON processor library, such as Jackson or Boon, is on the classpath.</p>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span>, the <code class="literal">firstLineAsHeader</code> option is introduced to specify that the first line of content is a header (such as column names in a CSV file).
+The argument passed to this property is the header name under which the first line will be carried as a header in the messages emitted for the remaining lines.
+This line is not included in the sequence header (if <code class="literal">applySequence</code> is true) nor in the <code class="literal">FileMarker.END</code> <code class="literal">lineCount</code>.
+If file contains only the header line, the file is treated as empty and therefore only <code class="literal">FileMarker</code> s are emitted during splitting (if markers are enabled, otherwise no messages are emitted).
+By default (if no header name is set), the first line is considered to be data and will be the payload of the first emitted message.</p>
+<p>If you need more complex logic about headers extraction from the file content (not first line, not the whole content of the line, not one header etc.), consider to use <a class="link" href="messaging-transformation-chapter.html#header-enricher" title="7.2.2&nbsp;Header Enricher">Header Enricher</a> upfront of the <code class="literal">FileSplitter</code>.
+The lines which have been moved to the headers might be filtered downstream from the normal content process.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_10" href="#_configuring_with_java_configuration_10"></a>15.5.1&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Splitter(inputChannel="toSplitter")</span></em>
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MessageHandler fileSplitter() {
+    FileSplitter splitter = <span class="hl-keyword">new</span> FileSplitter(true, true);
+    splitter.setApplySequence(true);
+    splitter.setOutputChannel(outputChannel);
+    <span class="hl-keyword">return</span> splitter;
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_10" href="#_configuring_with_the_java_dsl_10"></a>15.5.2&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using the Java DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FileSplitterApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(FileSplitterApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow fileSplitterFlow() {
+        <span class="hl-keyword">return</span> IntegrationFlows
+            .from(Files.inboundAdapter(tmpDir.getRoot())
+                 .filter(<span class="hl-keyword">new</span> ChainFileListFilter&lt;File&gt;()
+                        .addFilter(<span class="hl-keyword">new</span> AcceptOnceFileListFilter&lt;&gt;())
+                        .addFilter(<span class="hl-keyword">new</span> ExpressionFileListFilter&lt;&gt;(
+                             <span class="hl-keyword">new</span> FunctionExpression&lt;File&gt;(f -&gt; <span class="hl-string">"foo.tmp"</span>.equals(f.getName()))))))
+            .split(Files.splitter()
+                     .markers()
+                     .charset(StandardCharsets.US_ASCII)
+                     .firstLineAsHeader(<span class="hl-string">"fileHeader"</span>)
+                     .applySequence(true))
+            .channel(c -&gt; c.queue(<span class="hl-string">"fileSplittingResultChannel"</span>))
+            .get();
+    }
+
+}</pre>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="feed.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ftp.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">14.&nbsp;Feed Adapter&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;16.&nbsp;FTP/FTPS Adapters</td></tr></table></div></body></html>

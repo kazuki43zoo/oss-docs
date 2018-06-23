@@ -1,0 +1,266 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Appendix&nbsp;F.&nbsp;Testing support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-appendices.html" title="Part&nbsp;VI.&nbsp;Appendices"><link rel="prev" href="configuration.html" title="Appendix&nbsp;E.&nbsp;Configuration"><link rel="next" href="samples.html" title="Appendix&nbsp;G.&nbsp;Spring Integration Samples"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Appendix&nbsp;F.&nbsp;Testing support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="configuration.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;VI.&nbsp;Appendices</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="samples.html">Next</a></td></tr></table><hr></div><div class="appendix"><div class="titlepage"><div><div><h2 class="title"><a name="testing" href="#testing"></a>Appendix&nbsp;F.&nbsp;Testing support</h2></div></div></div>
+
+<p>Spring Integration provides a number of utilities and annotations to help when testing your application.
+Test support is presented by two modules: <code class="literal">spring-integration-test-support</code> which contains core items and shared utilities, and <code class="literal">spring-integration-test</code> which provides mocking and application context configuration components for integration tests.</p>
+<p><code class="literal">spring-integration-test-support</code> (<code class="literal">spring-integration-test</code> in versions before <span class="emphasis"><em>5.0</em></span>) provides basic, standalone utilities, rules and matchers for unit testing (it also has no dependencies on Spring Integration itself, and is used internally in Framework tests). <code class="literal">spring-integration-test</code> is aimed to help with integration testing and provides a comprehensive high level API to mock integration components and verify behavior of individual components, including whole integration flows or just parts thereof.
+A thorough treatment of testing in the enterprise is beyond the scope of this reference manual.
+See the <a class="ulink" href="http://www.enterpriseintegrationpatterns.com/docs/TestDrivenEAI.pdf" target="_top">Test-Driven Development in Enterprise Integration Projects</a> paper, by Gregor Hohpe and Wendy Istvanick, for a source of ideas and principles for testing your target integration solution.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="testing-intro" href="#testing-intro"></a>F.1&nbsp;Introduction</h2></div></div></div>
+
+<p>The Spring Integration Test Framework and test utilities are fully based on existing JUnit, Hamcrest and Mockito libraries.
+The Application Context interaction is based on the <a class="ulink" href="http://docs.spring.io/spring-framework/docs/current/spring-framework-reference/htmlsingle/#testing" target="_top">Spring Test Framework</a>.
+Please, refer to the documentation for those projects for further information.</p>
+<p>Thanks to the canonical implementation of the EIP in Spring Integration Framework and its first class citizens like <code class="literal">MessageChannel</code>, <code class="literal">Endpoint</code> and <code class="literal">MessageHandler</code> abstractions and supported out-of-the-box loose coupling principles, we can implement integration solutions of any complexity.
+With the Spring Integration API for the flow definitions, we can improve, modify or even replace some part of the flow without impacting (mostly) other components in the integration solution.
+Testing such an integration solution is still a challenge, from an <span class="emphasis"><em>end-to-end</em></span> perspective, as well as with an <span class="emphasis"><em>in-isolation</em></span> approach.
+There are several existing tools which help to test or mock some integration protocols and they work very well with Spring Integration Channel Adapters; examples include:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Spring <code class="literal">MockMVC</code> and its <code class="literal">MockRestServiceServer</code> for HTTP;
+</li><li class="listitem">
+Some RDBMS vendors provide embedded data bases for JDBC or JPA support;
+</li><li class="listitem">
+ActiveMQ can be embedded for testing JMS or STOMP protocols;
+</li><li class="listitem">
+There are tools for embedded MongoDB and Redis;
+</li><li class="listitem">
+Tomcat and Jetty have embedded libraries to test real HTTP, Web Services or WebSockets;
+</li><li class="listitem">
+The <code class="literal">FtpServer</code> and <code class="literal">SshServer</code> from the Apache Mina project can be used for testing (S)FTP protocols;
+</li><li class="listitem">
+Gemfire and Hazelcast can be run as real data grid nodes in the tests;
+</li><li class="listitem">
+The Curator Framework provides a <code class="literal">TestingServer</code> for Zookeeper interaction;
+</li><li class="listitem">
+Apache Kafka provides admin tools to embed a Kafka Broker in the tests.
+</li></ul></div>
+<p>Most of these tools and libraries are used in Spring Integration tests and from the GitHub <a class="ulink" href="https://github.com/spring-projects/spring-integration" target="_top">repository</a>, in the <code class="literal">test</code> directory of each module, you can discover ideas how to build your own tests for integration solutions.</p>
+<p>The rest of this chapter describes the testing tools and utilities provided by the Spring Integration Framework.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="testing-utilities" href="#testing-utilities"></a>F.2&nbsp;Testing Utilities</h2></div></div></div>
+
+<p>The <code class="literal">spring-integration-test-support</code> module provides utilities and helpers for unit testing.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_testutils" href="#_testutils"></a>F.2.1&nbsp;TestUtils</h3></div></div></div>
+
+<p>The <code class="literal">TestUtils</code> class is mostly used for properties assertions in JUnit tests:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> loadBalancerRef() {
+    MessageChannel channel = channels.get(<span class="hl-string">"lbRefChannel"</span>);
+    LoadBalancingStrategy lbStrategy = TestUtils.getPropertyValue(channel,
+                 <span class="hl-string">"dispatcher.loadBalancingStrategy"</span>, LoadBalancingStrategy.<span class="hl-keyword">class</span>);
+    assertTrue(lbStrategy <span class="hl-keyword">instanceof</span> SampleLoadBalancingStrategy);
+}</pre>
+<p><code class="literal">TestUtils.getPropertyValue()</code> is based on Spring&#8217;s <code class="literal">DirectFieldAccessor</code> and provides the ability to get a value from the target private property.
+As you see by the example above it also supports nested properties access, using dotted notation.</p>
+<p>The <code class="literal">createTestApplicationContext()</code> factory method produce a <code class="literal">TestApplicationContext</code> instance with the supplied Spring Integration environment.</p>
+<p>See the JavaDocs of other <code class="literal">TestUtils</code> methods for more information about this class.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_socketutils" href="#_socketutils"></a>F.2.2&nbsp;SocketUtils</h3></div></div></div>
+
+<p>The <code class="literal">SocketUtils</code> provides several methods to select a random port(s) for exposing server-side components without conflicts:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"socketUtils"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.test.util.SocketUtils"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-syslog:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"syslog"</span>
+            <span class="hl-attribute">channel</span>=<span class="hl-value">"sysLogs"</span>
+            <span class="hl-attribute">port</span>=<span class="hl-value">"#{socketUtils.findAvailableUdpSocket(1514)}"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sysLogs"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:queue/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+<p>Which is used from the unit test as:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Autowired</span></em> <em><span class="hl-annotation" style="color: gray">@Qualifier("syslog.adapter")</span></em>
+<span class="hl-keyword">private</span> UdpSyslogReceivingChannelAdapter adapter;
+
+<em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<span class="hl-keyword">private</span> PollableChannel sysLogs;
+...
+<em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> testSimplestUdp() <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-keyword">int</span> port = TestUtils.getPropertyValue(adapter1, <span class="hl-string">"udpAdapter.port"</span>, Integer.<span class="hl-keyword">class</span>);
+    <span class="hl-keyword">byte</span>[] buf = <span class="hl-string">"&lt;157&gt;JUL 26 22:08:35 WEBERN TESTING[70729]: TEST SYSLOG MESSAGE"</span>.getBytes(<span class="hl-string">"UTF-8"</span>);
+    DatagramPacket packet = <span class="hl-keyword">new</span> DatagramPacket(buf, buf.length,
+                              <span class="hl-keyword">new</span> InetSocketAddress(<span class="hl-string">"localhost"</span>, port));
+    DatagramSocket socket = <span class="hl-keyword">new</span> DatagramSocket();
+    socket.send(packet);
+    socket.close();
+    Message&lt;?&gt; message = foo.receive(<span class="hl-number">10000</span>);
+    assertNotNull(message);
+}</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>This tecnique is not foolproof; some other process could be allocated the "free" port before your test opens it.
+It is generally more preferable to use a server port <code class="literal">0</code> and let the operating system select the port for you, then discover the selected port in your test.
+We have converted most framework tests to use this preferred technique.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_onlyoncetrigger" href="#_onlyoncetrigger"></a>F.2.3&nbsp;OnlyOnceTrigger</h3></div></div></div>
+
+<p>The <code class="literal">OnlyOnceTrigger</code> is useful for polling endpoints when it is good to produce only one test message and verify the behavior without impacting of unexpected other period messages:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"testTrigger"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.test.util.OnlyOnceTrigger"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jpaPoller"</span> <span class="hl-attribute">trigger</span>=<span class="hl-value">"testTrigger"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:transactional</span> <span class="hl-attribute">transaction-manager</span>=<span class="hl-value">"transactionManager"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int:poller&gt;</span></pre>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<em><span class="hl-annotation" style="color: gray">@Qualifier("jpaPoller")</span></em>
+PollerMetadata poller;
+
+<em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+OnlyOnceTrigger testTrigger;
+...
+<em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<em><span class="hl-annotation" style="color: gray">@DirtiesContext</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> testWithEntityClass() <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-keyword">this</span>.testTrigger.reset();
+    ...
+    JpaPollingChannelAdapter jpaPollingChannelAdapter = <span class="hl-keyword">new</span> JpaPollingChannelAdapter(jpaExecutor);
+
+    SourcePollingChannelAdapter adapter = JpaTestUtils.getSourcePollingChannelAdapter(
+    		jpaPollingChannelAdapter, <span class="hl-keyword">this</span>.outputChannel, <span class="hl-keyword">this</span>.poller, <span class="hl-keyword">this</span>.context,
+    		<span class="hl-keyword">this</span>.getClass().getClassLoader());
+    adapter.start();
+    ...
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_support_components" href="#_support_components"></a>F.2.4&nbsp;Support Components</h3></div></div></div>
+
+<p>The <code class="literal">org.springframework.integration.test.support</code> package contains various abstract classes which should be implemented in target tests.
+See their JavaDocs for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_hamcrest_and_mockito_matchers" href="#_hamcrest_and_mockito_matchers"></a>F.2.5&nbsp;Hamcrest and Mockito Matchers</h3></div></div></div>
+
+<p>The <code class="literal">org.springframework.integration.test.matcher</code> package contains several <code class="literal">Matcher</code> implementations to assert <code class="literal">Message</code> and its properties in unit tests:</p>
+<pre class="programlisting"><span class="hl-keyword">import</span> <span class="hl-keyword">static</span> org.springframework.integration.test.matcher.PayloadMatcher.hasPayload;
+...
+<em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> transform_withFilePayload_convertedToByteArray() <span class="hl-keyword">throws</span> Exception {
+    Message&lt;?&gt; result = <span class="hl-keyword">this</span>.transformer.transform(message);
+    assertThat(result, is(notNullValue()));
+    assertThat(result, hasPayload(is(instanceOf(<span class="hl-keyword">byte</span>[].<span class="hl-keyword">class</span>))));
+    assertThat(result, hasPayload(SAMPLE_CONTENT.getBytes(DEFAULT_ENCODING)));
+}</pre>
+<p>The <code class="literal">MockitoMessageMatchers</code> factory can be used for mocks stubbing and verifications:</p>
+<pre class="programlisting"><span class="hl-keyword">static</span> <span class="hl-keyword">final</span> Date SOME_PAYLOAD = <span class="hl-keyword">new</span> Date();
+
+<span class="hl-keyword">static</span> <span class="hl-keyword">final</span> String SOME_HEADER_VALUE = <span class="hl-string">"bar"</span>;
+
+<span class="hl-keyword">static</span> <span class="hl-keyword">final</span> String SOME_HEADER_KEY = <span class="hl-string">"test.foo"</span>;
+...
+Message&lt;?&gt; message = MessageBuilder.withPayload(SOME_PAYLOAD)
+                .setHeader(SOME_HEADER_KEY, SOME_HEADER_VALUE)
+                .build();
+MessageHandler handler = mock(MessageHandler.<span class="hl-keyword">class</span>);
+handler.handleMessage(message);
+verify(handler).handleMessage(messageWithPayload(SOME_PAYLOAD));
+verify(handler).handleMessage(messageWithPayload(is(instanceOf(Date.<span class="hl-keyword">class</span>))));
+...
+MessageChannel channel = mock(MessageChannel.<span class="hl-keyword">class</span>);
+when(channel.send(messageWithHeaderEntry(SOME_HEADER_KEY, is(instanceOf(Short.<span class="hl-keyword">class</span>)))))
+        .thenReturn(true);
+assertThat(channel.send(message), is(false));</pre>
+<p>Additional utilities will eventually be added or migrated.
+For example <code class="literal">RemoteFileTestSupport</code> implementations for the (S)FTP tests can be moved from the <code class="literal">test</code> directory of those particular modules to this <code class="literal">spring-integration-test-support</code> artifact.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="test-context" href="#test-context"></a>F.3&nbsp;Spring Integration and test context</h2></div></div></div>
+
+<p>Typically, tests for Spring applications use the Spring Test Framework and since Spring Integration is based on the Spring Framework foundation, everything we can do with the Spring Test Framework is applied as well when testing integration flows.
+The <code class="literal">org.springframework.integration.test.context</code> package provides some components for enhancing the test context for integration needs.
+First of all we configure our test class with a <code class="literal">@SpringIntegrationTest</code> annotation to enable the Spring Integration Test Framework:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@RunWith(SpringRunner.class)</span></em>
+<em><span class="hl-annotation" style="color: gray">@SpringIntegrationTest(noAutoStartup = {"inboundChannelAdapter", "*Source*"})</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MyIntegrationTests {
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> MockIntegrationContext mockIntegrationContext;
+
+}</pre>
+<p>The <code class="literal">@SpringIntegrationTest</code> annotation populates a <code class="literal">MockIntegrationContext</code> bean which can be autowired to the test class to access its methods.
+With the provided <code class="literal">noAutoStartup</code> option, the Spring Integration Test Framework prevents endpoints that are normally <code class="literal">autoStartup=true</code> from starting. The endpoints are matched to the provided patterns, which support the following simple pattern styles: <code class="literal">xxx*</code>, <code class="literal">*xxx</code>, <code class="literal">*xxx*</code> and <code class="literal">xxx*yyy</code>.</p>
+<p>This is useful, when we would like to not have real connections to the target systems from Inbound Channel Adapters, for example an AMQP Inbound Gateway, JDBC Polling Channel Adapter, WebSocket Message Producer in client mode etc.</p>
+<p>The <code class="literal">MockIntegrationContext</code> is aimed to be used in the target test-cases for modifications to beans in the real application context, for example those endpoints that have <code class="literal">autoStartup</code> overridden to false can be replaced with mocks:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> testMockMessageSource() {
+    MessageSource&lt;String&gt; messageSource = () -&gt; <span class="hl-keyword">new</span> GenericMessage&lt;&gt;(<span class="hl-string">"foo"</span>);
+
+    <span class="hl-keyword">this</span>.mockIntegrationContext.substituteMessageSourceFor(<span class="hl-string">"mySourceEndpoint"</span>, messageSource);
+
+    Message&lt;?&gt; receive = <span class="hl-keyword">this</span>.results.receive(<span class="hl-number">10</span>_<span class="hl-number">000</span>);
+    assertNotNull(receive);
+}</pre>
+<p>See their JavaDocs for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="testing-mocks" href="#testing-mocks"></a>F.4&nbsp;Integration Mocks</h2></div></div></div>
+
+<p>The <code class="literal">org.springframework.integration.test.mock</code> package offers tools and utilities for mocking, stubbing and verification of activity on Spring Integration components.
+The mocking functionality is fully based and compatible with the well known Mockito Framework.
+(The current Mockito transitive dependency is of <span class="emphasis"><em>version 2.5.x</em></span>.)</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_mockintegration" href="#_mockintegration"></a>F.4.1&nbsp;MockIntegration</h3></div></div></div>
+
+<p>The <code class="literal">MockIntegration</code> factory provides an API to build mocks for Spring Integration beans which are parts of the integration flow - <code class="literal">MessageSource</code>, <code class="literal">MessageProducer</code>, <code class="literal">MessageHandler</code>, <code class="literal">MessageChannel</code>.
+The target mocks can be used during configuration phase:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inboundChannelAdapter"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"results"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.test.mock.MockIntegration"</span> <span class="hl-attribute">factory-method</span>=<span class="hl-value">"mockMessageSource"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"a"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg&gt;</span>
+            <span class="hl-tag">&lt;array&gt;</span>
+                <span class="hl-tag">&lt;value&gt;</span>b<span class="hl-tag">&lt;/value&gt;</span>
+                <span class="hl-tag">&lt;value&gt;</span>c<span class="hl-tag">&lt;/value&gt;</span>
+            <span class="hl-tag">&lt;/array&gt;</span>
+        <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+    <span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/int:inbound-channel-adapter&gt;</span></pre>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter(channel = "results")</span></em>
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MessageSource&lt;Integer&gt; testingMessageSource() {
+    <span class="hl-keyword">return</span> MockIntegration.mockMessageSource(<span class="hl-number">1</span>, <span class="hl-number">2</span>, <span class="hl-number">3</span>);
+}
+...
+StandardIntegrationFlow flow = IntegrationFlows
+        .from(MockIntegration.mockMessageSource(<span class="hl-string">"foo"</span>, <span class="hl-string">"bar"</span>, <span class="hl-string">"baz"</span>))
+        .&lt;String, String&gt;transform(String::toUpperCase)
+        .channel(out)
+        .get();
+IntegrationFlowRegistration registration = <span class="hl-keyword">this</span>.integrationFlowContext.registration(flow)
+        .register();</pre>
+<p>as well as in the target test method to replace the real endpoints before performing verifications and assertions.
+For this purpose, the aforementioned <code class="literal">MockIntegrationContext</code> should be used from the test:</p>
+<pre class="programlisting"><span class="hl-keyword">this</span>.mockIntegrationContext.substituteMessageSourceFor(<span class="hl-string">"mySourceEndpoint"</span>,
+        MockIntegration.mockMessageSource(<span class="hl-string">"foo"</span>, <span class="hl-string">"bar"</span>, <span class="hl-string">"baz"</span>));
+Message&lt;?&gt; receive = <span class="hl-keyword">this</span>.results.receive(<span class="hl-number">10</span>_<span class="hl-number">000</span>);
+assertNotNull(receive);
+assertEquals(<span class="hl-string">"FOO"</span>, receive.getPayload());</pre>
+<p>Unlike the Mockito <code class="literal">MessageSource</code> mock object, the <code class="literal">MockMessageHandler</code> is just a regular <code class="literal">AbstractMessageProducingHandler</code> extension with a chain API to stub handling for incoming messages.
+The <code class="literal">MockMessageHandler</code> provides <code class="literal">handleNext(Consumer&lt;Message&lt;?&gt;&gt;)</code> to specify a one-way stub for the next request message; used to mock message handlers that don&#8217;t produce replies.
+The <code class="literal">handleNextAndReply(Function&lt;Message&lt;?&gt;, ?&gt;)</code> is provided for performing the same stub logic for the next request message and producing a reply for it.
+They can be chained to simulate any arbitrary request-reply scenarios for all expected request messages variants.
+These consumers and functions are applied to the incoming messages, one at a time from the stack, until the last, which is then used for all remaining messages.
+The behavior is similar to the Mockito <code class="literal">Answer</code> or <code class="literal">doReturn()</code> API.</p>
+<p>In addition, a Mockito <code class="literal">ArgumentCaptor&lt;Message&lt;?&gt;&gt;</code> can be supplied to the <code class="literal">MockMessageHandler</code> in a constructor argument.
+Each request message for the <code class="literal">MockMessageHandler</code> is captured by that <code class="literal">ArgumentCaptor</code>.
+During the test, its <code class="literal">getValue()/getAllValues()</code> can be used to verify and assert those request messages.</p>
+<p>The <code class="literal">MockIntegrationContext</code> provides an <code class="literal">substituteMessageHandlerFor()</code> API for replacing the actual configured <code class="literal">MessageHandler</code> with a <code class="literal">MockMessageHandler</code>, in the particular endpoint in the application context under test.</p>
+<p>A typical usage might be:</p>
+<pre class="programlisting">ArgumentCaptor&lt;Message&lt;?&gt;&gt; messageArgumentCaptor = ArgumentCaptor.forClass(Message.<span class="hl-keyword">class</span>);
+
+MessageHandler mockMessageHandler =
+        mockMessageHandler(messageArgumentCaptor)
+                .handleNextAndReply(m -&gt; m.getPayload().toString().toUpperCase());
+
+<span class="hl-keyword">this</span>.mockIntegrationContext.substituteMessageHandlerFor(<span class="hl-string">"myService.serviceActivator"</span>,
+                               mockMessageHandler);
+GenericMessage&lt;String&gt; message = <span class="hl-keyword">new</span> GenericMessage&lt;&gt;(<span class="hl-string">"foo"</span>);
+<span class="hl-keyword">this</span>.myChannel.send(message);
+Message&lt;?&gt; received = <span class="hl-keyword">this</span>.results.receive(<span class="hl-number">10000</span>);
+assertNotNull(received);
+assertEquals(<span class="hl-string">"FOO"</span>, received.getPayload());
+assertSame(message, messageArgumentCaptor.getValue());</pre>
+<p>See <code class="literal">MockIntegration</code> and <code class="literal">MockMessageHandler</code> JavaDocs for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="testing-other-resources" href="#testing-other-resources"></a>F.5&nbsp;Other Resources</h2></div></div></div>
+
+<p>As well as exploring the test cases in the framework itself, the <a class="ulink" href="https://github.com/spring-projects/spring-integration-samples" target="_top">spring-integration-samples repository</a> has some sample apps specifically around testing, such as <code class="literal">testing-examples</code> and <code class="literal">advanced-testing-examples</code>.
+In some cases, the samples themselves have comprehensive end-to-end tests, such as the <code class="literal">file-split-ftp</code> sample.</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="configuration.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-appendices.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="samples.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Appendix&nbsp;E.&nbsp;Configuration&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Appendix&nbsp;G.&nbsp;Spring Integration Samples</td></tr></table></div></body></html>

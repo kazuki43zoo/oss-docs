@@ -1,0 +1,265 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>24.&nbsp;MQTT Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="mongodb.html" title="23.&nbsp;MongoDb Support"><link rel="next" href="redis.html" title="25.&nbsp;Redis Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">24.&nbsp;MQTT Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="mongodb.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="redis.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="mqtt" href="#mqtt"></a>24.&nbsp;MQTT Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="mqtt-intro" href="#mqtt-intro"></a>24.1&nbsp;Introduction</h2></div></div></div>
+
+<p>Spring Integration provides inbound and outbound channel adapters supporting the MQ Telemetry Transport (MQTT) protocol.
+The current implementation uses the <a class="ulink" href="http://www.eclipse.org/paho/" target="_top">Eclipse Paho MQTT Client</a> library.</p>
+<p>Configuration of both adapters is achieved using the <code class="literal">DefaultMqttPahoClientFactory</code>.
+Refer to the Paho documentation for more information about configuration options.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>It is preferred to configure an <code class="literal">MqttConnectOptions</code> object and inject it into the factory, instead of setting the (deprecated) options on the factory itself.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="mqtt-inbound" href="#mqtt-inbound"></a>24.2&nbsp;Inbound (message-driven) Channel Adapter</h2></div></div></div>
+
+<p>The inbound channel adapter is implemented by the <code class="literal">MqttPahoMessageDrivenChannelAdapter</code>.
+For convenience, it can be configured using the namespace.
+A minimal configuration might be:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"clientFactory"</span>
+        <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"connectionOptions"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.eclipse.paho.client.mqttv3.MqttConnectOptions"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"userName"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${mqtt.username}"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"password"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${mqtt.password}"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;int-mqtt:message-driven-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"mqttInbound"</span>
+    <span class="hl-attribute">client-id</span>=<span class="hl-value">"${mqtt.default.client.id}.src"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"${mqtt.url}"</span>
+    <span class="hl-attribute">topics</span>=<span class="hl-value">"sometopic"</span>
+    <span class="hl-attribute">client-factory</span>=<span class="hl-value">"clientFactory"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Attributes:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-mqtt:message-driven-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"oneTopicAdapter"</span>
+    <span class="hl-attribute">client-id</span>=<span class="hl-value">"foo"</span>  <a name="CO40-1" href="#CO40-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    url="tcp://localhost:1883"  <a name="CO40-2" href="#CO40-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    topics="bar,baz"  <a name="CO40-3" href="#CO40-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    qos="1,2"  <a name="CO40-4" href="#CO40-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    converter="myConverter"  <a name="CO40-5" href="#CO40-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    client-factory="clientFactory"  <a name="CO40-6" href="#CO40-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+    send-timeout="123"  <a name="CO40-7" href="#CO40-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+    error-channel="errors"  <a name="CO40-8" href="#CO40-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+    recovery-interval="10000"  <a name="CO40-9" href="#CO40-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+    channel="out" /&gt;</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The client id.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The broker URL.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A comma delimited list of topics from which this adapter will receive messages.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A comma delimited list of QoS values.
+Can be a single value that is applied to all topics, or a value for each topic (in which case the lists must the same length).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An <code class="literal">MqttMessageConverter</code> (optional).
+The default <code class="literal">DefaultPahoMessageConverter</code> produces a message with a <code class="literal">String</code> payload (by default) with the following headers:
+<code class="literal">mqtt_topic</code> - the topic from which the message was received
+<code class="literal">mqtt_duplicate</code> - true if the message is a duplicate
+<code class="literal">mqtt_qos</code> - the quality of service
+The <code class="literal">DefaultPahoMessageConverter</code> can be configured to return the raw <code class="literal">byte[]</code> in the payload by declaring it as a <code class="literal">&lt;bean/&gt;</code> and setting the <code class="literal">payloadAsBytes</code> property.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The client factory.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The send timeout - only applies if the channel might block (such as a bounded <code class="literal">QueueChannel</code> that is currently full).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The error channel - downstream exceptions will be sent to this channel, if supplied, in an <code class="literal">ErrorMessage</code>; the payload is a <code class="literal">MessagingException</code> containing the failed message and cause.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The recovery interval - controls the interval at which the adapter will attempt to reconnect after
+a failure; it defaults to <code class="literal">10000ms</code> (ten seconds).</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Starting with <span class="emphasis"><em>version 4.1</em></span> the url can be omitted and, instead, the server URIs can be provided in the <code class="literal">serverURIs</code> property of the <code class="literal">DefaultMqttPahoClientFactory</code>.
+This enables, for example, connection to a highly available (HA) cluster.</p>
+</td></tr></table></div>
+<p>Starting with <span class="emphasis"><em>version 4.2.2</em></span>, an <code class="literal">MqttSubscribedEvent</code> is published when the adapter successfully subscribes to the
+topic(s).
+<code class="literal">MqttConnectionFailedEvent</code> s are published when the connection/subscription fails.
+These events can be received by a bean that implements <code class="literal">ApplicationListener</code>.</p>
+<p>Also, a new property <code class="literal">recoveryInterval</code> controls the interval at which the adapter will attempt to reconnect after
+a failure; it defaults to <code class="literal">10000ms</code> (ten seconds).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Prior to <span class="emphasis"><em>version 4.2.3</em></span>, the client always unsubscribed when the adapter was stopped.
+This was incorrect because if the client QOS is &gt; 0, we need to keep the subscription active so that messages arriving
+while the adapter is stopped will be delivered on the next start.
+This also requires setting the <code class="literal">cleanSession</code> property on the client factory to <code class="literal">false</code> - it defaults to <code class="literal">true</code>.</p>
+<p>Starting with <span class="emphasis"><em>version 4.2.3</em></span>, the adapter will not unsubscribe (by default) if the <code class="literal">cleanSession</code> property is <code class="literal">false</code>.</p>
+<p>This behavior can be overridden by setting the <code class="literal">consumerCloseAction</code> property on the factory.
+It can have values: <code class="literal">UNSUBSCRIBE_ALWAYS</code>, <code class="literal">UNSUBSCRIBE_NEVER</code>, and <code class="literal">UNSUBSCRIBE_CLEAN</code>.
+The latter (the default) will unsubscribe only if the <code class="literal">cleanSession</code> property is <code class="literal">true</code>.</p>
+<p>To revert to the pre-4.2.3 behavior, use <code class="literal">UNSUBSCRIBE_ALWAYS</code>.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span>, the <code class="literal">topic</code>, <code class="literal">qos</code> and <code class="literal">retained</code> properties are mapped to <code class="literal">.RECEIVED_...</code> headers (<code class="literal">MqttHeaders.RECEIVED_TOPIC</code>, <code class="literal">MqttHeaders.RECEIVED_QOS</code>, and <code class="literal">MqttHeaders.RECEIVED_RETAINED</code>), to avoid inadvertent propagation to an outbound message which (by default) uses the <code class="literal">MqttHeaders.TOPIC</code>, <code class="literal">MqttHeaders.QOS</code>, and <code class="literal">MqttHeaders.RETAINED</code> headers.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_adding_removing_topics_at_runtime" href="#_adding_removing_topics_at_runtime"></a>24.2.1&nbsp;Adding/Removing Topics at Runtime</h3></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.1</em></span>, it is possible to programmatically change the topics to which the adapter is subscribed.
+Methods <code class="literal">addTopic()</code> and <code class="literal">removeTopic()</code> are provided.
+When adding topics, you can optionally specify the <code class="literal">QoS</code> (default: 1).
+You can also modify the topics by sending an appropriate message to a <code class="literal">&lt;control-bus/&gt;</code> with an appropriate payload: <code class="literal">"myMqttAdapter.addTopic('foo', 1)"</code>.</p>
+<p>Stopping/starting the adapter has no effect on the topic list (it does <span class="strong"><strong>not</strong></span> revert to the original settings in the configuration).
+The changes are not retained beyond the life cycle of the application context; a new application context will revert to the configured settings.</p>
+<p>Changing the topics while the adapter is stopped (or disconnected from the broker) will take effect the next time a connection is established.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_20" href="#_configuring_with_java_configuration_20"></a>24.2.2&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using Java configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MqttJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(MqttJavaApplication.<span class="hl-keyword">class</span>)
+                .web(false)
+                .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel mqttInputChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageProducer inbound() {
+        MqttPahoMessageDrivenChannelAdapter adapter =
+                <span class="hl-keyword">new</span> MqttPahoMessageDrivenChannelAdapter(<span class="hl-string">"tcp://localhost:1883"</span>, <span class="hl-string">"testClient"</span>,
+                                                 <span class="hl-string">"topic1"</span>, <span class="hl-string">"topic2"</span>);
+        adapter.setCompletionTimeout(<span class="hl-number">5000</span>);
+        adapter.setConverter(<span class="hl-keyword">new</span> DefaultPahoMessageConverter());
+        adapter.setQos(<span class="hl-number">1</span>);
+        adapter.setOutputChannel(mqttInputChannel());
+        <span class="hl-keyword">return</span> adapter;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "mqttInputChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler handler() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> MessageHandler() {
+
+            <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+            <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> handleMessage(Message&lt;?&gt; message) <span class="hl-keyword">throws</span> MessagingException {
+                System.out.println(message.getPayload());
+            }
+
+        };
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="mqtt-outbound" href="#mqtt-outbound"></a>24.3&nbsp;Outbound Channel Adapter</h2></div></div></div>
+
+<p>The outbound channel adapter is implemented by the <code class="literal">MqttPahoMessageHandler</code> which is wrapped in a <code class="literal">ConsumerEndpoint</code>.
+For convenience, it can be configured using the namespace.</p>
+<p>Starting with <span class="emphasis"><em>version 4.1</em></span>, the adapter supports asynchronous sends, avoiding blocking until the delivery is confirmed; application events can be emitted to enable applications to confirm delivery if desired.</p>
+<p>Attributes:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-mqtt:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"withConverter"</span>
+    <span class="hl-attribute">client-id</span>=<span class="hl-value">"foo"</span>  <a name="CO41-1" href="#CO41-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    url="tcp://localhost:1883"  <a name="CO41-2" href="#CO41-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    converter="myConverter"  <a name="CO41-3" href="#CO41-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    client-factory="clientFactory"  <a name="CO41-4" href="#CO41-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    default-qos="1"  <a name="CO41-5" href="#CO41-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    qos-expression="" <a name="CO41-6" href="#CO41-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+    default-retained="true"  <a name="CO41-7" href="#CO41-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+    retained-expression="" <a name="CO41-8" href="#CO41-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+    default-topic="bar"  <a name="CO41-9" href="#CO41-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+    topic-expression="" <a name="CO41-10" href="#CO41-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+    async="false"  <a name="CO41-11" href="#CO41-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+    async-events="false"  <a name="CO41-12" href="#CO41-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+    channel="target" /&gt;</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The client id.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The broker URL.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An <code class="literal">MqttMessageConverter</code> (optional).
+The default <code class="literal">DefaultPahoMessageConverter</code> recognizes the following headers:
+<code class="literal">mqtt_topic</code> - the topic to which the message will be sent
+<code class="literal">mqtt_retained</code> - true if the message is to be retained
+<code class="literal">mqtt_qos</code> - the quality of service</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The client factory.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The default quality of service (used if no <code class="literal">mqtt_qos</code> header is found or the <code class="literal">qos-expression</code> returns <code class="literal">null</code>.
+Not used if a custom <code class="literal">converter</code> is supplied.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An expression to evaluate to determine the qos; default <code class="literal">headers[mqtt_qos]</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The default value of the retained flag (used if no <code class="literal">mqtt_retained</code> header is found).
+Not used if a custom <code class="literal">converter</code> is supplied.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An expression to evaluate to determine the retained boolean; default <code class="literal">headers[mqtt_retained]</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The default topic to which the message will be sent (used if no <code class="literal">mqtt_topic</code> header is found).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An expression to evaluate to determine the destination topic; default <code class="literal">headers['topic']</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When <code class="literal">true</code>, the caller will not block waiting for delivery confirmation when a message is sent.
+Default:false (the send blocks until delivery is confirmed).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When <code class="literal">async</code> and <code class="literal">async-events</code> are both <code class="literal">true</code>, an <code class="literal">MqttMessageSentEvent</code> is emitted, containing the message, the topic, the <code class="literal">messageId</code> generated by the client library, the <code class="literal">clientId</code> and the <code class="literal">clientInstance</code> (incremented each time the client is connected).
+When the delivery is confirmed by the client library, an <code class="literal">MqttMessageDeliveredEvent</code> is emitted, containing the the <code class="literal">messageId</code>, <code class="literal">clientId</code> and the <code class="literal">clientInstance</code>, enabling delivery to be correlated with the send.
+These events can be received by any <code class="literal">ApplicationListener</code>, or by an event inbound channel adapter.
+Note that it is possible that the <code class="literal">MqttMessageDeliveredEvent</code> might be received before the <code class="literal">MqttMessageSentEvent</code>.
+Default: <code class="literal">false</code>.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Starting with <span class="emphasis"><em>version 4.1</em></span> the url can be omitted and, instead, the server URIs can be provided in the <code class="literal">serverURIs</code> property of the <code class="literal">DefaultMqttPahoClientFactory</code>.
+This enables, for example, connection to a highly available (HA) cluster.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_21" href="#_configuring_with_java_configuration_21"></a>24.3.1&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the outbound adapter using Java configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MqttJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        ConfigurableApplicationContext context =
+                <span class="hl-keyword">new</span> SpringApplicationBuilder(MqttJavaApplication.<span class="hl-keyword">class</span>)
+                        .web(false)
+                        .run(args);
+        MyGateway gateway = context.getBean(MyGateway.<span class="hl-keyword">class</span>);
+        gateway.sendToMqtt(<span class="hl-string">"foo"</span>);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MqttPahoClientFactory mqttClientFactory() {
+        DefaultMqttPahoClientFactory factory = <span class="hl-keyword">new</span> DefaultMqttPahoClientFactory();
+        MqttConnectOptions options = <span class="hl-keyword">new</span> MqttConnectOptions();
+        options.setServerURIs(<span class="hl-keyword">new</span> String[] { <span class="hl-string">"tcp://host1:1883"</span>, <span class="hl-string">"tcp://host2:1883"</span> });
+        options.setUserName(<span class="hl-string">"username"</span>);
+        options.setPassword(<span class="hl-string">"password"</span>.toCharArray());
+        factory.setConnectionOptions(options);
+        <span class="hl-keyword">return</span> factory;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "mqttOutboundChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler mqttOutbound() {
+        MqttPahoMessageHandler messageHandler =
+                       <span class="hl-keyword">new</span> MqttPahoMessageHandler(<span class="hl-string">"testClient"</span>, mqttClientFactory());
+        messageHandler.setAsync(true);
+        messageHandler.setDefaultTopic(<span class="hl-string">"testTopic"</span>);
+        <span class="hl-keyword">return</span> messageHandler;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel mqttOutboundChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway(defaultRequestChannel = "mqttOutboundChannel")</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MyGateway {
+
+        <span class="hl-keyword">void</span> sendToMqtt(String data);
+
+    }
+
+}</pre>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="mongodb.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="redis.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">23.&nbsp;MongoDb Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;25.&nbsp;Redis Support</td></tr></table></div></body></html>

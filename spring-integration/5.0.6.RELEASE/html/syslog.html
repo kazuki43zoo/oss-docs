@@ -1,0 +1,92 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>31.&nbsp;Syslog Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="stream.html" title="30.&nbsp;Stream Support"><link rel="next" href="ip.html" title="32.&nbsp;TCP and UDP Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">31.&nbsp;Syslog Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="stream.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ip.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="syslog" href="#syslog"></a>31.&nbsp;Syslog Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="syslog-intro" href="#syslog-intro"></a>31.1&nbsp;Introduction</h2></div></div></div>
+
+<p>Spring Integration 2.2 introduced the Syslog transformer <code class="literal">SyslogToMapTransformer</code>.
+This transformer, together with a <code class="literal">UDP</code> or <code class="literal">TCP</code> inbound adapter could be used to receive and analyze syslog records from other hosts.
+The transformer creates a message payload containing a map of the elements from the syslog message.</p>
+<p>Spring Integration 3.0 introduced convenient namespace support for configuring a Syslog inbound adapter in a single element.</p>
+<p>Starting with <span class="emphasis"><em>version 4.1.1</em></span>, the framework now supports the extended Syslog format, as specified in <a class="ulink" href="https://tools.ietf.org/html/rfc5424" target="_top">RFC 5424&gt;</a>.
+In addition, when using TCP and RFC5424, both <code class="literal">octet counting</code> and <code class="literal">non-transparent framing</code> described in <a class="ulink" href="https://tools.ietf.org/html/rfc6587" target="_top">RFC 6587</a> are supported.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="syslog-inbound-adapter" href="#syslog-inbound-adapter"></a>31.2&nbsp;Syslog &lt;inbound-channel-adapter&gt;</h2></div></div></div>
+
+<p>This element encompasses a <code class="literal">UDP</code> or <code class="literal">TCP</code> inbound channel adapter and a <code class="literal">MessageConverter</code> to convert the Syslog message to a Spring Integration message.
+The <code class="literal">DefaultMessageConverter</code> delegates to the <code class="literal">SyslogToMapTransformer</code>, creating a message with its payload being the <code class="literal">Map</code> of Syslog fields.
+In addition, all fields except the message are also made available as headers in the message, prefixed with <code class="literal">syslog_</code>.
+In this mode, only <a class="ulink" href="https://tools.ietf.org/html/rfc3164" target="_top">RFC 3164</a> (BSD) syslogs are supported.</p>
+<p>Since <span class="emphasis"><em>version 4.1</em></span>, the <code class="literal">DefaultMessageConverter</code> has a property <code class="literal">asMap</code> (default <code class="literal">true</code>); when it is <code class="literal">false</code>, the converter will leave the message payload as the original complete syslog message, in a <code class="literal">byte[]</code>, while still setting the headers.</p>
+<p>Since <span class="emphasis"><em>version 4.1.1</em></span>, RFC 5424 is also supported, using the <code class="literal">RFC5424MessageConverter</code>; in this case the fields are not copied as headers, unless <code class="literal">asMap</code> is set to <code class="literal">false</code>, in which case the original message is the payload and the decoded fields are headers.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>To use RFC 5424 with a TCP transport, additional configuration is required, to enable the different framing techniques described in RFC 6587.
+The adapter needs a TCP connection factory configured with a <code class="literal">RFC6587SyslogDeserializer</code>.
+By default, this deserializer will handle <code class="literal">octet counting</code> and <code class="literal">non-transparent framing</code>, using a linefeed (LF) to delimit syslog messages; it uses a <code class="literal">ByteArrayLfSerializer</code> when <code class="literal">octet counting</code> is not detected.
+To use different <code class="literal">non-transparent</code> framing, you can provide it with some other deserializer.
+While the deserializer can support both <code class="literal">octet counting</code> and <code class="literal">non-transparent framing</code>, only one form of the latter is supported.
+If <code class="literal">asMap</code> is <code class="literal">false</code> on the converter, you must set the <code class="literal">retainOriginal</code> constructor argument in the <code class="literal">RFC6587SyslogDeserializer</code>.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="syslog-inbound-examplers" href="#syslog-inbound-examplers"></a>31.2.1&nbsp;Example Configuration</h3></div></div></div>
+
+<pre class="programlisting"><span class="hl-tag">&lt;int-syslog:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"syslogIn"</span> <span class="hl-attribute">port</span>=<span class="hl-value">"1514"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>A <code class="literal">UDP</code> adapter that sends messages to channel <code class="literal">syslogIn</code> (the adapter bean name is <code class="literal">syslogIn.adapter</code>).
+The adapter listens on port <code class="literal">1514</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-syslog:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"syslogIn"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"fromSyslog"</span> <span class="hl-attribute">port</span>=<span class="hl-value">"1514"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>A <code class="literal">UDP</code> adapter that sends message to channel <code class="literal">fromSyslog</code> (the adapter bean name is <code class="literal">syslogIn</code>).
+The adapter listens on port <code class="literal">1514</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-syslog:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"bar"</span> <span class="hl-attribute">protocol</span>=<span class="hl-value">"tcp"</span> <span class="hl-attribute">port</span>=<span class="hl-value">"1514"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>A <code class="literal">TCP</code> adapter that sends messages to channel <code class="literal">syslogIn</code> (the adapter bean name is <code class="literal">syslogIn.adapter</code>).
+The adapter listens on port <code class="literal">1514</code>.</p>
+<p>Note the addition of the <code class="literal">protocol</code> attribute.
+This attribute can contain <code class="literal">udp</code> or <code class="literal">tcp</code>; it defaults to <code class="literal">udp</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-syslog:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"udpSyslog"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"fromSyslog"</span>
+	<span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span>
+	<span class="hl-attribute">phase</span>=<span class="hl-value">"10000"</span>
+	<span class="hl-attribute">converter</span>=<span class="hl-value">"converter"</span>
+	<span class="hl-attribute">send-timeout</span>=<span class="hl-value">"1000"</span>
+	<span class="hl-attribute">error-channel</span>=<span class="hl-value">"errors"</span><span class="hl-tag">&gt;</span>
+		<span class="hl-tag">&lt;int-syslog:udp-attributes</span> <span class="hl-attribute">port</span>=<span class="hl-value">"1514"</span> <span class="hl-attribute">lookup-host</span>=<span class="hl-value">"false"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int-syslog:inbound-channel-adapter&gt;</span></pre>
+<p>A <code class="literal">UDP</code> adapter that sends messages to channel <code class="literal">fromSyslog</code>.
+It also shows the <code class="literal">SmartLifecycle</code> attributes <code class="literal">auto-startup</code> and <code class="literal">phase</code>.
+It has a reference to a custom <code class="literal">org.springframework.integration.syslog.MessageConverter</code> with id <code class="literal">converter</code> and an <code class="literal">error-channel</code>.
+Also notice the <code class="literal">udp-attributes</code> child element.
+You can set various UDP attributes here, as defined in <a class="xref" href="ip.html#ip-udp-ib-atts" title="Table&nbsp;32.2.&nbsp;UDP Inbound Channel Adapter Attributes">Table&nbsp;32.2, &#8220;UDP Inbound Channel Adapter Attributes&#8221;</a>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When using the <code class="literal">udp-attributes</code> element, the <code class="literal">port</code> attribute must be provided there rather than on the <code class="literal">inbound-channel-adapter</code> element itself.</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;int-syslog:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"TcpSyslog"</span>
+	<span class="hl-attribute">protocol</span>=<span class="hl-value">"tcp"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"fromSyslog"</span>
+	<span class="hl-attribute">connection-factory</span>=<span class="hl-value">"cf"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"cf"</span> <span class="hl-attribute">type</span>=<span class="hl-value">"server"</span> <span class="hl-attribute">port</span>=<span class="hl-value">"1514"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>A <code class="literal">TCP</code> adapter that sends messages to channel <code class="literal">fromSyslog</code>.
+It also shows how to reference an externally defined connection factory, which can be used for advanced configuration (socket keep alive etc).
+For more information, see <a class="xref" href="ip.html#tcp-connection-factories" title="32.3&nbsp;TCP Connection Factories">Section&nbsp;32.3, &#8220;TCP Connection Factories&#8221;</a>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The externally configured <code class="literal">connection-factory</code> must be of type <code class="literal">server</code> and, the port is defined there rather than on the <code class="literal">inbound-channel-adapter</code> element itself.</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;int-syslog:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"rfc5424Tcp"</span>
+	<span class="hl-attribute">protocol</span>=<span class="hl-value">"tcp"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"fromSyslog"</span>
+	<span class="hl-attribute">connection-factory</span>=<span class="hl-value">"cf"</span>
+	<span class="hl-attribute">converter</span>=<span class="hl-value">"rfc5424"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"cf"</span>
+	<span class="hl-attribute">using-nio</span>=<span class="hl-value">"true"</span>
+	<span class="hl-attribute">type</span>=<span class="hl-value">"server"</span>
+	<span class="hl-attribute">port</span>=<span class="hl-value">"1514"</span>
+	<span class="hl-attribute">deserializer</span>=<span class="hl-value">"rfc6587"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"rfc5424"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.syslog.RFC5424MessageConverter"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"rfc6587"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.syslog.inbound.RFC6587SyslogDeserializer"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>A <code class="literal">TCP</code> adapter that sends messages to channel <code class="literal">fromSyslog</code>.
+It is configured to use the <code class="literal">RFC 5424</code> converter and is configured with a reference to an externally defined connection factory with the <code class="literal">RFC 6587</code> deserializer (required for RFC 5424).</p>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="stream.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ip.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">30.&nbsp;Stream Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;32.&nbsp;TCP and UDP Support</td></tr></table></div></body></html>

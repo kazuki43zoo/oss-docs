@@ -1,0 +1,86 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>14.&nbsp;Feed Adapter</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="applicationevent.html" title="13.&nbsp;Spring ApplicationEvent Support"><link rel="next" href="files.html" title="15.&nbsp;File Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">14.&nbsp;Feed Adapter</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="applicationevent.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="files.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="feed" href="#feed"></a>14.&nbsp;Feed Adapter</h2></div></div></div>
+
+<p>Spring Integration provides support for Syndication via Feed Adapters.
+The implementation is based on the <a class="ulink" href="https://rometools.github.io/rome/" target="_top">ROME Framework</a>.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="feed-intro" href="#feed-intro"></a>14.1&nbsp;Introduction</h2></div></div></div>
+
+<p>Web syndication is a form of publishing material such as news stories, press releases, blog posts, and other items typically available on a website but also made available in a feed format such as RSS or ATOM.</p>
+<p>Spring integration provides support for Web Syndication via its <span class="emphasis"><em>feed</em></span> adapter and provides convenient namespace-based configuration for it.
+To configure the <span class="emphasis"><em>feed</em></span> namespace, include the following elements within the headers of your XML configuration file:</p>
+<pre class="programlisting">xmlns:int-feed="http://www.springframework.org/schema/integration/feed"
+xsi:schemaLocation="http://www.springframework.org/schema/integration/feed
+	http://www.springframework.org/schema/integration/feed/spring-integration-feed.xsd"</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="feed-inbound-channel-adapter" href="#feed-inbound-channel-adapter"></a>14.2&nbsp;Feed Inbound Channel Adapter</h2></div></div></div>
+
+<p>The only adapter that is really needed to provide support for retrieving feeds is an <span class="emphasis"><em>inbound channel adapter</em></span>.
+This allows you to subscribe to a particular URL.
+Below is an example configuration:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-feed:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"feedAdapter"</span>
+        <span class="hl-attribute">channel</span>=<span class="hl-value">"feedChannel"</span>
+        <span class="hl-attribute">url</span>=<span class="hl-value">"http://feeds.bbci.co.uk/news/rss.xml"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"10000"</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"100"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int-feed:inbound-channel-adapter&gt;</span></pre>
+<p>In the above configuration, we are subscribing to a URL identified by the <code class="literal">url</code> attribute.</p>
+<p>As news items are retrieved they will be converted to Messages and sent to a channel identified by the <code class="literal">channel</code> attribute.
+The payload of each message will be a <code class="literal">com.sun.syndication.feed.synd.SyndEntry</code> instance.
+That encapsulates various data about a news item (content, dates, authors, etc.).</p>
+<p>You can also see that the <span class="emphasis"><em>Inbound Feed Channel Adapter</em></span> is a Polling Consumer.
+That means you have to provide a poller configuration.
+However, one important thing you must understand with regard to Feeds is that its inner-workings are slightly different then most other poling consumers.
+When an Inbound Feed adapter is started, it does the first poll and receives a <code class="literal">com.sun.syndication.feed.synd.SyndEntryFeed</code> instance.
+That is an object that contains multiple <code class="literal">SyndEntry</code> objects.
+Each entry is stored in the local entry queue and is released based on the value in the <code class="literal">max-messages-per-poll</code> attribute such that each Message will contain a single entry.
+If during retrieval of the entries from the entry queue the queue had become empty, the adapter will attempt to update the Feed thereby populating the queue with more entries (<code class="literal">SyndEntry</code> instances) if available.
+Otherwise the next attempt to poll for a feed will be determined by the trigger of the poller (e.g., every 10 seconds in the above configuration).</p>
+<p><span class="emphasis"><em>Duplicate Entries</em></span></p>
+<p>Polling for a Feed might result in entries that have already been processed ("I already read that news item, why are you showing it to me again?").
+Spring Integration provides a convenient mechanism to eliminate the need to worry about duplicate entries.
+Each feed entry will have a <span class="emphasis"><em>published date</em></span> field.
+Every time a new <code class="literal">Message</code> is generated and sent, Spring Integration will store the value of the latest <span class="emphasis"><em>published date</em></span> in an instance of the <code class="literal">MetadataStore</code> strategy (<a class="xref" href="system-management-chapter.html#metadata-store" title="10.5&nbsp;Metadata Store">Section&nbsp;10.5, &#8220;Metadata Store&#8221;</a>).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The key used to persist the latest <span class="emphasis"><em>published date</em></span> is the value of the (required) <code class="literal">id</code> attribute of the Feed Inbound Channel Adapter component plus the <code class="literal">feedUrl</code> (if any) from the adapter&#8217;s configuration.</p>
+</td></tr></table></div>
+<p><span class="emphasis"><em>Other Options</em></span></p>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span>, the deprecated <code class="literal">com.rometools.fetcher.FeedFetcher</code> option has been removed and an overloaded <code class="literal">FeedEntryMessageSource</code> constructor for an <code class="literal">org.springframework.core.io.Resource</code> is provided.
+This is useful when Feed source isn&#8217;t an HTTP endpoint, but any other resource, local or remote on FTP, for example.
+In the <code class="literal">FeedEntryMessageSource</code> logic such a resource (or provided <code class="literal">URL</code>) is parsed by the <code class="literal">SyndFeedInput</code> to the <code class="literal">SyndFeed</code> object for processing mentioned above.
+A customized <code class="literal">SyndFeedInput</code> (for example with the <code class="literal">allowDoctypes</code> option) instance also can be injected to the <code class="literal">FeedEntryMessageSource</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="feed-java-configuration" href="#feed-java-configuration"></a>14.3&nbsp;Java DSL and Annotation configuration</h2></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the Inbound Adapter using the Java DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FeedJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(FeedJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Value("org/springframework/integration/feed/sample.rss")</span></em>
+    <span class="hl-keyword">private</span> Resource feedResource;
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MetadataStore metadataStore() {
+        PropertiesPersistingMetadataStore metadataStore = <span class="hl-keyword">new</span> PropertiesPersistingMetadataStore();
+        metadataStore.setBaseDirectory(tempFolder.getRoot().getAbsolutePath());
+        <span class="hl-keyword">return</span> metadataStore;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow feedFlow() {
+        <span class="hl-keyword">return</span> IntegrationFlows
+                .from(Feed.inboundAdapter(<span class="hl-keyword">this</span>.feedResource, <span class="hl-string">"feedTest"</span>)
+                                .metadataStore(metadataStore()),
+                        e -&gt; e.poller(p -&gt; p.fixedDelay(<span class="hl-number">100</span>)))
+                .channel(c -&gt; c.queue(<span class="hl-string">"entries"</span>))
+                .get();
+    }
+
+}</pre>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="applicationevent.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="files.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">13.&nbsp;Spring ApplicationEvent Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;15.&nbsp;File Support</td></tr></table></div></body></html>

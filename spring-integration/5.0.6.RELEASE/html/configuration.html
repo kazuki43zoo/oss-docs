@@ -1,0 +1,683 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Appendix&nbsp;E.&nbsp;Configuration</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-appendices.html" title="Part&nbsp;VI.&nbsp;Appendices"><link rel="prev" href="security.html" title="Appendix&nbsp;D.&nbsp;Security in Spring Integration"><link rel="next" href="testing.html" title="Appendix&nbsp;F.&nbsp;Testing support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Appendix&nbsp;E.&nbsp;Configuration</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="security.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;VI.&nbsp;Appendices</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="testing.html">Next</a></td></tr></table><hr></div><div class="appendix"><div class="titlepage"><div><div><h2 class="title"><a name="configuration" href="#configuration"></a>Appendix&nbsp;E.&nbsp;Configuration</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="configuration-introduction" href="#configuration-introduction"></a>E.1&nbsp;Introduction</h2></div></div></div>
+
+<p>Spring Integration offers a number of configuration options.
+Which option you choose depends upon your particular needs and at what level you prefer to work.
+As with the Spring framework in general, it is also possible to mix and match the various techniques according to the particular problem at hand.
+For example, you may choose the XSD-based namespace for the majority of configuration combined with a handful of objects that are configured with annotations.
+As much as possible, the two provide consistent naming.
+XML elements defined by the XSD schema will match the names of annotations, and the attributes of those XML elements will match the names of annotation properties.
+Direct usage of the API is of course always an option, but we expect that most users will choose one of the higher-level options, or a combination of the namespace-based and annotation-driven configuration.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="configuration-namespace" href="#configuration-namespace"></a>E.2&nbsp;Namespace Support</h2></div></div></div>
+
+<p>Spring Integration components can be configured with XML elements that map directly to the terminology and concepts of enterprise integration.
+In many cases, the element names match those of the <a class="ulink" href="http://www.eaipatterns.com" target="_top">Enterprise Integration Patterns</a>.</p>
+<p>To enable Spring Integration&#8217;s core namespace support within your Spring configuration files, add the following namespace reference and schema mapping in your top-level <span class="emphasis"><em>beans</em></span> element:</p>
+<pre class="screen">&lt;beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       <span class="strong"><strong>xmlns:int="http://www.springframework.org/schema/integration"</strong></span>
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           <span class="strong"><strong>http://www.springframework.org/schema/integration</strong></span>
+           <span class="strong"><strong>http://www.springframework.org/schema/integration/spring-integration.xsd</strong></span>"&gt;</pre>
+<p>You can choose any name after "xmlns:"; <span class="emphasis"><em>int</em></span> is used here for clarity, but you might prefer a shorter abbreviation.
+Of course if you are using an XML-editor or IDE support, then the availability of auto-completion may convince you to keep the longer name for clarity.
+Alternatively, you can create configuration files that use the Spring Integration schema as the primary namespace:</p>
+<pre class="screen"><span class="strong"><strong>&lt;beans:beans xmlns="http://www.springframework.org/schema/integration"</strong></span>
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:beans="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           <span class="strong"><strong>http://www.springframework.org/schema/integration</strong></span>
+           <span class="strong"><strong>http://www.springframework.org/schema/integration/spring-integration.xsd</strong></span>"&gt;</pre>
+<p>When using this alternative, no prefix is necessary for the Spring Integration elements.
+On the other hand, if you want to define a generic Spring "bean" within the same configuration file, then a prefix would be required for the bean element (<code class="literal">&lt;beans:bean .../&gt;</code>).
+Since it is generally a good idea to modularize the configuration files themselves based on responsibility and/or architectural layer, you may find it appropriate to use the latter approach in the integration-focused configuration files, since generic beans are seldom necessary within those same files.
+For purposes of this documentation, we will assume the "integration" namespace is primary.</p>
+<p>Many other namespaces are provided within the Spring Integration distribution.
+In fact, each adapter type (JMS, File, etc.) that provides namespace support defines its elements within a separate schema.
+In order to use these elements, simply add the necessary namespaces with an "xmlns" entry and the corresponding "schemaLocation" mapping.
+For example, the following root element shows several of these namespace declarations:</p>
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;beans</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://www.springframework.org/schema/beans"</span>
+  <span class="hl-attribute">xmlns:xsi</span>=<span class="hl-value">"http://www.w3.org/2001/XMLSchema-instance"</span>
+  <span class="hl-attribute">xmlns:int</span>=<span class="hl-value">"http://www.springframework.org/schema/integration"</span>
+  <span class="hl-attribute">xmlns:int-file</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/file"</span>
+  <span class="hl-attribute">xmlns:int-jms</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/jms"</span>
+  <span class="hl-attribute">xmlns:int-mail</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/mail"</span>
+  <span class="hl-attribute">xmlns:int-rmi</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/rmi"</span>
+  <span class="hl-attribute">xmlns:int-ws</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/ws"</span>
+  <span class="hl-attribute">xsi:schemaLocation</span>=<span class="hl-value">"http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/integration
+    http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/file
+    http://www.springframework.org/schema/integration/file/spring-integration-file.xsd
+    http://www.springframework.org/schema/integration/jms
+    http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+    http://www.springframework.org/schema/integration/mail
+    http://www.springframework.org/schema/integration/mail/spring-integration-mail.xsd
+    http://www.springframework.org/schema/integration/rmi
+    http://www.springframework.org/schema/integration/rmi/spring-integration-rmi.xsd
+    http://www.springframework.org/schema/integration/ws
+    http://www.springframework.org/schema/integration/ws/spring-integration-ws.xsd"</span><span class="hl-tag">&gt;</span>
+ ...
+<span class="hl-tag">&lt;/beans&gt;</span></pre>
+<p>The reference manual provides specific examples of the various elements in their corresponding chapters.
+Here, the main thing to recognize is the consistency of the naming for each namespace URI and schema location.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="namespace-taskscheduler" href="#namespace-taskscheduler"></a>E.3&nbsp;Configuring the Task Scheduler</h2></div></div></div>
+
+<p>In Spring Integration, the ApplicationContext plays the central role of a Message Bus, and there are only a couple configuration options to consider.
+First, you may want to control the central TaskScheduler instance.
+You can do so by providing a single bean with the name "taskScheduler".
+This is also defined as a constant:</p>
+<pre class="programlisting">IntegrationContextUtils.TASK_SCHEDULER_BEAN_NAME</pre>
+<p>By default Spring Integration relies on an instance of <code class="literal">ThreadPoolTaskScheduler</code> as described in the <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/scheduling.html" target="_top">Task Execution and Scheduling</a> section of the Spring Framework reference manual.
+That default TaskScheduler will startup automatically with a pool of 10 threads, but see <a class="xref" href="configuration.html#global-properties" title="E.5&nbsp;Global Properties">Section&nbsp;E.5, &#8220;Global Properties&#8221;</a>.
+If you provide your own TaskScheduler instance instead, you can set the <span class="emphasis"><em>autoStartup</em></span> property to <span class="emphasis"><em>false</em></span>, and/or you can provide your own pool size value.</p>
+<p>When Polling Consumers provide an explicit task-executor reference in their configuration, the invocation of the handler methods will happen within that executor&#8217;s thread pool and not the main scheduler pool.
+However, when no task-executor is provided for an endpoint&#8217;s poller, it will be invoked by one of the main scheduler&#8217;s threads.</p>
+<div class="caution" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Caution"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="images/caution.png"></td><th align="left">Caution</th></tr><tr><td align="left" valign="top">
+<p>Do not run long-running tasks on poller threads; use a task executor instead.
+If you have a lot of polling endpoints, you can cause thread starvation, unless you increase the pool size.
+Also, polling consumers have a default <code class="literal">receiveTimeout</code> of 1 second; since the poller thread blocks for this time,
+it is recommended that a task executor be used when many such endpoints exist, again to avoid starvation.
+Alternatively, reduce the <code class="literal">receiveTimeout</code>.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>An endpoint is a <span class="emphasis"><em>Polling Consumer</em></span> if its input channel is one of the queue-based (i.e. pollable) channels.
+<span class="emphasis"><em>Event Driven Consumers</em></span> are those having input channels that have dispatchers instead of queues (i.e. they are subscribable).
+Such endpoints have no poller configuration since their handlers will be invoked directly.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>When running in a JEE container, you may need to use Spring&#8217;s <code class="literal">TimerManagerTaskScheduler</code> as described
+<a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/scheduling.html#scheduling-task-scheduler-implementations" target="_top">here</a>,
+instead of the default <span class="emphasis"><em>taskScheduler</em></span>.
+To do that, simply define a bean with the appropriate JNDI name for your environment, for example:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"taskScheduler"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.scheduling.commonj.TimerManagerTaskScheduler"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"timerManagerName"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"tm/MyTimerManager"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"resourceRef"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</td></tr></table></div>
+<p>The next section will describe what happens if Exceptions occur within the asynchronous invocations.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="namespace-errorhandler" href="#namespace-errorhandler"></a>E.4&nbsp;Error Handling</h2></div></div></div>
+
+<p>As described in the overview at the very beginning of this manual, one of the main motivations behind a Message-oriented
+framework like Spring Integration is to promote loose-coupling between components.
+The Message Channel plays an important role in that producers and consumers do not have to know about each other.
+However, the advantages also have some drawbacks.
+Some things become more complicated in a very loosely coupled environment, and one example is error handling.</p>
+<p>When sending a Message to a channel, the component that ultimately handles that Message may or may not be operating within the same thread as the sender.
+If using a simple default <code class="literal">DirectChannel</code> (with the <code class="literal">&lt;channel&gt;</code> element that has no <code class="literal">&lt;queue&gt;</code> sub-element and no <span class="emphasis"><em>task-executor</em></span> attribute),
+the Message-handling will occur in the same thread that sends the initial message.
+In that case, if an <code class="literal">Exception</code> is thrown, it can be caught by the sender (or it may propagate past the sender if it is an uncaught <code class="literal">RuntimeException</code>).
+So far, everything is fine.
+This is the same behavior as an Exception-throwing operation in a normal call stack.</p>
+<p>A message flow that runs on a caller thread might be invoked via a <code class="literal">Messaging Gateway</code> (see <a class="xref" href="messaging-endpoints-chapter.html#gateway" title="8.4&nbsp;Messaging Gateways">Section&nbsp;8.4, &#8220;Messaging Gateways&#8221;</a>) or a <code class="literal">MessagingTemplate</code> (see <a class="xref" href="messaging-channels-section.html#channel-template" title="4.1.4&nbsp;MessagingTemplate">Section&nbsp;4.1.4, &#8220;MessagingTemplate&#8221;</a>).
+In either case, the default behavior is to throw any exceptions to the caller.
+For the <code class="literal">Messaging Gateway</code>, see <a class="xref" href="messaging-endpoints-chapter.html#gateway-error-handling" title="8.4.8&nbsp;Error Handling">Section&nbsp;8.4.8, &#8220;Error Handling&#8221;</a> for details about how the exception is thrown and how to configure the gateway to route the errors to an error channel instead.
+When using a <code class="literal">MessagingTemplate</code>, or sending to a <code class="literal">MessageChannel</code> directly, exceptions are always thrown to the caller.</p>
+<p>When adding asynchronous processing, things become rather more complicated.
+For instance, if the <span class="emphasis"><em>channel</em></span> element <span class="emphasis"><em>does</em></span> provide a <span class="emphasis"><em>queue</em></span> sub-element, then the component that handles the Message <span class="emphasis"><em>will</em></span> be operating in a different thread than the sender.
+The same is true when an <code class="literal">ExecutorChannel</code> is used.
+The sender may have dropped the <code class="literal">Message</code> into the channel and moved on to other things.
+There is no way for the <code class="literal">Exception</code> to be thrown directly back to that sender using standard <code class="literal">Exception</code> throwing techniques.
+Instead, handling errors for asynchronous processes requires an asynchronous error-handling mechanism as well.</p>
+<p>Spring Integration supports error handling for its components by publishing errors to a Message Channel.
+Specifically, the <code class="literal">Exception</code> will become the payload of a Spring Integration <code class="literal">ErrorMessage</code>.
+That <code class="literal">Message</code> will then be sent to a Message Channel that is resolved in a way that is similar to the <span class="emphasis"><em>replyChannel</em></span> resolution.
+First, if the request <code class="literal">Message</code> being handled at the time the <code class="literal">Exception</code> occurred contains an <span class="emphasis"><em>errorChannel</em></span> header (the
+header name is defined in the constant: <code class="literal">MessageHeaders.ERROR_CHANNEL</code>), the <code class="literal">ErrorMessage</code> will be sent to that channel.
+Otherwise, the error handler will send to a "global" channel whose bean name is "errorChannel"
+(this is also defined as a constant: <code class="literal">IntegrationContextUtils.ERROR_CHANNEL_BEAN_NAME</code>).</p>
+<p>A default "errorChannel" bean is created behind the scenes by the Framework.
+However, you can just as easily define your own if you want to control the settings.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"errorChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:queue</span> <span class="hl-attribute">capacity</span>=<span class="hl-value">"500"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The default "errorChannel" is a <code class="literal">PublishSubscribeChannel</code>.</p>
+</td></tr></table></div>
+<p>The most important thing to understand here is that the messaging-based error handling will only apply to Exceptions
+that are thrown by a Spring Integration task that is executing within a <code class="literal">TaskExecutor</code>.
+This does <span class="emphasis"><em>not</em></span> apply to Exceptions thrown by a handler that is operating within the same thread as the sender (e.g.
+through a <code class="literal">DirectChannel</code> as described above).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When Exceptions occur in a scheduled poller task&#8217;s execution, those exceptions will be wrapped in <code class="literal">ErrorMessage</code> s and sent to the <span class="emphasis"><em>errorChannel</em></span> as well.</p>
+</td></tr></table></div>
+<p>To enable global error handling, simply register a handler on that channel.
+For example, you can configure Spring Integration&#8217;s <code class="literal">ErrorMessageExceptionTypeRouter</code> as the handler of an endpoint that is subscribed to the <span class="emphasis"><em>errorChannel</em></span>.
+That router can then spread the error messages across multiple channels based on <code class="literal">Exception</code> type.</p>
+<p>Starting with <span class="emphasis"><em>version 4.3.10</em></span>, the <code class="literal">ErrorMessagePublisher</code> and the <code class="literal">ErrorMessageStrategy</code> are provided.
+They can be used as general mechanism for publishing <code class="literal">ErrorMessage</code> s and can be called or extended in any error handling scenarios.
+The <code class="literal">ErrorMessageSendingRecoverer</code> extends this class as a <code class="literal">RecoveryCallback</code> implementation that can be used with retry, such as the
+<a class="link" href="messaging-endpoints-chapter.html#retry-advice" title="Retry Advice">RequestHandlerRetryAdvice</a>.
+The <code class="literal">ErrorMessageStrategy</code> is used to build an <code class="literal">ErrorMessage</code> based on the provided exception and an <code class="literal">AttributeAccessor</code> context.
+It can be injected to any <code class="literal">MessageProducerSupport</code> and <code class="literal">MessagingGatewaySupport</code> - and the <code class="literal">requestMessage</code> is stored under <code class="literal">ErrorMessageUtils.INPUT_MESSAGE_CONTEXT_KEY</code> in the <code class="literal">AttributeAccessor</code> context.
+The <code class="literal">ErrorMessageStrategy</code> can use that <code class="literal">requestMessage</code> as the <code class="literal">originalMessage</code> property of the <code class="literal">ErrorMessage</code> it creates.
+The <code class="literal">DefaultErrorMessageStrategy</code> does exactly that.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="global-properties" href="#global-properties"></a>E.5&nbsp;Global Properties</h2></div></div></div>
+
+<p>Certain global framework properties can be overridden by providing a properties file on the classpath.</p>
+<p>The default properties can be found in <code class="literal">/META-INF/spring.integration.default.properties</code> in the <code class="literal">spring-integration-core</code>
+jar.
+You can see them on GitHub <a class="ulink" href="https://github.com/spring-projects/spring-integration/blob/master/spring-integration-core/src/main/resources/META-INF/spring.integration.default.properties" target="_top">here</a>,
+but here are the current default values:</p>
+<pre class="screen">spring.integration.channels.autoCreate=true <a name="CO59-1" href="#CO59-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+spring.integration.channels.maxUnicastSubscribers=0x7fffffff <a name="CO59-2" href="#CO59-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+spring.integration.channels.maxBroadcastSubscribers=0x7fffffff <a name="CO59-3" href="#CO59-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+spring.integration.taskScheduler.poolSize=10 <a name="CO59-4" href="#CO59-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+spring.integration.messagingTemplate.throwExceptionOnLateReply=false <a name="CO59-5" href="#CO59-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+spring.integration.readOnly.headers= <a name="CO59-6" href="#CO59-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+spring.integration.endpoints.noAutoStartup= <a name="CO59-7" href="#CO59-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+spring.integration.postProcessDynamicBeans=false <a name="CO59-8" href="#CO59-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO59-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When true, <code class="literal">input-channel</code> s will be automatically declared as <code class="literal">DirectChannel</code> s when not explicitly found in the
+application context.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO59-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This property provides the default number of subscribers allowed on, say, a <code class="literal">DirectChannel</code>.
+It can be used to avoid inadvertently subscribing multiple endpoints to the same channel.
+This can be overridden on individual channels with the <code class="literal">max-subscribers</code> attribute.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO59-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This property provides the default number of subscribers allowed on, say, a <code class="literal">PublishSubscribeChannel</code>.
+It can be used to avoid inadvertently subscribing more than the expected number of endpoints to the same channel.
+This can be overridden on individual channels with the <code class="literal">max-subscribers</code> attribute.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO59-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The number of threads available in the default <code class="literal">taskScheduler</code> bean; see <a class="xref" href="configuration.html#namespace-taskscheduler" title="E.3&nbsp;Configuring the Task Scheduler">Section&nbsp;E.3, &#8220;Configuring the Task Scheduler&#8221;</a>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO59-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When <code class="literal">true</code>, messages that arrive at a gateway reply channel will throw an exception, when the gateway is not
+expecting a reply - because the sending thread has timed out, or already received a reply.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO59-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A comma-separated list of message header names which should not be populated into <code class="literal">Message</code> s during a header copying operation.
+The list is used by the <code class="literal">DefaultMessageBuilderFactory</code> bean and propagated to the <code class="literal">IntegrationMessageHeaderAccessor</code> instances (see <a class="xref" href="messaging-construction-chapter.html#message-header-accessor" title="MessageHeaderAccessor API">the section called &#8220;MessageHeaderAccessor API&#8221;</a>), used to build messages via <code class="literal">MessageBuilder</code> (see <a class="xref" href="messaging-construction-chapter.html#message-builder" title="5.1.4&nbsp;The MessageBuilder Helper Class">Section&nbsp;5.1.4, &#8220;The MessageBuilder Helper Class&#8221;</a>).
+By default only <code class="literal">MessageHeaders.ID</code> and <code class="literal">MessageHeaders.TIMESTAMP</code> are not copied during message building.
+<span class="emphasis"><em>Since version 4.3.2</em></span></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO59-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A comma-separated list of <code class="literal">AbstractEndpoint</code> bean names patterns (<code class="literal">xxx*</code>, <code class="literal">*xxx</code>, <code class="literal">*xxx*</code> or <code class="literal">xxx*yyy</code>) which should not be started automatically during application startup.
+These endpoints can be started later manually by their bean name via <code class="literal">Control Bus</code> (see <a class="xref" href="system-management-chapter.html#control-bus" title="10.6&nbsp;Control Bus">Section&nbsp;10.6, &#8220;Control Bus&#8221;</a>), by their role using the <code class="literal">SmartLifecycleRoleController</code> (see <a class="xref" href="messaging-endpoints-chapter.html#endpoint-roles" title="8.2&nbsp;Endpoint Roles">Section&nbsp;8.2, &#8220;Endpoint Roles&#8221;</a>) or via simple <code class="literal">Lifecycle</code> bean injection.
+The effect of this global property can be explicitly overridden by specifying <code class="literal">auto-startup</code> XML or <code class="literal">autoStartup</code> annotation attribute, or via call to the <code class="literal">AbstractEndpoint.setAutoStartup()</code> in bean definition.
+<span class="emphasis"><em>Since version 4.3.12</em></span></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO59-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A boolean flag to indicate that <code class="literal">BeanPostProcessor</code> s should post-process beans registered at runtime, e.g. message channels created via <code class="literal">IntegrationFlowContext</code> can be supplied with global channel interceptors.
+<span class="emphasis"><em>Since version 4.3.15</em></span></p>
+</td></tr></table></div>
+<p>These properties can be overridden by adding a file <code class="literal">/META-INF/spring.integration.properties</code> to the classpath.
+It is not necessary to provide all the properties, just those that you want to override.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="annotations" href="#annotations"></a>E.6&nbsp;Annotation Support</h2></div></div></div>
+
+<p>In addition to the XML namespace support for configuring Message Endpoints, it is also possible to use annotations.
+First, Spring Integration provides the class-level <code class="literal">@MessageEndpoint</code> as a <span class="emphasis"><em>stereotype</em></span> annotation, meaning that it is itself annotated with Spring&#8217;s <code class="literal">@Component</code> annotation and is therefore recognized automatically as a bean definition when using Spring component-scanning.</p>
+<p>Even more important are the various method-level annotations that indicate the annotated method is capable of handling a message.
+The following example demonstrates both:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@MessageEndpoint</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FooService {
+
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> processMessage(Message message) {
+        ...
+    }
+}</pre>
+<p>Exactly what it means for the method to "handle" the Message depends on the particular annotation.
+Annotations available in Spring Integration include:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+@Aggregator
+</li><li class="listitem">
+@Filter
+</li><li class="listitem">
+@Router
+</li><li class="listitem">
+@ServiceActivator
+</li><li class="listitem">
+@Splitter
+</li><li class="listitem">
+@Transformer
+</li><li class="listitem">
+@InboundChannelAdapter
+</li><li class="listitem">
+@BridgeFrom
+</li><li class="listitem">
+@BridgeTo
+</li><li class="listitem">
+@MessagingGateway
+</li><li class="listitem">
+@IntegrationComponentScan
+</li></ul></div>
+<p>The behavior of each is described in its own chapter or section within this reference.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If you are using XML configuration in combination with annotations, the <code class="literal">@MessageEndpoint</code> annotation is not required.
+If you want to configure a POJO reference from the "ref" attribute of a <code class="literal">&lt;service-activator/&gt;</code> element,
+it is sufficient to provide the method-level annotations.
+In that case, the annotation prevents ambiguity even when no "method" attribute exists on the <code class="literal">&lt;service-activator/&gt;</code> element.</p>
+</td></tr></table></div>
+<p>In most cases, the annotated handler method should not require the <code class="literal">Message</code> type as its parameter.
+Instead, the method parameter type can match the message&#8217;s payload type.</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FooService {
+
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> bar(Foo foo) {
+        ...
+    }
+
+}</pre>
+<p>When the method parameter should be mapped from a value in the <code class="literal">MessageHeaders</code>, another option is to use the parameter-level <code class="literal">@Header</code> annotation.
+In general, methods annotated with the Spring Integration annotations can either accept the <code class="literal">Message</code> itself, the message payload, or a header value (with @Header) as the parameter.
+In fact, the method can accept a combination, such as:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FooService {
+
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> bar(String payload, <em><span class="hl-annotation" style="color: gray">@Header("x")</span></em> <span class="hl-keyword">int</span> valueX, <em><span class="hl-annotation" style="color: gray">@Header("y")</span></em> <span class="hl-keyword">int</span> valueY) {
+        ...
+    }
+
+}</pre>
+<p>There is also a <code class="literal">@Headers</code> annotation that provides all of the Message headers as a Map:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FooService {
+
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> bar(String payload, <em><span class="hl-annotation" style="color: gray">@Headers</span></em> Map&lt;String, Object&gt; headerMap) {
+        ...
+    }
+
+}</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The value of the annotation can also be a SpEL expression (e.g., <code class="literal">someHeader.toUpperCase()</code>) which is useful
+when you wish to manipulate the header value before injecting it.
+It also provides an optional <span class="emphasis"><em>required</em></span> property which specifies whether the attribute value must be available within
+the headers.
+The default value for <span class="emphasis"><em>required</em></span> is <code class="literal">true</code>.</p>
+</td></tr></table></div>
+<p>For several of these annotations, when a Message-handling method returns a non-null value, the endpoint will attempt to send a reply.
+This is consistent across both configuration options (namespace and annotations) in that such an endpoint&#8217;s output channel will be used if available, and the REPLY_CHANNEL message header value will be used as a fallback.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>The combination of output channels on endpoints and the reply channel message header enables a pipeline approach where multiple components have an output channel, and the final component simply allows the reply message to be forwarded to the reply channel as specified in the original request message.
+In other words, the final component depends on the information provided by the original sender and can dynamically support any number of clients as a result.
+This is an example of <a class="ulink" href="http://eaipatterns.com/ReturnAddress.html" target="_top">Return Address</a>.</p>
+</td></tr></table></div>
+<p>In addition to the examples shown here, these annotations also support inputChannel and outputChannel properties.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Service</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> FooService {
+
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel="input", outputChannel="output")</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> bar(String payload, <em><span class="hl-annotation" style="color: gray">@Headers</span></em> Map&lt;String, Object&gt; headerMap) {
+        ...
+    }
+
+}</pre>
+<p>The processing of these annotations creates the same beans (<code class="literal">AbstractEndpoint</code> s and <code class="literal">MessageHandler</code> s (or <code class="literal">MessageSource</code> s for the inbound channel adapter - see below) as with similar xml components.
+The bean names are generated with this pattern: <code class="literal">[componentName].[methodName].[decapitalizedAnnotationClassShortName]</code>
+(e.g for the sample above - <code class="literal">fooService.bar.serviceActivator</code>)
+for the <code class="literal">AbstractEndpoint</code> and the same name with an additional <code class="literal">.handler</code> (<code class="literal">.source</code>) suffix for the <code class="literal">MessageHandler</code> (<code class="literal">MessageSource</code>) bean.
+The <code class="literal">MessageHandler</code> s (<code class="literal">MessageSource</code> s) are also eligible to be tracked by <a class="xref" href="system-management-chapter.html#message-history" title="10.3&nbsp;Message History">Section&nbsp;10.3, &#8220;Message History&#8221;</a>.</p>
+<p>Starting with <span class="emphasis"><em>version 4.0</em></span>, all Messaging Annotations provide <code class="literal">SmartLifecycle</code> options - <code class="literal">autoStartup</code> and <code class="literal">phase</code> to allow endpoint lifecycle control on application context initialization.
+They default to <code class="literal">true</code> and <code class="literal">0</code> respectively.
+To change the state of an endpoint (e.g` start()/stop()<code class="literal">) obtain a reference to the endpoint bean using the `BeanFactory</code> (or autowiring) and invoke the method(s), or send a <span class="emphasis"><em>command message</em></span> to the <code class="literal">Control Bus</code> (<a class="xref" href="system-management-chapter.html#control-bus" title="10.6&nbsp;Control Bus">Section&nbsp;10.6, &#8220;Control Bus&#8221;</a>).
+For these purposes you should use the <code class="literal">beanName</code> mentioned above.</p>
+<p><span class="strong"><strong>@Poller</strong></span></p>
+<p>Before <span class="emphasis"><em>Spring Integration 4.0</em></span>, the above Messaging Annotations required that the <code class="literal">inputChannel</code> was a reference to a <code class="literal">SubscribableChannel</code>.
+For <code class="literal">PollableChannel</code> s there was need to use a <code class="literal">&lt;int:bridge/&gt;</code>, to configure a <code class="literal">&lt;int:poller/&gt;</code> to make the composite endpoint - a <code class="literal">PollingConsumer</code>.
+Starting with <span class="emphasis"><em>version 4.0</em></span>, the <code class="literal">@Poller</code> annotation has been introduced to allow the configuration of <code class="literal">poller</code> attributes directly on the above Messaging Annotations:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AnnotationService {
+
+    <em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel = "input", outputChannel = "output",
+        poller = @Poller(maxMessagesPerPoll = "${poller.maxMessagesPerPoll}", fixedDelay = "${poller.fixedDelay}"))</span></em>
+    <span class="hl-keyword">public</span> String handle(String payload) {
+        ...
+    }
+}</pre>
+<p>This annotation provides only simple <code class="literal">PollerMetadata</code> options.
+The <code class="literal">@Poller</code>'s attributes <code class="literal">maxMessagesPerPoll</code>, <code class="literal">fixedDelay</code>, <code class="literal">fixedRate</code> and <code class="literal">cron</code> can be configured with <span class="emphasis"><em>property-placeholders</em></span>.
+If it is necessary to provide more polling options (e.g. transaction, advice-chain, error-handler etc.), the <code class="literal">PollerMetadata</code> should be configured as a generic bean with its bean name used for <code class="literal">@Poller</code>'s <code class="literal">value</code> attribute.
+In this case, no other attributes are allowed (they would be specified on the <code class="literal">PollerMetadata</code> bean).
+Note, if <code class="literal">inputChannel</code> is <code class="literal">PollableChannel</code> and no <code class="literal">@Poller</code> is configured, the default <code class="literal">PollerMetadata</code> will be used, if it is present in the application context.
+To declare the default poller using <code class="literal">@Configuration</code>, use:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean(name = PollerMetadata.DEFAULT_POLLER)</span></em>
+<span class="hl-keyword">public</span> PollerMetadata defaultPoller() {
+    PollerMetadata pollerMetadata = <span class="hl-keyword">new</span> PollerMetadata();
+    pollerMetadata.setTrigger(<span class="hl-keyword">new</span> PeriodicTrigger(<span class="hl-number">10</span>));
+    <span class="hl-keyword">return</span> pollerMetadata;
+}</pre>
+<p>With this endpoint using the default poller:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AnnotationService {
+
+    <em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel = "aPollableChannel", outputChannel = "output")</span></em>
+    <span class="hl-keyword">public</span> String handle(String payload) {
+        ...
+    }
+}</pre>
+<p>To use a named poller, use:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> PollerMetadata myPoller() {
+    PollerMetadata pollerMetadata = <span class="hl-keyword">new</span> PollerMetadata();
+    pollerMetadata.setTrigger(<span class="hl-keyword">new</span> PeriodicTrigger(<span class="hl-number">1000</span>));
+    <span class="hl-keyword">return</span> pollerMetadata;
+}</pre>
+<p>With this endpoint using the default poller:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AnnotationService {
+
+    <em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel = "aPollableChannel", outputChannel = "output"
+                           poller = @Poller("myPoller"))</span></em>
+    <span class="hl-keyword">public</span> String handle(String payload) {
+         ...
+    }
+}</pre>
+<p>Starting with <span class="emphasis"><em>version 4.3.3</em></span>, the <code class="literal">@Poller</code> annotation now has the <code class="literal">errorChannel</code> attribute for easier configuration of the underlying <code class="literal">MessagePublishingErrorHandler</code>.
+This attribute play the same role as <code class="literal">error-channel</code> in the <code class="literal">&lt;poller&gt;</code> xml component.
+See <a class="xref" href="messaging-endpoints-chapter.html#endpoint-namespace" title="8.1.4&nbsp;Endpoint Namespace Support">Section&nbsp;8.1.4, &#8220;Endpoint Namespace Support&#8221;</a> for more information.</p>
+<p><span class="strong"><strong>@InboundChannelAdapter</strong></span></p>
+<p>Starting with <span class="emphasis"><em>version 4.0</em></span>, the <code class="literal">@InboundChannelAdapter</code> method annotation is available.
+This produces a <code class="literal">SourcePollingChannelAdapter</code> integration component based on a <code class="literal">MethodInvokingMessageSource</code> for the annotated method.
+This annotation is an analogue of <code class="literal">&lt;int:inbound-channel-adapter&gt;</code> XML component and has the same restrictions: the method cannot have parameters, and the return type must not be <code class="literal">void</code>.
+It has two attributes: <code class="literal">value</code> - the required <code class="literal">MessageChannel</code> bean name and <code class="literal">poller</code> - an optional <code class="literal">@Poller</code> annotation, as described above.
+If there is need to provide some <code class="literal">MessageHeaders</code>, use a <code class="literal">Message&lt;?&gt;</code> return type and build the <code class="literal">Message&lt;?&gt;</code> within the method using a <code class="literal">MessageBuilder</code> to configure its <code class="literal">MessageHeaders</code>.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter("counterChannel")</span></em>
+<span class="hl-keyword">public</span> Integer count() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.counter.incrementAndGet();
+}
+
+<em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter(value = "fooChannel", poller = @Poller(fixed-rate = "5000"))</span></em>
+<span class="hl-keyword">public</span> String foo() {
+    <span class="hl-keyword">return</span> <span class="hl-string">"foo"</span>;
+}</pre>
+<p>Starting with <span class="emphasis"><em>version 4.3</em></span> the <code class="literal">channel</code> alias for the <code class="literal">value</code> annotation attribute has been introduced for better
+source code readability.
+Also the target <code class="literal">MessageChannel</code> bean is resolved in the <code class="literal">SourcePollingChannelAdapter</code> by the provided name
+(<code class="literal">outputChannelName</code> options) on the first <code class="literal">receive()</code> call, not during
+initialization phase.
+It allows the <span class="emphasis"><em>late binding</em></span> logic, when the target <code class="literal">MessageChannel</code> bean from the consumer perspective
+is created and registered a bit later than the <code class="literal">@InboundChannelAdapter</code> parsing phase.</p>
+<p>The first example requires that the default poller has been declared elsewhere in the application context.</p>
+<p><span class="strong"><strong>@MessagingGateway</strong></span></p>
+<p>See <a class="xref" href="messaging-endpoints-chapter.html#messaging-gateway-annotation" title="8.4.6&nbsp;@MessagingGateway Annotation">Section&nbsp;8.4.6, &#8220;@MessagingGateway Annotation&#8221;</a>.</p>
+<p><span class="strong"><strong>@IntegrationComponentScan</strong></span></p>
+<p>The standard Spring Framework <code class="literal">@ComponentScan</code> annotation doesn&#8217;t scan interfaces for stereotype <code class="literal">@Component</code>
+annotations.
+To overcome this limitation and allow the configuration of <code class="literal">@MessagingGateway</code> (see <a class="xref" href="messaging-endpoints-chapter.html#messaging-gateway-annotation" title="8.4.6&nbsp;@MessagingGateway Annotation">Section&nbsp;8.4.6, &#8220;@MessagingGateway Annotation&#8221;</a>),
+the <code class="literal">@IntegrationComponentScan</code> mechanism has been introduced.
+This annotation must be placed along with a <code class="literal">@Configuration</code> annotation, and customized for the scanning options,
+such as <code class="literal">basePackages</code> and <code class="literal">basePackageClasses</code>.
+In this case all discovered interfaces annotated with <code class="literal">@MessagingGateway</code> will be parsed and registered
+as a <code class="literal">GatewayProxyFactoryBean</code> s.
+All other class-based components are parsed by the standard <code class="literal">@ComponentScan</code>.
+In future, more scanning logic may be added to the <code class="literal">@IntegrationComponentScan</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="meta-annotations" href="#meta-annotations"></a>E.6.1&nbsp;Messaging Meta-Annotations</h3></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.0</em></span>, all Messaging Annotations can be configured as meta-annotations and all user-defined Messaging Annotations can define the same attributes to override their default values.
+In addition, meta-annotations can be configured hierarchically:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})</span></em>
+<em><span class="hl-annotation" style="color: gray">@Retention(RetentionPolicy.RUNTIME)</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "annInput", outputChannel = "annOutput")</span></em>
+<span class="hl-keyword">public</span> <em><span class="hl-annotation" style="color: gray">@interface</span></em> MyServiceActivator {
+
+    String[] adviceChain = { <span class="hl-string">"annAdvice"</span> };
+}
+
+<em><span class="hl-annotation" style="color: gray">@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})</span></em>
+<em><span class="hl-annotation" style="color: gray">@Retention(RetentionPolicy.RUNTIME)</span></em>
+<em><span class="hl-annotation" style="color: gray">@MyServiceActivator</span></em>
+<span class="hl-keyword">public</span> <em><span class="hl-annotation" style="color: gray">@interface</span></em> MyServiceActivator1 {
+
+    String inputChannel();
+
+    String outputChannel();
+}
+...
+
+<em><span class="hl-annotation" style="color: gray">@MyServiceActivator1(inputChannel = "inputChannel", outputChannel = "outputChannel")</span></em>
+<span class="hl-keyword">public</span> Object service(Object payload) {
+   ...
+}</pre>
+<p>This allows users to set defaults for various attributes and enables isolation of framework Java dependencies to user annotations, avoiding their use in user classes.
+If the framework finds a method with a user annotation that has a framework meta-annotation, it is treated as if the method was annotated directly with the framework annotation.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="annotations_on_beans" href="#annotations_on_beans"></a>E.6.2&nbsp;Annotations on @Beans</h3></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.0</em></span>, Messaging Annotations can be configured on <code class="literal">@Bean</code> method definitions in <code class="literal">@Configuration</code> classes, to produce Message Endpoints based on the beans, not methods.
+It is useful when <code class="literal">@Bean</code> definitions are "out of the box" <code class="literal">MessageHandler</code> s (<code class="literal">AggregatingMessageHandler</code>, <code class="literal">DefaultMessageSplitter</code> etc.), <code class="literal">Transformer</code> s (<code class="literal">JsonToObjectTransformer</code>, <code class="literal">ClaimCheckOutTransformer</code> etc.), <code class="literal">MessageSource</code> s (<code class="literal">FileReadingMessageSource</code>, <code class="literal">RedisStoreMessageSource</code> etc.):</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MyFlowConfiguration {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter(value = "inputChannel", poller = @Poller(fixedDelay = "1000"))</span></em>
+    <span class="hl-keyword">public</span> MessageSource&lt;String&gt; consoleSource() {
+        <span class="hl-keyword">return</span> CharacterStreamReadingMessageSource.stdin();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel = "inputChannel", outputChannel = "httpChannel")</span></em>
+    <span class="hl-keyword">public</span> ObjectToMapTransformer toMapTransformer() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> ObjectToMapTransformer();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "httpChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler httpHandler() {
+    HttpRequestExecutingMessageHandler handler = <span class="hl-keyword">new</span> HttpRequestExecutingMessageHandler(<span class="hl-string">"http://foo/service"</span>);
+        handler.setExpectedResponseType(String.<span class="hl-keyword">class</span>);
+        handler.setOutputChannelName(<span class="hl-string">"outputChannel"</span>);
+        <span class="hl-keyword">return</span> handler;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "outputChannel")</span></em>
+    <span class="hl-keyword">public</span> LoggingHandler loggingHandler() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> LoggingHandler(<span class="hl-string">"info"</span>);
+    }
+
+}</pre>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span>, a support is also provided for a <code class="literal">@Bean</code> annotated with the <code class="literal">InboundChannelAdapter</code> that return <code class="literal">java.util.function.Supplier</code> which can produce either a POJO or a <code class="literal">Message</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MyFlowConfiguration {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter(value = "inputChannel", poller = @Poller(fixedDelay = "1000"))</span></em>
+    <span class="hl-keyword">public</span> Supplier&lt;String&gt; pojoSupplier() {
+        <span class="hl-keyword">return</span> () -&gt; <span class="hl-string">"foo"</span>;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter(value = "inputChannel", poller = @Poller(fixedDelay = "1000"))</span></em>
+    <span class="hl-keyword">public</span> Supplier&lt;Message&lt;String&gt;&gt; messageSupplier() {
+        <span class="hl-keyword">return</span> () -&gt; <span class="hl-keyword">new</span> GenericMessage&lt;&gt;(<span class="hl-string">"foo"</span>);
+    }
+}</pre>
+<p>The meta-annotation rules work on <code class="literal">@Bean</code> methods as well (<code class="literal">@MyServiceActivator</code> above can be applied to a <code class="literal">@Bean</code> definition).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When using these annotations on consumer <code class="literal">@Bean</code> definitions, if the bean definition returns an appropriate <code class="literal">MessageHandler</code> (depending on the annotation type), attributes such as <code class="literal">outputChannel</code>, <code class="literal">requiresReply</code>, <code class="literal">order</code> etc, must be set on the <code class="literal">MessageHandler</code> <code class="literal">@Bean</code> definition itself.
+The only annotation attributes used are <code class="literal">adviceChain</code>, <code class="literal">autoStartup</code>, <code class="literal">inputChannel</code>, <code class="literal">phase</code>, <code class="literal">poller</code>, all other attributes are for the handler.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The bean names are generated with this algorithm:
+* The <code class="literal">MessageHandler</code> (<code class="literal">MessageSource</code>) <code class="literal">@Bean</code> gets its own standard name from the method name or <code class="literal">name</code> attribute on
+the <code class="literal">@Bean</code>.
+This works like there is no Messaging Annotation on the <code class="literal">@Bean</code> method.
+* The <code class="literal">AbstractEndpoint</code> bean name is generated with the pattern:
+<code class="literal">[configurationComponentName].[methodName].[decapitalizedAnnotationClassShortName]</code>.
+For example the endpoint (<code class="literal">SourcePollingChannelAdapter</code>) for the <code class="literal">consoleSource()</code> definition above gets a bean name like:
+<code class="literal">myFlowConfiguration.consoleSource.inboundChannelAdapter</code>.
+Also see <a class="xref" href="overview.html#endpoint-bean-names" title="3.4.8&nbsp;Endpoint Bean Names">Section&nbsp;3.4.8, &#8220;Endpoint Bean Names&#8221;</a>.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>When using these annotations on <code class="literal">@Bean</code> definitions, the <code class="literal">inputChannel</code> must reference a declared bean; channels are not automatically declared in this case.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>With Java &amp; Annotation configuration we can use any <code class="literal">@Conditional</code> (e.g. <code class="literal">@Profile</code>) definition on the <code class="literal">@Bean</code>
+method level, meaning to skip the bean registration by some condition reason:</p>
+</td></tr></table></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "skippedChannel")</span></em>
+<em><span class="hl-annotation" style="color: gray">@Profile("foo")</span></em>
+<span class="hl-keyword">public</span> MessageHandler skipped() {
+    <span class="hl-keyword">return</span> System.out::println;
+}</pre>
+<p>Together with the existing Spring Container logic, the Messaging Endpoint bean, based on the <code class="literal">@ServiceActivator</code>
+ annotation, won&#8217;t be registered as well.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_creating_a_bridge_with_annotations" href="#_creating_a_bridge_with_annotations"></a>E.6.3&nbsp;Creating a Bridge with Annotations</h3></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.0</em></span>, the Messaging Annotation and Java configuration provides <code class="literal">@BridgeFrom</code> and <code class="literal">@BridgeTo</code> <code class="literal">@Bean</code> method annotations to mark <code class="literal">MessageChannel</code> beans in <code class="literal">@Configuration</code> classes.
+This is just for completeness, providing a convenient mechanism to declare a <code class="literal">BridgeHandler</code> and its Message Endpoint configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> PollableChannel bridgeFromInput() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> QueueChannel();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@BridgeFrom(value = "bridgeFromInput", poller = @Poller(fixedDelay = "1000"))</span></em>
+<span class="hl-keyword">public</span> MessageChannel bridgeFromOutput() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+}
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> QueueChannel bridgeToOutput() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> QueueChannel();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@BridgeTo("bridgeToOutput")</span></em>
+<span class="hl-keyword">public</span> MessageChannel bridgeToInput() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+}</pre>
+<p>These annotations can be used as meta-annotations as well.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_advising_annotated_endpoints" href="#_advising_annotated_endpoints"></a>E.6.4&nbsp;Advising Annotated Endpoints</h3></div></div></div>
+
+<p>See <a class="xref" href="messaging-endpoints-chapter.html#advising-with-annotations" title="8.9.8&nbsp;Advising Endpoints Using Annotations">Section&nbsp;8.9.8, &#8220;Advising Endpoints Using Annotations&#8221;</a>.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="message-mapping-rules" href="#message-mapping-rules"></a>E.7&nbsp;Message Mapping rules and conventions</h2></div></div></div>
+
+<p>Spring Integration implements a flexible facility to map Messages to Methods and their arguments without providing extra configuration by relying on some default rules as well as defining certain conventions.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sample-scenarios" href="#sample-scenarios"></a>E.7.1&nbsp;Simple Scenarios</h3></div></div></div>
+
+<p><span class="emphasis"><em>Single un-annotated parameter (object or primitive) which is not a Map/Properties with non-void return type;</em></span></p>
+<pre class="programlisting"><span class="hl-keyword">public</span> String foo(Object o);</pre>
+<p>Details:</p>
+<p>Input parameter is&nbsp;Message Payload.
+If parameter type is not compatible with&nbsp;Message Payload&nbsp;an attempt will be made to convert it using Conversion Service provided by Spring 3.0.
+The return value will be incorporated as a Payload of the returned Message</p>
+<p><span class="emphasis"><em>Single un-annotated parameter&nbsp;(object or primitive)&nbsp;which is not a Map/Properties with Message return type;</em></span></p>
+<pre class="programlisting"><span class="hl-keyword">public</span> Message&nbsp; foo(Object o);</pre>
+<p>Details:</p>
+<p>Input parameter is&nbsp;Message Payload.
+If parameter type is not compatible with&nbsp;Message Payload&nbsp;an attempt will be made to convert it using Conversion Service provided by Spring 3.0.
+The return value is a newly constructed Message that will be sent to the next destination.</p>
+<p>_Single parameter which is a Message or its subclass with arbitrary object/primitive return type;  _</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">int</span> foo(Message&nbsp; msg);</pre>
+<p>Details:</p>
+<p>Input parameter is&nbsp;Message&nbsp;itself.&nbsp;The return value will become a payload of the Message that will be sent to the next destination.</p>
+<p><span class="emphasis"><em>Single parameter which is a Message or its subclass with Message or its subclass as a return type;</em></span></p>
+<pre class="programlisting"><span class="hl-keyword">public</span> Message foo(Message&nbsp;msg);</pre>
+<p>Details:</p>
+<p>Input parameter is&nbsp;Message&nbsp;itself.&nbsp;The return value is a newly constructed Message that will be sent to the next destination.</p>
+<p><span class="emphasis"><em>Single parameter which is of type Map or Properties with Message as a return type;</em></span></p>
+<pre class="programlisting"><span class="hl-keyword">public</span> Message foo(Map m);</pre>
+<p>Details:</p>
+<p>This one is a bit interesting.
+Although at first it might seem like an easy mapping straight to Message Headers, the preference is always given to a Message Payload.
+This means that if Message Payload is of type Map, this input argument will represent Message Payload.
+However if Message Payload is not of type Map, then no conversion via Conversion Service will be attempted and the input argument will be mapped to Message Headers.</p>
+<p><span class="emphasis"><em>Two parameters where one of them is arbitrary non-Map/Properties type object/primitive and another is Map/Properties type object (regardless of the return)</em></span></p>
+<pre class="programlisting"><span class="hl-keyword">public</span> Message foo(Map h, &lt;T&gt; t);</pre>
+<p>Details:</p>
+<p>This combination contains two input parameters where one of them is of type Map.
+Naturally the non-Map parameters (regardless of the order) will be mapped to a Message Payload and the Map/Properties (regardless of the order) will be mapped to &nbsp;Message Headers giving you a nice POJO way of interacting with Message structure.</p>
+<p><span class="emphasis"><em>No parameters (regardless of the return)</em></span></p>
+<pre class="programlisting"><span class="hl-keyword">public</span> String foo();</pre>
+<p>Details:</p>
+<p>This Message Handler method will be invoked based on the Message sent to the input channel this handler is hooked up to, however no Message data will be mapped, thus making Message act as event/trigger to invoke such handlerThe output will be mapped according to the rules above</p>
+<p><span class="emphasis"><em>No parameters, void return</em></span></p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">void</span> foo();</pre>
+<p>Details:</p>
+<p>Same as above, but no output&nbsp;</p>
+<p><span class="emphasis"><em>Annotation based mappings</em></span></p>
+<p>Annotation based mapping is the safest and least ambiguous approach to map Messages to Methods.
+There wil be many pointers to annotation based mapping throughout this manual, however here are couple of examples:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> String foo(<em><span class="hl-annotation" style="color: gray">@Payload</span></em> String s,&nbsp;<em><span class="hl-annotation" style="color: gray">@Header("foo")</span></em> String b)&nbsp;</pre>
+<p>Very simple and explicit way of mapping Messages to method.
+As you&#8217;ll see later on, without an annotation this signature would result in an ambiguous condition.
+However by explicitly mapping the first argument to a Message Payload and the second argument to a value of the <span class="emphasis"><em>foo</em></span> Message Header, we have avoided any ambiguity.</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> String foo(<em><span class="hl-annotation" style="color: gray">@Payload</span></em> String s, <em><span class="hl-annotation" style="color: gray">@RequestParam("foo")</span></em> String b)&nbsp;</pre>
+<p>Looks almost identical to the previous example, however @RequestMapping or any other non-Spring Integration mapping annotation is irrelevant&nbsp;and therefore will be ignored leaving the second parameter unmapped.
+Although the second parameter could easily be mapped to a Payload, there can only be one Payload.
+Therefore this method mapping is ambiguous.</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> String foo(String s, <em><span class="hl-annotation" style="color: gray">@Header("foo")</span></em> String b)&nbsp;</pre>
+<p>The same as above.
+The only difference is that the first argument will be mapped to the Message Payload implicitly.</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> String foo(<em><span class="hl-annotation" style="color: gray">@Headers</span></em> Map m, <em><span class="hl-annotation" style="color: gray">@Header("foo")</span></em> Map f, <em><span class="hl-annotation" style="color: gray">@Header("bar")</span></em> String bar)</pre>
+<p>Yet another signature that would definitely be treated as ambiguous without annotations because it has more than 2 arguments.
+Furthermore, two of them are Maps.
+However, with annotation-based mapping, the ambiguity is easily avoided.
+In this example the first argument is mapped to all the Message Headers, while the second and third argument map to the values of Message Headers <span class="emphasis"><em>foo</em></span> and <span class="emphasis"><em>bar</em></span>.
+The payload is not being mapped to any argument.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="complex-scenarios" href="#complex-scenarios"></a>E.7.2&nbsp;Complex Scenarios</h3></div></div></div>
+
+<p><span class="emphasis"><em>Multiple parameters:</em></span></p>
+<p>Multiple parameters could create a lot of ambiguity with regards to determining the appropriate mappings.
+The general advice is to annotate your method parameters with <code class="literal">@Payload</code> and/or <code class="literal">@Header</code>/<code class="literal">@Headers</code>.
+Below are some of the examples of ambiguous conditions which result in an Exception being raised.</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> String foo(String s, <span class="hl-keyword">int</span> i)</pre>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+the two parameters are equal in weight, therefore there is no way to determine which one is a payload.
+</li></ul></div>
+<pre class="programlisting"><span class="hl-keyword">public</span> String foo(String s, Map m, String b)</pre>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+almost the same as above.
+Although the Map could be easily mapped to Message Headers, there is no way to determine what to do with the two Strings.
+</li></ul></div>
+<pre class="programlisting"><span class="hl-keyword">public</span> String foo(Map m, Map f)</pre>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+although one might argue that one Map could be mapped to Message Payload and another one to Message Headers, it would be unreasonable to rely on the order (e.g., first is Payload, second Headers)
+</li></ul></div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>Basically any method signature with more than one method argument which is not (Map, &lt;T&gt;), and those parameters are not annotated, will result in an ambiguous condition thus triggering an Exception.</p>
+</td></tr></table></div>
+<p><span class="emphasis"><em>Multiple methods:</em></span></p>
+<p>Message Handlers with multiple methods are mapped based on the same rules that are described above, however some scenarios might still look confusing.</p>
+<p><span class="emphasis"><em>Multiple methods (same or different name) with legal (mappable) signatures:</em></span></p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Foo {
+    <span class="hl-keyword">public</span> String foo(String str, Map m);
+
+    <span class="hl-keyword">public</span> String foo(Map m);
+}</pre>
+<p>As you can see, the Message could be mapped to either method.
+The first method would be invoked where Message Payload could be mapped to <span class="emphasis"><em>str</em></span> &nbsp;and Message Headers could be mapped to <span class="emphasis"><em>m</em></span>.
+The second method could easily also be a candidate where only Message Headers are mapped to <span class="emphasis"><em>m</em></span>.
+To make meters worse both methods have the same name which at first might look very ambiguous considering the following configuration:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:service-activator&nbsp;input-channel="input"&nbsp;output-channel="output"&nbsp;method="foo"&gt;</span>
+    <span class="hl-tag">&lt;bean&nbsp;class="org.bar.Foo"/&gt;</span>
+<span class="hl-tag">&lt;/int:service-activator&gt;</span></pre>
+<p>At this point it would be important to understand Spring Integration mapping Conventions where at the very core, mappings are based on Payload first and everything else next.
+In other words the method whose argument could be mapped to a Payload will take precedence over all other methods.</p>
+<p>On the other hand let&#8217;s look at slightly different example:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Foo {
+    <span class="hl-keyword">public</span> String foo(String str, Map m);
+
+    <span class="hl-keyword">public</span> String foo(String str);
+}</pre>
+<p>If you look at it you can probably see a truly ambiguous condition.
+In this example since both methods have signatures that could be mapped to a Message Payload.
+They also have the same name.
+Such handler methods will trigger an Exception.
+However if the method names were different you could influence the mapping with a <span class="emphasis"><em>method</em></span> attribute (see below):</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Foo {
+    <span class="hl-keyword">public</span> String foo(String str, Map m);
+
+    <span class="hl-keyword">public</span> String bar(String str);
+}</pre>
+<pre class="programlisting"><span class="hl-tag">&lt;int:service-activator&nbsp;input-channel="input"&nbsp;output-channel="output"&nbsp;method="bar"&gt;</span>
+    <span class="hl-tag">&lt;bean&nbsp;class="org.bar.Foo"/&gt;</span>
+<span class="hl-tag">&lt;/int:service-activator&gt;</span></pre>
+<p>Now there is no ambiguity since the configuration explicitly maps to the <span class="emphasis"><em>bar</em></span> method which has no name conflicts.</p>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="security.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-appendices.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="testing.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Appendix&nbsp;D.&nbsp;Security in Spring Integration&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Appendix&nbsp;F.&nbsp;Testing support</td></tr></table></div></body></html>

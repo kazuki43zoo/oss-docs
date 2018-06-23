@@ -1,0 +1,101 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>30.&nbsp;Stream Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="stomp.html" title="29.&nbsp;STOMP Support"><link rel="next" href="syslog.html" title="31.&nbsp;Syslog Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">30.&nbsp;Stream Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="stomp.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="syslog.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="stream" href="#stream"></a>30.&nbsp;Stream Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="stream-intro" href="#stream-intro"></a>30.1&nbsp;Introduction</h2></div></div></div>
+
+<p>In many cases application data is obtained from a stream.
+It is <span class="emphasis"><em>not</em></span> recommended to send a reference to a Stream as a message payload to a consumer.
+Instead messages are created from data that is read from an input stream and message payloads are written to an output stream one by one.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="stream-reading" href="#stream-reading"></a>30.2&nbsp;Reading from streams</h2></div></div></div>
+
+<p>Spring Integration provides two adapters for streams.
+Both <code class="literal">ByteStreamReadingMessageSource</code> and <code class="literal">CharacterStreamReadingMessageSource</code> implement <code class="literal">MessageSource</code>.
+By configuring one of these within a channel-adapter element, the polling period can be configured, and the Message Bus can automatically detect and schedule them.
+The byte stream version requires an <code class="literal">InputStream</code>, and the character stream version requires a <code class="literal">Reader</code> as the single constructor argument.
+The <code class="literal">ByteStreamReadingMessageSource</code> also accepts the <span class="emphasis"><em>bytesPerMessage</em></span> property to determine how many bytes it will attempt to read into each <code class="literal">Message</code>.
+The default value is 1024.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.stream.ByteStreamReadingMessageSource"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"someInputStream"</span><span class="hl-tag">/&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"bytesPerMessage"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"2048"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.stream.CharacterStreamReadingMessageSource"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"someReader"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The <code class="literal">CharacterStreamReadingMessageSource</code> wraps the reader in a <code class="literal">BufferedReader</code> (if it&#8217;s not one already).
+You can set the buffer size used by the buffered reader in the second constructor argument.
+Starting with <span class="emphasis"><em>version 5.0</em></span>, a third constructor argument (<code class="literal">blockToDetectEOF</code>) controls the behavior of the <code class="literal">CharacterStreamReadingMessageSource</code>.
+When <code class="literal">false</code> (default), the <code class="literal">receive()</code> method checks if the reader is <code class="literal">ready()</code> and returns null if not.
+EOF is not detected in this case.
+When <code class="literal">true</code>, the <code class="literal">receive()</code> method blocks until data is available, or EOF is detected on the underlying stream.
+When EOF is detected, a <code class="literal">StreamClosedEvent</code> (application event) is published; you can consume this event with a bean implementing <code class="literal">ApplicationListener&lt;StreamClosedEvent&gt;</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>To facilitate EOF detection, the poller thread will block in the <code class="literal">receive()</code> method until either data arrives or EOF is detected.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The poller will continue to publish an event on each poll once EOF has been detected; the application listener can stop the adapter to prevent this.
+The event is published on the poller thread and stopping the adapter will cause the thread to be interrupted.
+If you intend to perform some interruptible task after stopping the adapter, you must either perform the <code class="literal">stop()</code> on a different thread, or use a different thread for those downstream activities.
+Note that sending to a <code class="literal">QueueChannel</code> is interruptible so if you wish to send a message from the listener, do it before stopping the adapter.</p>
+</td></tr></table></div>
+<p>This facilitates "piping" or redirecting data to <code class="literal">stdin</code>, such as&#8230;&#8203;</p>
+<pre class="screen">cat foo.txt | java -jar my.jar</pre>
+<p>or</p>
+<pre class="screen">java -jar my.jar &lt; foo.txt</pre>
+<p>allowing the application to terminate when the pipe is closed.</p>
+<p>Four convenient factory methods are available:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">final</span> CharacterStreamReadingMessageSource stdin() { ... }
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">final</span> CharacterStreamReadingMessageSource stdin(String charsetName) { ... }
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">final</span> CharacterStreamReadingMessageSource stdinPipe() { ... }
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">final</span> CharacterStreamReadingMessageSource stdinPipe(String charsetName) { ... }</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="stream-writing" href="#stream-writing"></a>30.3&nbsp;Writing to streams</h2></div></div></div>
+
+<p>For target streams, there are also two implementations: <code class="literal">ByteStreamWritingMessageHandler</code> and <code class="literal">CharacterStreamWritingMessageHandler</code>.
+Each requires a single constructor argument - <code class="literal">OutputStream</code> for byte streams or <code class="literal">Writer</code> for character streams, and each provides a second constructor that adds the optional <span class="emphasis"><em>bufferSize</em></span>.
+Since both of these ultimately implement the <code class="literal">MessageHandler</code> interface, they can be referenced from a <span class="emphasis"><em>channel-adapter</em></span> configuration as described in more detail in <a class="xref" href="messaging-channels-section.html#channel-adapter" title="4.3&nbsp;Channel Adapter">Section&nbsp;4.3, &#8220;Channel Adapter&#8221;</a>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.stream.ByteStreamWritingMessageHandler"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"someOutputStream"</span><span class="hl-tag">/&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"1024"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.stream.CharacterStreamWritingMessageHandler"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"someWriter"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="stream-namespace" href="#stream-namespace"></a>30.4&nbsp;Stream namespace support</h2></div></div></div>
+
+<p>To reduce the configuration needed for stream related channel adapters there is a namespace defined.
+The following schema locations are needed to use it.</p>
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;beans:beans</span> <span class="hl-attribute">xmlns:int-stream</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/stream"</span>
+  <span class="hl-attribute">xmlns:xsi</span>=<span class="hl-value">"http://www.w3.org/2001/XMLSchema-instance"</span>
+  <span class="hl-attribute">xmlns:beans</span>=<span class="hl-value">"http://www.springframework.org/schema/beans"</span>
+  <span class="hl-attribute">xsi:schemaLocation</span>=<span class="hl-value">"http://www.springframework.org/schema/beans
+      http://www.springframework.org/schema/beans/spring-beans.xsd
+      http://www.springframework.org/schema/integration/stream
+      http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd"</span><span class="hl-tag">&gt;</span></pre>
+<p>To configure the inbound channel adapter the following code snippet shows the different configuration options that are supported.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-stream:stdin-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adapterWithDefaultCharset"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-stream:stdin-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adapterWithProvidedCharset"</span> <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Starting with <span class="emphasis"><em>version 5.0</em></span> you can set the <code class="literal">detect-eof</code> attribute which sets the <code class="literal">blockToDetectEOF</code> property - see <a class="xref" href="stream.html#stream-reading" title="30.2&nbsp;Reading from streams">Section&nbsp;30.2, &#8220;Reading from streams&#8221;</a> for more information.</p>
+<p>To configure the outbound channel adapter you can use the namespace support as well.
+The following code snippet shows the different configuration for an outbound channel adapters.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-stream:stdout-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"stdoutAdapterWithDefaultCharset"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"testChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-stream:stdout-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"stdoutAdapterWithProvidedCharset"</span> <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"testChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-stream:stderr-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"stderrAdapter"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"testChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-stream:stdout-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"newlineAdapter"</span> <span class="hl-attribute">append-newline</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"testChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="stomp.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="syslog.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">29.&nbsp;STOMP Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;31.&nbsp;Syslog Support</td></tr></table></div></body></html>

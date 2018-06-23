@@ -1,0 +1,249 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>2.&nbsp;What&#8217;s new in Spring Integration 5.0?</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="whats-new-part.html" title="Part&nbsp;II.&nbsp;What&#8217;s new?"><link rel="prev" href="whats-new-part.html" title="Part&nbsp;II.&nbsp;What&#8217;s new?"><link rel="next" href="spring-integration-introduction.html" title="Part&nbsp;III.&nbsp;Overview of Spring Integration Framework"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">2.&nbsp;What&#8217;s new in Spring Integration 5.0?</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="whats-new-part.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;II.&nbsp;What&#8217;s new?</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="spring-integration-introduction.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="whats-new" href="#whats-new"></a>2.&nbsp;What&#8217;s new in Spring Integration 5.0?</h2></div></div></div>
+
+<p>This chapter provides an overview of the new features and improvements that have been introduced with Spring
+Integration 5.0.
+If you are interested in more details, please see the Issue Tracker tickets that were resolved as part of the 5.0
+development process.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="x5.0-new-components" href="#x5.0-new-components"></a>2.1&nbsp;New Components</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_java_dsl" href="#_java_dsl"></a>2.1.1&nbsp;Java DSL</h3></div></div></div>
+
+<p>The separate <a class="ulink" href="https://github.com/spring-projects/spring-integration-java-dsl" target="_top">Spring Integration Java DSL</a> project has now been merged into the core Spring Integration project.
+The <code class="literal">IntegrationComponentSpec</code> implementations for channel adapters and gateways are distributed to their specific modules.
+See <a class="xref" href="java-dsl.html" title="9.&nbsp;Java DSL">Chapter&nbsp;9, <i>Java DSL</i></a> for more information about Java DSL support.
+Also see the <a class="ulink" href="https://github.com/spring-projects/spring-integration/wiki/Spring-Integration-4.3-to-5.0-Migration-Guide#java-dsl" target="_top">4.3 to 5.0 Migration Guide</a> for the required steps to move to Spring Integration 5.0.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_testing_support" href="#_testing_support"></a>2.1.2&nbsp;Testing Support</h3></div></div></div>
+
+<p>A new Spring Integration Test Framework has been created to assist with testing Spring Integration applications.
+Now, with the <code class="literal">@SpringIntegrationTest</code> annotation on test class and <code class="literal">MockIntegration</code> factory you can make your JUnit tests for integration flows somewhat easier.</p>
+<p>See <a class="xref" href="testing.html" title="Appendix&nbsp;F.&nbsp;Testing support">Appendix&nbsp;F, <i>Testing support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_mongodb_outbound_gateway" href="#_mongodb_outbound_gateway"></a>2.1.3&nbsp;MongoDB Outbound Gateway</h3></div></div></div>
+
+<p>The new <code class="literal">MongoDbOutboundGateway</code> allows you to make queries to the database on demand by sending a message to its request channel.</p>
+<p>See <a class="xref" href="mongodb.html#mongodb-outbound-gateway" title="23.6&nbsp;MongoDB Outbound Gateway">Section&nbsp;23.6, &#8220;MongoDB Outbound Gateway&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_webflux_gateways_and_channel_adapters" href="#_webflux_gateways_and_channel_adapters"></a>2.1.4&nbsp;WebFlux Gateways and Channel Adapters</h3></div></div></div>
+
+<p>The new WebFlux support module has been introduced for Spring WebFlux Framework gateways and channel adapters.</p>
+<p>See <a class="xref" href="webflux.html" title="34.&nbsp;WebFlux Support">Chapter&nbsp;34, <i>WebFlux Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_content_type_conversion" href="#_content_type_conversion"></a>2.1.5&nbsp;Content Type Conversion</h3></div></div></div>
+
+<p>Now that we use the new <code class="literal">InvocableHandlerMethod</code> -based infrastructure for service method invocations, we can perform <code class="literal">contentType</code> conversion from payload to target method argument.</p>
+<p>See <a class="xref" href="messaging-endpoints-chapter.html#content-type-conversion" title="8.1.7&nbsp;Content Type Conversion">Section&nbsp;8.1.7, &#8220;Content Type Conversion&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_errormessagepublisher_and_errormessagestrategy" href="#_errormessagepublisher_and_errormessagestrategy"></a>2.1.6&nbsp;ErrorMessagePublisher and ErrorMessageStrategy</h3></div></div></div>
+
+<p>The <code class="literal">ErrorMessagePublisher</code> and the <code class="literal">ErrorMessageStrategy</code> are provided for creating <code class="literal">ErrorMessage</code> instances.</p>
+<p>See <a class="xref" href="configuration.html#namespace-errorhandler" title="E.4&nbsp;Error Handling">Section&nbsp;E.4, &#8220;Error Handling&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_jdbc_metadata_store" href="#_jdbc_metadata_store"></a>2.1.7&nbsp;JDBC Metadata Store</h3></div></div></div>
+
+<p>A JDBC implementation of <code class="literal">MetadataStore</code> implementation is now provided.
+This is useful when it is necessary to ensure transactional boundaries for metadata.</p>
+<p>See <a class="xref" href="jdbc.html#jdbc-metadata-store" title="19.7&nbsp;JDBC Metadata Store">Section&nbsp;19.7, &#8220;JDBC Metadata Store&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="x5.0-general" href="#x5.0-general"></a>2.2&nbsp;General Changes</h2></div></div></div>
+
+<p>Spring Integration is now fully based on Spring Framework <code class="literal">5.0</code> and Project Reactor <code class="literal">3.1</code>.
+Previous Project Reactor versions are no longer supported.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_core_changes" href="#_core_changes"></a>2.2.1&nbsp;Core Changes</h3></div></div></div>
+
+<p>The <code class="literal">@Poller</code> annotation now has the <code class="literal">errorChannel</code> attribute for easier configuration of the underlying <code class="literal">MessagePublishingErrorHandler</code>.</p>
+<p>See <a class="xref" href="configuration.html#annotations" title="E.6&nbsp;Annotation Support">Section&nbsp;E.6, &#8220;Annotation Support&#8221;</a> for more information.</p>
+<p>All the request-reply endpoints (based on <code class="literal">AbstractReplyProducingMessageHandler</code>) can now start transaction and, therefore, make the whole downstream flow transactional.</p>
+<p>See <a class="xref" href="messaging-endpoints-chapter.html#tx-handle-message-advice" title="8.9.6&nbsp;Transaction Support">Section&nbsp;8.9.6, &#8220;Transaction Support&#8221;</a> for more information.</p>
+<p>The <code class="literal">SmartLifecycleRoleController</code> now provides methods to obtain status of endpoints in roles.</p>
+<p>See <a class="xref" href="messaging-endpoints-chapter.html#endpoint-roles" title="8.2&nbsp;Endpoint Roles">Section&nbsp;8.2, &#8220;Endpoint Roles&#8221;</a> for more information.</p>
+<p>POJO methods are now invoked using an <code class="literal">InvocableHandlerMethod</code> by default, but can be configured to use SpEL as before.</p>
+<p>See <a class="xref" href="overview.html#pojo-invocation" title="3.9&nbsp;POJO Method invocation">Section&nbsp;3.9, &#8220;POJO Method invocation&#8221;</a> for more information.</p>
+<p>When targeting POJO methods as message handlers, one of the service methods can now be marked with the <code class="literal">@Default</code> annotation to provide a fallback mechanism for non-matched conditions.</p>
+<p>See <a class="xref" href="messaging-endpoints-chapter.html#service-activator-namespace" title="8.5.2&nbsp;Configuring Service Activator">Section&nbsp;8.5.2, &#8220;Configuring Service Activator&#8221;</a> for more information.</p>
+<p>A simple <code class="literal">PassThroughTransactionSynchronizationFactory</code> is provided to always store a polled message in the current transaction context.
+That message is used as a <code class="literal">failedMessage</code> property of the <code class="literal">MessagingException</code> which wraps a raw exception thrown during transaction completion.</p>
+<p>See <a class="xref" href="transactions.html#transaction-synchronization" title="C.3&nbsp;Transaction Synchronization">Section&nbsp;C.3, &#8220;Transaction Synchronization&#8221;</a> for more information.</p>
+<p>The aggregator expression-based <code class="literal">ReleaseStrategy</code> now evaluates the expression against the <code class="literal">MessageGroup</code> instead of just the collection of <code class="literal">Message&lt;?&gt;</code>.</p>
+<p>See <a class="xref" href="messaging-routing-chapter.html#aggregator-spel" title="Aggregators and Spring Expression Language (SpEL)">the section called &#8220;Aggregators and Spring Expression Language (SpEL)&#8221;</a> for more information.</p>
+<p>The <code class="literal">ObjectToMapTransformer</code> can now be supplied with a customised <code class="literal">JsonObjectMapper</code>.</p>
+<p>See <a class="xref" href="messaging-routing-chapter.html#aggregator-spel" title="Aggregators and Spring Expression Language (SpEL)">the section called &#8220;Aggregators and Spring Expression Language (SpEL)&#8221;</a> for more information.</p>
+<p>The <code class="literal">@GlobalChannelInterceptor</code> annotation and <code class="literal">&lt;int:channel-interceptor&gt;</code> now support negative patterns (via <code class="literal">!</code> prepending) for component names matching.</p>
+<p>See <a class="xref" href="messaging-channels-section.html#global-channel-configuration-interceptors" title="Global Channel Interceptor Configuration">the section called &#8220;Global Channel Interceptor Configuration&#8221;</a> for more information.</p>
+<p>A new <code class="literal">OnFailedToAcquireMutexEvent</code> is emitted now via <code class="literal">DefaultLeaderEventPublisher</code> by the <code class="literal">LockRegistryLeaderInitiator</code>, when candidate is failed to acquire the lock.</p>
+<p>See <a class="xref" href="messaging-endpoints-chapter.html#leadership-event-handling" title="8.3&nbsp;Leadership Event Handling">Section&nbsp;8.3, &#8220;Leadership Event Handling&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_gateway_changes" href="#_gateway_changes"></a>2.2.2&nbsp;Gateway Changes</h3></div></div></div>
+
+<p>The gateway now correctly sets the <code class="literal">errorChannel</code> header when the gateway method has a <code class="literal">void</code> return type and an error channel is provided.
+Previously, the header was not populated.
+This had the effect that synchronous downstream flows (running on the calling thread) would send the exception to the configured channel but an exception on an async downstream flow would be sent to the default <code class="literal">errorChannel</code> instead.</p>
+<p>The <code class="literal">RequestReplyExchanger</code> interface now has a <code class="literal">throws MessagingException</code> clause to meet all the proposed messages exchange contract.</p>
+<p>The request and reply timeouts can now be specified as SpEL expressions.</p>
+<p>See <a class="xref" href="messaging-endpoints-chapter.html#gateway" title="8.4&nbsp;Messaging Gateways">Section&nbsp;8.4, &#8220;Messaging Gateways&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_aggregator_performance_changes" href="#_aggregator_performance_changes"></a>2.2.3&nbsp;Aggregator Performance Changes</h3></div></div></div>
+
+<p>Aggregators now use a <code class="literal">SimpleSequenceSizeReleaseStrategy</code> by default, which is more efficient, especially with large groups.
+Empty groups are now scheduled for removal after <code class="literal">empty-group-min-timeout</code>.</p>
+<p>See <a class="xref" href="messaging-routing-chapter.html#aggregator" title="6.4&nbsp;Aggregator">Section&nbsp;6.4, &#8220;Aggregator&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_splitter_changes" href="#_splitter_changes"></a>2.2.4&nbsp;Splitter Changes</h3></div></div></div>
+
+<p>The Splitter component now can handle and split Java <code class="literal">Stream</code> and Reactive Streams <code class="literal">Publisher</code> objects.
+If the output channel is a <code class="literal">ReactiveStreamsSubscribableChannel</code>, the <code class="literal">AbstractMessageSplitter</code> builds a <code class="literal">Flux</code> for subsequent iteration instead of a regular <code class="literal">Iterator</code> independent of object being split.
+In addition, <code class="literal">AbstractMessageSplitter</code> provides <code class="literal">protected obtainSizeIfPossible()</code> methods to allow the determination of the size of the <code class="literal">Iterable</code> and <code class="literal">Iterator</code> objects if that is possible.</p>
+<p>See <a class="xref" href="messaging-routing-chapter.html#splitter" title="6.3&nbsp;Splitter">Section&nbsp;6.3, &#8220;Splitter&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_jms_changes" href="#_jms_changes"></a>2.2.5&nbsp;JMS Changes</h3></div></div></div>
+
+<p>Previously, Spring Integration JMS XML configuration used a default bean name <code class="literal">connectionFactory</code> for the JMS Connection Factory, allowing the property to be omitted from component definitions.
+It has now been renamed to <code class="literal">jmsConnectionFactory</code>, which is the bean name used by Spring Boot to auto-configure the JMS Connection Factory bean.</p>
+<p>If your application is relying on the previous behavior, rename your <code class="literal">connectionFactory</code> bean to <code class="literal">jmsConnectionFactory</code>, or specifically configure your components to use your bean using its current name.</p>
+<p>See <a class="xref" href="jms.html" title="21.&nbsp;JMS Support">Chapter&nbsp;21, <i>JMS Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_mail_changes" href="#_mail_changes"></a>2.2.6&nbsp;Mail Changes</h3></div></div></div>
+
+<p>Some inconsistencies with rendering IMAP mail content have been resolved.</p>
+<p>See <a class="link" href="mail.html#imap-format-important" title="Important">the note in the Mail-Receiving Channel Adapter Section</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_feed_changes" href="#_feed_changes"></a>2.2.7&nbsp;Feed Changes</h3></div></div></div>
+
+<p>Instead of the <code class="literal">com.rometools.fetcher.FeedFetcher</code>, which is deprecated in ROME, a new <code class="literal">Resource</code> property has been introduced to the <code class="literal">FeedEntryMessageSource</code>.</p>
+<p>See <a class="xref" href="feed.html" title="14.&nbsp;Feed Adapter">Chapter&nbsp;14, <i>Feed Adapter</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_file_changes" href="#_file_changes"></a>2.2.8&nbsp;File Changes</h3></div></div></div>
+
+<p>The new <code class="literal">FileHeaders.RELATIVE_PATH</code> Message header has been introduced to represent relative path in the <code class="literal">FileReadingMessageSource</code>.</p>
+<p>The tail adapter now supports <code class="literal">idleEventInterval</code> to emit events when there is no data in the file during that period.</p>
+<p>The flush predicates for the <code class="literal">FileWritingMessageHandler</code> now have an additional parameter.</p>
+<p>The file outbound channel adapter and gateway (<code class="literal">FileWritingMessageHandler</code>) now support the <code class="literal">REPLACE_IF_MODIFIED</code> <code class="literal">FileExistsMode</code>.</p>
+<p>They also now support setting file permissions on the newly written file.</p>
+<p>A new <code class="literal">FileSystemMarkerFilePresentFileListFilter</code> is now available; see <a class="xref" href="files.html#file-incomplete" title="15.2.7&nbsp;Dealing With Incomplete Data">Section&nbsp;15.2.7, &#8220;Dealing With Incomplete Data&#8221;</a> for more information.</p>
+<p>The <code class="literal">FileSplitter</code> now provides a <code class="literal">firstLineAsHeader</code> option to carry the first line of content as a header in the messages emitted for the remaining lines.</p>
+<p>See <a class="xref" href="files.html" title="15.&nbsp;File Support">Chapter&nbsp;15, <i>File Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="__s_ftp_changes" href="#__s_ftp_changes"></a>2.2.9&nbsp;(S)FTP Changes</h3></div></div></div>
+
+<p>The Inbound Channel Adapters now have a property <code class="literal">max-fetch-size</code> which is used to limit the number of files fetched during a poll when there are no files currently in the local directory.
+They also are configured with a <code class="literal">FileSystemPersistentAcceptOnceFileListFilter</code> in the <code class="literal">local-filter</code> by default.</p>
+<p>You can also provide a custom <code class="literal">DirectoryScanner</code> implementation to Inbound Channel Adapters via the newly introduced <code class="literal">scanner</code> attribute.</p>
+<p>The regex and pattern filters can now be configured to always pass directories.
+This can be useful when using recursion in the outbound gateways.</p>
+<p>All the Inbound Channel Adapters (streaming and synchronization-based) now use an appropriate <code class="literal">AbstractPersistentAcceptOnceFileListFilter</code> implementation by default to prevent remote files duplicate downloads.</p>
+<p>The FTP and SFTP outbound gateways now support the <code class="literal">REPLACE_IF_MODIFIED</code> <code class="literal">FileExistsMode</code> when fetching remote files.</p>
+<p>The (S)FTP streaming inbound channel adapters now add remote file information in a message header.</p>
+<p>The FTP and SFTP outbound channel adapters, as well as <code class="literal">PUT</code> command of the outbound gateways, now support <code class="literal">InputStream</code> as <code class="literal">payload</code>, too.</p>
+<p>The inbound channel adapters now can build file tree locally using a newly introduced <code class="literal">RecursiveDirectoryScanner</code>.
+See <code class="literal">scanner</code> option for injection.
+Also these adapters can now be switched to the <code class="literal">WatchService</code> instead.</p>
+<p>The <code class="literal">NLST</code> command has been added to the <code class="literal">AbstractRemoteFileOutboundGateway</code> to perform only list files names remote command.</p>
+<p>The <code class="literal">FtpOutboundGateway</code> can now be supplied with <code class="literal">workingDirExpression</code> to change the FTP client working directory for the current request message.</p>
+<p>The <code class="literal">RemoteFileTemplate</code> is supplied now with the <code class="literal">invoke(OperationsCallback&lt;F, T&gt; action)</code> to perform several <code class="literal">RemoteFileOperations</code> calls in the scope of the same, thread-bounded, <code class="literal">Session</code>.</p>
+<p>New filters for detecting incomplete remote files are now provided.</p>
+<p>The <code class="literal">FtpOutboundGateway</code> and <code class="literal">SftpOutboundGateway</code> now support an option to remove the remote file after a successful transfer using the <code class="literal">GET</code> or <code class="literal">MGET</code> commands.</p>
+<p>See <a class="xref" href="ftp.html" title="16.&nbsp;FTP/FTPS Adapters">Chapter&nbsp;16, <i>FTP/FTPS Adapters</i></a> and <a class="xref" href="sftp.html" title="28.&nbsp;SFTP Adapters">Chapter&nbsp;28, <i>SFTP Adapters</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_integration_properties" href="#_integration_properties"></a>2.2.10&nbsp;Integration Properties</h3></div></div></div>
+
+<p>Since <span class="emphasis"><em>version 4.3.2</em></span> a new <code class="literal">spring.integration.readOnly.headers</code> global property has been added to customize the list of headers which should not be copied to a newly created <code class="literal">Message</code> by the <code class="literal">MessageBuilder</code>.</p>
+<p>See <a class="xref" href="configuration.html#global-properties" title="E.5&nbsp;Global Properties">Section&nbsp;E.5, &#8220;Global Properties&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_stream_changes" href="#_stream_changes"></a>2.2.11&nbsp;Stream Changes</h3></div></div></div>
+
+<p>There is a new option on the <code class="literal">CharacterStreamReadingMessageSource</code> to allow it to be used to "pipe" stdin and publish an application event when the pipe is closed.</p>
+<p>See <a class="xref" href="stream.html#stream-reading" title="30.2&nbsp;Reading from streams">Section&nbsp;30.2, &#8220;Reading from streams&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_barrier_changes" href="#_barrier_changes"></a>2.2.12&nbsp;Barrier Changes</h3></div></div></div>
+
+<p>The <code class="literal">BarrierMessageHandler</code> now supports a discard channel to which late-arriving trigger messages are sent.</p>
+<p>See <a class="xref" href="messaging-routing-chapter.html#barrier" title="6.8&nbsp;Thread Barrier">Section&nbsp;6.8, &#8220;Thread Barrier&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_amqp_changes" href="#_amqp_changes"></a>2.2.13&nbsp;AMQP Changes</h3></div></div></div>
+
+<p>The AMQP outbound endpoints now support setting a delay expression for when using the RabbitMQ Delayed Message Exchange plugin.</p>
+<p>The inbound endpoints now support the Spring AMQP <code class="literal">DirectMessageListenerContainer</code>.</p>
+<p>Pollable AMQP-backed channels now block the poller thread for the poller&#8217;s configured <code class="literal">receiveTimeout</code> (default 1 second).</p>
+<p>Headers, such as <code class="literal">contentType</code> that are added to message properties by the message converter are now used in the final message; previously, it depended on the converter type as to which headers/message properties appeared in the final message.
+To override headers set by the converter, set the <code class="literal">headersMappedLast</code> property to <code class="literal">true</code>.</p>
+<p>See <a class="xref" href="amqp.html" title="12.&nbsp;AMQP Support">Chapter&nbsp;12, <i>AMQP Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_http_changes" href="#_http_changes"></a>2.2.14&nbsp;HTTP Changes</h3></div></div></div>
+
+<p>The <code class="literal">DefaultHttpHeaderMapper.userDefinedHeaderPrefix</code> property is now an empty string by default instead of <code class="literal">X-</code>.</p>
+<p>See <a class="xref" href="http.html#http-header-mapping" title="18.8&nbsp;HTTP Header Mappings">Section&nbsp;18.8, &#8220;HTTP Header Mappings&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_mqtt_changes" href="#_mqtt_changes"></a>2.2.15&nbsp;MQTT Changes</h3></div></div></div>
+
+<p>Inbound messages are now mapped with headers <code class="literal">RECEIVED_TOPIC</code>, <code class="literal">RECEIVED_QOS</code> and <code class="literal">RECEIVED_RETAINED</code> to avoid inadvertent propagation to outbound messages when an application is relaying messages.</p>
+<p>The outbound channel adapter now supports expressions for the topic, qos and retained properties; the defaults remain the same.</p>
+<p>See <a class="xref" href="mqtt.html" title="24.&nbsp;MQTT Support">Chapter&nbsp;24, <i>MQTT Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_stomp_changes" href="#_stomp_changes"></a>2.2.16&nbsp;STOMP Changes</h3></div></div></div>
+
+<p>The STOMP module has been changed to use <code class="literal">ReactorNettyTcpStompClient</code>, based on the Project Reactor <code class="literal">3.1</code> and <code class="literal">reactor-netty</code> extension.
+The <code class="literal">Reactor2TcpStompSessionManager</code> has been renamed to the <code class="literal">ReactorNettyTcpStompSessionManager</code> according to the <code class="literal">ReactorNettyTcpStompClient</code> foundation.</p>
+<p>See <a class="xref" href="stomp.html" title="29.&nbsp;STOMP Support">Chapter&nbsp;29, <i>STOMP Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_web_services_changes" href="#_web_services_changes"></a>2.2.17&nbsp;Web Services Changes</h3></div></div></div>
+
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The <code class="literal">WebServiceOutboundGateway</code> s can now be supplied with an externally configured <code class="literal">WebServiceTemplate</code> instances.
+</li><li class="listitem">
+The <code class="literal">DefaultSoapHeaderMapper</code> can now map a <code class="literal">javax.xml.transform.Source</code> user-defined header to a SOAP header element.
+</li><li class="listitem">
+Simple WebService Inbound and Outbound gateways can now deal with the complete <code class="literal">WebServiceMessage</code> as a <code class="literal">payload</code>, allowing the manipulation of MTOM attachments.
+</li></ul></div>
+<p>See <a class="xref" href="ws.html" title="36.&nbsp;Web Services Support">Chapter&nbsp;36, <i>Web Services Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_redis_changes" href="#_redis_changes"></a>2.2.18&nbsp;Redis Changes</h3></div></div></div>
+
+<p>The <code class="literal">RedisStoreWritingMessageHandler</code> is supplied now with additional String-based setters for SpEL expressions - for convenience with Java configuration.
+The <code class="literal">zsetIncrementExpression</code> can now be configured on the <code class="literal">RedisStoreWritingMessageHandler</code>, as well.
+In addition this property has been changed from <code class="literal">true</code> to <code class="literal">false</code> since <code class="literal">INCR</code> option on <code class="literal">ZADD</code> Redis command is optional.</p>
+<p>The <code class="literal">RedisInboundChannelAdapter</code> can now be supplied with an <code class="literal">Executor</code> for executing Redis listener invokers.
+In addition the received messages now contains a <code class="literal">RedisHeaders.MESSAGE_SOURCE</code> header to indicate the source of the message - topic or pattern.</p>
+<p>See <a class="xref" href="redis.html" title="25.&nbsp;Redis Support">Chapter&nbsp;25, <i>Redis Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_tcp_changes" href="#_tcp_changes"></a>2.2.19&nbsp;TCP Changes</h3></div></div></div>
+
+<p>A new <code class="literal">ThreadAffinityClientConnectionFactory</code> is provided that binds TCP connections to threads.</p>
+<p>You can now configure the TCP connection factories to support <code class="literal">PushbackInputStream</code> s, allowing deserializers to "unread" (push back) bytes after "reading ahead".</p>
+<p>A <code class="literal">ByteArrayElasticRawDeserializer</code> has been added without <code class="literal">maxMessageSize</code> control and buffer incoming data as needed.</p>
+<p>See <a class="xref" href="ip.html" title="32.&nbsp;TCP and UDP Support">Chapter&nbsp;32, <i>TCP and UDP Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_gemfire_changes" href="#_gemfire_changes"></a>2.2.20&nbsp;Gemfire Changes</h3></div></div></div>
+
+<p>The <code class="literal">GemfireMetadataStore</code> now implements <code class="literal">ListenableMetadataStore</code>, allowing users to listen to cache events by providing <code class="literal">MetadataStoreListener</code> instances to the store.</p>
+<p>See <a class="xref" href="gemfire.html" title="17.&nbsp;GemFire Support">Chapter&nbsp;17, <i>GemFire Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_jdbc_changes" href="#_jdbc_changes"></a>2.2.21&nbsp;Jdbc Changes</h3></div></div></div>
+
+<p>The <code class="literal">JdbcMessageChannelStore</code> now provides setter for the <code class="literal">ChannelMessageStorePreparedStatementSetter</code> allowing users to customize a message insertion in the store.</p>
+<p>The <code class="literal">ExpressionEvaluatingSqlParameterSourceFactory</code> now provides setter for the sqlParameterTypes allowing users to customize sql types of the parameters.</p>
+<p>See <a class="xref" href="jdbc.html" title="19.&nbsp;JDBC Support">Chapter&nbsp;19, <i>JDBC Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_metrics_changes" href="#_metrics_changes"></a>2.2.22&nbsp;Metrics Changes</h3></div></div></div>
+
+<p><a class="ulink" href="http://micrometer.io/" target="_top">Micrometer</a> application monitoring is now supported (since <span class="emphasis"><em>version 5.0.2</em></span>).
+See <a class="xref" href="system-management-chapter.html#micrometer-integration" title="10.1.2&nbsp;Micrometer Integration">Section&nbsp;10.1.2, &#8220;Micrometer Integration&#8221;</a> for more information.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Changes were made to the Micrometer <code class="literal">Meters</code> in <span class="emphasis"><em>version 5.0.3</em></span> to make them more suitable for use in dimensional systems.
+Further changes were made in 5.0.4; if using Micrometer, a minimum of version 5.0.4 is recommended.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="__endpointid_annotations" href="#__endpointid_annotations"></a>2.2.23&nbsp;@EndpointId Annotations</h3></div></div></div>
+
+<p>Introduced in <span class="emphasis"><em>version 5.0.4</em></span>, this annotation provides control over bean naming when using Java configuration.
+See <a class="xref" href="overview.html#endpoint-bean-names" title="3.4.8&nbsp;Endpoint Bean Names">Section&nbsp;3.4.8, &#8220;Endpoint Bean Names&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_integration_flows_generated_bean_names" href="#_integration_flows_generated_bean_names"></a>2.2.24&nbsp;Integration Flows: Generated bean names</h3></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 5.0.5</em></span>, generated bean names for the components in an <code class="literal">IntegrationFlow</code> include the flow bean name, followed by a dot, as a prefix.</p>
+<p>See <a class="xref" href="java-dsl.html#java-dsl-flows" title="9.15&nbsp;Working With Message Flows">Section&nbsp;9.15, &#8220;Working With Message Flows&#8221;</a> for more information.</p>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="whats-new-part.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="whats-new-part.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="spring-integration-introduction.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Part&nbsp;II.&nbsp;What&#8217;s new?&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Part&nbsp;III.&nbsp;Overview of Spring Integration Framework</td></tr></table></div></body></html>

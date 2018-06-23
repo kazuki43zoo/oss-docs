@@ -1,0 +1,48 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Requirements</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="preface.html" title="Part&nbsp;I.&nbsp;Preface"><link rel="prev" href="preface.html" title="Part&nbsp;I.&nbsp;Preface"><link rel="next" href="_conventions_in_this_book.html" title="1.&nbsp;Conventions in this Book"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Requirements</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="preface.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;I.&nbsp;Preface</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="_conventions_in_this_book.html">Next</a></td></tr></table><hr></div><div class="preface"><div class="titlepage"><div><div><h2 class="title"><a name="system-requirements" href="#system-requirements"></a>Requirements</h2></div></div></div>
+
+<p>This section details the compatible <a class="ulink" href="http://www.oracle.com/technetwork/java/javase/downloads/index.html" target="_top">Java</a> and <a class="ulink" href="http://www.springsource.org/spring-framework" target="_top">Spring Framework</a> versions.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="supported-java-versions" href="#supported-java-versions"></a>1&nbsp;Compatible Java Versions</h2></div></div></div>
+
+<p>For <span class="emphasis"><em>Spring Integration</em></span> <span class="strong"><strong>5.0.x</strong></span>, the <span class="strong"><strong>minimum</strong></span> compatible Java version is <span class="strong"><strong>Java SE 8</strong></span>.
+Older versions of Java are not supported.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="supported-spring-versions" href="#supported-spring-versions"></a>2&nbsp;Compatible Versions of the Spring Framework</h2></div></div></div>
+
+<p><span class="emphasis"><em>Spring Integration</em></span> <span class="strong"><strong>5.0.x</strong></span> requires <span class="emphasis"><em>Spring Framework</em></span> <span class="strong"><strong>5.0</strong></span> or later.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="code-conventions" href="#code-conventions"></a>3&nbsp;Code Conventions</h2></div></div></div>
+
+<p>The Spring Framework 2.0 introduced support for namespaces, which simplifies the XML configuration of the application context, and consequently Spring Integration provides broad namespace support.
+This reference guide applies the following conventions for all code examples that use namespace support:</p>
+<p>The <span class="strong"><strong>int</strong></span> namespace prefix will be used for Spring Integration&#8217;s core namespace support.
+Each Spring Integration adapter type (module) will provide its own namespace, which is configured using the following convention:</p>
+<p><span class="strong"><strong>int-</strong></span> followed by the name of the module, e.g.
+<span class="strong"><strong>int-twitter</strong></span>, <span class="strong"><strong>int-stream</strong></span>, &#8230;</p>
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;beans</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://www.springframework.org/schema/beans"</span>
+  <span class="hl-attribute">xmlns:xsi</span>=<span class="hl-value">"http://www.w3.org/2001/XMLSchema-instance"</span>
+  <span class="hl-attribute">xmlns:int</span>=<span class="hl-value">"http://www.springframework.org/schema/integration"</span>
+  <span class="hl-attribute">xmlns:int-twitter</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/twitter"</span>
+  <span class="hl-attribute">xmlns:int-stream</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/stream"</span>
+  <span class="hl-attribute">xsi:schemaLocation</span>=<span class="hl-value">"
+   http://www.springframework.org/schema/beans
+   http://www.springframework.org/schema/beans/spring-beans.xsd
+   http://www.springframework.org/schema/integration
+   http://www.springframework.org/schema/integration/spring-integration.xsd
+   http://www.springframework.org/schema/integration/twitter
+   http://www.springframework.org/schema/integration/twitter/spring-integration-twitter.xsd
+   http://www.springframework.org/schema/integration/stream
+   http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd"</span><span class="hl-tag">&gt;</span>
+&#8230;
+<span class="hl-tag">&lt;/beans&gt;</span></pre>
+<p>For a detailed explanation regarding Spring Integration&#8217;s namespace support see <span class="emphasis"><em><a class="xref" href="configuration.html#configuration-namespace" title="E.2&nbsp;Namespace Support">Section&nbsp;E.2, &#8220;Namespace Support&#8221;</a></em></span>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Please note that the namespace prefix can be freely chosen.
+You may even choose not to use any namespace prefixes at all.
+Therefore, apply the convention that suits your application needs best.
+Be aware, though, that SpringSource Tool Suite&#8482; (STS) uses the same namespace conventions for Spring Integration as used in this reference guide.</p>
+</td></tr></table></div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="preface.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="preface.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="_conventions_in_this_book.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Part&nbsp;I.&nbsp;Preface&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;1.&nbsp;Conventions in this Book</td></tr></table></div></body></html>

@@ -1,0 +1,769 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>9.&nbsp;Java DSL</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-core-messaging.html" title="Part&nbsp;IV.&nbsp;Core Messaging"><link rel="prev" href="messaging-endpoints-chapter.html" title="8.&nbsp;Messaging Endpoints"><link rel="next" href="system-management-chapter.html" title="10.&nbsp;System Management"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">9.&nbsp;Java DSL</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="messaging-endpoints-chapter.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;IV.&nbsp;Core Messaging</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="system-management-chapter.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="java-dsl" href="#java-dsl"></a>9.&nbsp;Java DSL</h2></div></div></div>
+
+<p>The Spring Integration JavaConfig and DSL provides a set of convenient Builders and a fluent API to configure Spring Integration message flows from Spring <code class="literal">@Configuration</code> classes.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-example" href="#java-dsl-example"></a>9.1&nbsp;Example Configurations</h2></div></div></div>
+
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MyConfiguration {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> AtomicInteger integerSource() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> AtomicInteger();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow myFlow() {
+        <span class="hl-keyword">return</span> IntegrationFlows.from(integerSource::getAndIncrement,
+                                         c -&gt; c.poller(Pollers.fixedRate(<span class="hl-number">100</span>)))
+                    .channel(<span class="hl-string">"inputChannel"</span>)
+                    .filter((Integer p) -&gt; p &gt; <span class="hl-number">0</span>)
+                    .transform(Object::toString)
+                    .channel(MessageChannels.queue())
+                    .get();
+    }
+}</pre>
+<p>As the result after <code class="literal">ApplicationContext</code> start up Spring Integration endpoints and Message Channels will be created as is the case after XML parsing.
+Such configuration can be used to replace XML configuration or along side with it.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-introduction" href="#java-dsl-introduction"></a>9.2&nbsp;Introduction</h2></div></div></div>
+
+<p>The Java DSL for Spring Integration is essentially a facade for Spring Integration.
+The DSL provides a simple way to embed Spring Integration Message Flows into your application using the fluent <code class="literal">Builder</code> pattern together with existing Java and Annotation configurations from Spring Framework and Spring Integration as well.
+Another useful tool to simplify configuration is Java 8 Lambdas.</p>
+<p>The <a class="ulink" href="https://github.com/spring-projects/spring-integration-samples/tree/master/dsl/cafe-dsl" target="_top">cafe</a> is a good example of using the DSL.</p>
+<p>The DSL is  presented by the <code class="literal">IntegrationFlows</code> Factory for the <code class="literal">IntegrationFlowBuilder</code>.
+This produces the <code class="literal">IntegrationFlow</code> component, which should be registered as a Spring bean (<code class="literal">@Bean</code>).
+The builder pattern is used to express arbitrarily complex structures as a hierarchy of methods that may accept Lambdas as arguments.</p>
+<p>The <code class="literal">IntegrationFlowBuilder</code> just collects integration components (<code class="literal">MessageChannel</code> s, <code class="literal">AbstractEndpoint</code> s etc.) in the <code class="literal">IntegrationFlow</code> bean for further parsing and registration of concrete beans in the application context by the <code class="literal">IntegrationFlowBeanPostProcessor</code>.</p>
+<p>The Java DSL uses Spring Integration classes directly and bypasses any XML generation and parsing.
+However, the DSL offers more than syntactic sugar on top of XML.
+One of its most compelling features is the ability to define inline Lambdas to implement endpoint logic, eliminating the need for external classes to implement custom logic.
+In some sense, Spring Integration&#8217;s support for the Spring Expression Language (SpEL) and inline scripting address this, but Java Lambdas are easier and much more powerful.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-basics" href="#java-dsl-basics"></a>9.3&nbsp;DSL Basics</h2></div></div></div>
+
+<p>The <code class="literal">org.springframework.integration.dsl</code> package contains the <code class="literal">IntegrationFlowBuilder</code> API mentioned above and a bunch of <code class="literal">IntegrationComponentSpec</code> implementations which are builders too and provide the fluent API to configure concrete endpoints.
+The <code class="literal">IntegrationFlowBuilder</code> infrastructure provides common <a class="ulink" href="http://www.eaipatterns.com" target="_top">EIP</a> for message based applications, such as channels, endpoints, pollers and channel interceptors.</p>
+<p>Endpoints are expressed as verbs in the DSL to improve readability.
+The following list includes the common DSL method names and the associated EIP endpoint:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+transform &#8594; <code class="literal">Transformer</code>
+</li><li class="listitem">
+filter &#8594; <code class="literal">Filter</code>
+</li><li class="listitem">
+handle &#8594; <code class="literal">ServiceActivator</code>
+</li><li class="listitem">
+split &#8594; <code class="literal">Splitter</code>
+</li><li class="listitem">
+aggregate &#8594; <code class="literal">Aggregator</code>
+</li><li class="listitem">
+route &#8594; <code class="literal">Router</code>
+</li><li class="listitem">
+bridge &#8594; <code class="literal">Bridge</code>
+</li></ul></div>
+<p>Conceptually, integration processes are constructed by composing these endpoints into one or more message flows.
+Note that EIP does not formally define the term <span class="emphasis"><em>message flow</em></span>, but it is useful to think of it as a unit of work that uses well known messaging patterns.
+The DSL provides an <code class="literal">IntegrationFlow</code> component to define a composition of channels and endpoints between them, but now <code class="literal">IntegrationFlow</code> plays only the configuration role to populate real beans in the application context and isn&#8217;t used at runtime:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow integerFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"input"</span>)
+            .&lt;String, Integer&gt;transform(Integer::parseInt)
+            .get();
+}</pre>
+<p>Here we use the <code class="literal">IntegrationFlows</code> factory to define an <code class="literal">IntegrationFlow</code> bean using EIP-methods from <code class="literal">IntegrationFlowBuilder</code>.</p>
+<p>The <code class="literal">transform</code> method accepts a Lambda as an endpoint argument to operate on the message payload.
+The real argument of this method is <code class="literal">GenericTransformer&lt;S, T&gt;</code>, hence any out-of-the-box transformers  (<code class="literal">ObjectToJsonTransformer</code>, <code class="literal">FileToStringTransformer</code> etc.) can be used here.</p>
+<p>Under the covers, <code class="literal">IntegrationFlowBuilder</code> recognizes the <code class="literal">MessageHandler</code> and endpoint for that: <code class="literal">MessageTransformingHandler</code> and <code class="literal">ConsumerEndpointFactoryBean</code>, respectively.
+Let&#8217;s look at another example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow myFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"input"</span>)
+                .filter(<span class="hl-string">"World"</span>::equals)
+                .transform(<span class="hl-string">"Hello "</span>::concat)
+                .handle(System.out::println)
+                .get();
+}</pre>
+<p>The above example composes a sequence of <code class="literal">Filter -&gt; Transformer -&gt; Service Activator</code>.
+The flow is <span class="emphasis"><em>one way</em></span>, that is it does not provide a a reply message but simply prints the payload to STDOUT.
+The endpoints are automatically wired together using direct channels.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-channels" href="#java-dsl-channels"></a>9.4&nbsp;Message Channels</h2></div></div></div>
+
+<p>In addition to the <code class="literal">IntegrationFlowBuilder</code> with EIP-methods the Java DSL provides a fluent API to configure <code class="literal">MessageChannel</code> s.
+For this purpose the <code class="literal">MessageChannels</code> builder factory is provided:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MessageChannel priorityChannel() {
+    <span class="hl-keyword">return</span> MessageChannels.priority(<span class="hl-keyword">this</span>.mongoDbChannelMessageStore, <span class="hl-string">"priorityGroup"</span>)
+                        .interceptor(wireTap())
+                        .get();
+}</pre>
+<p>The same <code class="literal">MessageChannels</code> builder factory can be used in the <code class="literal">channel()</code> EIP-method from <code class="literal">IntegrationFlowBuilder</code> to wire endpoints similar to an <code class="literal">input-channel</code>/<code class="literal">output-channel</code> pair in the XML configuration.
+By default endpoints are wired via <code class="literal">DirectChannel</code> s where the bean name is based on the pattern: <code class="literal">[IntegrationFlow.beanName].channel#[channelNameIndex]</code>.
+This rule is applied for unnamed channels produced by inline <code class="literal">MessageChannels</code> builder factory usage, too.
+However all <code class="literal">MessageChannels</code> methods have a <code class="literal">channelId</code> -aware variant to create the bean names for <code class="literal">MessageChannel</code> s.
+The <code class="literal">MessageChannel</code> references can be used as well as <code class="literal">beanName</code>, as bean-method invocations.
+Here is a sample with possible variants of <code class="literal">channel()</code> EIP-method usage:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MessageChannel queueChannel() {
+    <span class="hl-keyword">return</span> MessageChannels.queue().get();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MessageChannel publishSubscribe() {
+    <span class="hl-keyword">return</span> MessageChannels.publishSubscribe().get();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow channelFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"input"</span>)
+                .fixedSubscriberChannel()
+                .channel(<span class="hl-string">"queueChannel"</span>)
+                .channel(publishSubscribe())
+                .channel(MessageChannels.executor(<span class="hl-string">"executorChannel"</span>, <span class="hl-keyword">this</span>.taskExecutor))
+                .channel(<span class="hl-string">"output"</span>)
+                .get();
+}</pre>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">from("input")</code> means: <span class="emphasis"><em>find and use the <code class="literal">MessageChannel</code> with the "input" id, or create one</em></span>;
+</li><li class="listitem">
+<code class="literal">fixedSubscriberChannel()</code> produces an instance of <code class="literal">FixedSubscriberChannel</code> and registers it with name <code class="literal">channelFlow.channel#0</code>;
+</li><li class="listitem">
+<code class="literal">channel("queueChannel")</code> works the same way but, of course, uses an existing "queueChannel" bean;
+</li><li class="listitem">
+<code class="literal">channel(publishSubscribe())</code> - the bean-method reference;
+</li><li class="listitem">
+<code class="literal">channel(MessageChannels.executor("executorChannel", this.taskExecutor))</code> the <code class="literal">IntegrationFlowBuilder</code> unwraps <code class="literal">IntegrationComponentSpec</code> to the <code class="literal">ExecutorChannel</code> and registers it as "executorChannel";
+</li><li class="listitem">
+<code class="literal">channel("output")</code> - registers the <code class="literal">DirectChannel</code> bean with "output" name as long as there are no beans with this name.
+</li></ul></div>
+<p>Note: the <code class="literal">IntegrationFlow</code> definition shown above is valid and all of its channels are applied to  endpoints with <code class="literal">BridgeHandler</code> s.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Be careful to use the same inline channel definition via <code class="literal">MessageChannels</code> factory from different <code class="literal">IntegrationFlow</code> s.
+Even if the DSL parsers register non-existing objects as beans, it can&#8217;t determine the same object (<code class="literal">MessageChannel</code>) from different <code class="literal">IntegrationFlow</code> containers.
+This is wrong:</p>
+</td></tr></table></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow startFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"input"</span>)
+                .transform(...)
+                .channel(MessageChannels.queue(<span class="hl-string">"queueChannel"</span>))
+                .get();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow endFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(MessageChannels.queue(<span class="hl-string">"queueChannel"</span>))
+                .handle(...)
+                .get();
+}</pre>
+<p>You end up with:</p>
+<pre class="screen">Caused by: java.lang.IllegalStateException:
+Could not register object [queueChannel] under bean name 'queueChannel':
+     there is already object [queueChannel] bound
+	    at o.s.b.f.s.DefaultSingletonBeanRegistry.registerSingleton(DefaultSingletonBeanRegistry.java:129)</pre>
+<p>To make it working there is just need to declare <code class="literal">@Bean</code> for that channel and use its bean-method from different <code class="literal">IntegrationFlow</code> s.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-pollers" href="#java-dsl-pollers"></a>9.5&nbsp;Pollers</h2></div></div></div>
+
+<p>A similar fluent API is provided to configure <code class="literal">PollerMetadata</code> for <code class="literal">AbstractPollingEndpoint</code> implementations.
+The <code class="literal">Pollers</code> builder factory can be used to configure common bean definitions or those created from <code class="literal">IntegrationFlowBuilder</code> EIP-methods:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean(name = PollerMetadata.DEFAULT_POLLER)</span></em>
+<span class="hl-keyword">public</span> PollerSpec poller() {
+    <span class="hl-keyword">return</span> Pollers.fixedRate(<span class="hl-number">500</span>)
+        .errorChannel(<span class="hl-string">"myErrors"</span>);
+}</pre>
+<p>See <code class="literal">Pollers</code> and <code class="literal">PollerSpec</code> Java Docs for more information.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If you use the DSL to construct a <code class="literal">PollerSpec</code> as a <code class="literal">@Bean</code>, do not call the <code class="literal">get()</code> method in the bean definition; the <code class="literal">PollerSpec</code> is a <code class="literal">FactoryBean</code> that will generate the <code class="literal">PollerMetadata</code> object from the specification and initialize all of its properties as needed.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-endpoints" href="#java-dsl-endpoints"></a>9.6&nbsp;DSL and Endpoint Configuration</h2></div></div></div>
+
+<p>All <code class="literal">IntegrationFlowBuilder</code> EIP-methods have a variant to apply the Lambda parameter to provide options for <code class="literal">AbstractEndpoint</code> s: <code class="literal">SmartLifecycle</code>, <code class="literal">PollerMetadata</code>, <code class="literal">request-handler-advice-chain</code> etc.
+Each of them has generic arguments, so it allows you to simply configure an endpoint and even its <code class="literal">MessageHandler</code> in the context:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow flow2() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-keyword">this</span>.inputChannel)
+                .transform(<span class="hl-keyword">new</span> PayloadSerializingTransformer(),
+                       c -&gt; c.autoStartup(false).id(<span class="hl-string">"payloadSerializingTransformer"</span>))
+                .transform((Integer p) -&gt; p * <span class="hl-number">2</span>, c -&gt; c.advice(<span class="hl-keyword">this</span>.expressionAdvice()))
+                .get();
+}</pre>
+<p>In addition the <code class="literal">EndpointSpec</code> provides an <code class="literal">id()</code> method to allow you to register an endpoint bean with a  given bean name, rather than a generated one.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-transformers" href="#java-dsl-transformers"></a>9.7&nbsp;Transformers</h2></div></div></div>
+
+<p>The DSL API provides a convenient, fluent <code class="literal">Transformers</code> factory to be used as inline target object definition within <code class="literal">.transform()</code> EIP-method:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow transformFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"input"</span>)
+            .transform(Transformers.fromJson(MyPojo.<span class="hl-keyword">class</span>))
+            .transform(Transformers.serializer())
+            .get();
+}</pre>
+<p>It avoids inconvenient coding using setters and makes the flow definition more straightforward.
+Note, that <code class="literal">Transformers</code> can be use to declare target <code class="literal">Transformer</code> s as <code class="literal">@Bean</code> s and, again, use them from <code class="literal">IntegrationFlow</code> definition as bean-methods.
+Nevertheless, the DSL parser takes care about bean declarations for inline objects, if they aren&#8217;t defined as beans yet.</p>
+<p>See <code class="literal">Transformers</code> Java Docs for more information and supported factory methods.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-inbound-adapters" href="#java-dsl-inbound-adapters"></a>9.8&nbsp;Inbound Channel Adapters</h2></div></div></div>
+
+<p>Typically message flows start from some Inbound Channel Adapter (e.g. <code class="literal">&lt;int-jdbc:inbound-channel-adapter&gt;</code>).
+The adapter is configured with <code class="literal">&lt;poller&gt;</code> and it asks a <code class="literal">MessageSource&lt;?&gt;</code> for producing messages periodically.
+Java DSL allows to start <code class="literal">IntegrationFlow</code> from a <code class="literal">MessageSource&lt;?&gt;</code>, too.
+For this purpose <code class="literal">IntegrationFlows</code> builder factory provides overloaded <code class="literal">IntegrationFlows.from(MessageSource&lt;?&gt; messageSource)</code> method.
+The <code class="literal">MessageSource&lt;?&gt;</code> may be configured as a bean and provided as argument for that method.
+The second parameter of <code class="literal">IntegrationFlows.from()</code> is a <code class="literal">Consumer&lt;SourcePollingChannelAdapterSpec&gt;</code> Lambda and allows to provide options for the <code class="literal">SourcePollingChannelAdapter</code>, e.g. <code class="literal">PollerMetadata</code> or <code class="literal">SmartLifecycle</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MessageSource&lt;Object&gt; jdbcMessageSource() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> JdbcPollingChannelAdapter(<span class="hl-keyword">this</span>.dataSource, <span class="hl-string">"SELECT * FROM foo"</span>);
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow pollingFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(jdbcMessageSource(),
+                c -&gt; c.poller(Pollers.fixedRate(<span class="hl-number">100</span>).maxMessagesPerPoll(<span class="hl-number">1</span>)))
+            .transform(Transformers.toJson())
+            .channel(<span class="hl-string">"furtherProcessChannel"</span>)
+            .get();
+}</pre>
+<p>There is also an <code class="literal">IntegrationFlows.from()</code> variant based on the <code class="literal">java.util.function.Supplier</code> if there is no requirements to build <code class="literal">Message</code> objects directly.
+The result of the <code class="literal">Supplier.get()</code> is wrapped to the <code class="literal">Message</code> (if it isn&#8217;t message already) by Framework automatically.</p>
+<p>The next sections discuss selected endpoints which require further explanation.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-routers" href="#java-dsl-routers"></a>9.9&nbsp;Message Routers</h2></div></div></div>
+
+<p>Spring Integration natively provides specialized router types including:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">HeaderValueRouter</code>
+</li><li class="listitem">
+<code class="literal">PayloadTypeRouter</code>
+</li><li class="listitem">
+<code class="literal">ExceptionTypeRouter</code>
+</li><li class="listitem">
+<code class="literal">RecipientListRouter</code>
+</li><li class="listitem">
+<code class="literal">XPathRouter</code>
+</li></ul></div>
+<p>As with many other DSL <code class="literal">IntegrationFlowBuilder</code> EIP-methods the <code class="literal">route()</code> method can apply any out-of-the-box <code class="literal">AbstractMessageRouter</code> implementation, or for convenience a <code class="literal">String</code> as a SpEL expression, or a <code class="literal">ref</code>/<code class="literal">method</code> pair.
+In addition <code class="literal">route()</code> can be configured with a Lambda - the inline method invocation case, and with a Lambda for a <code class="literal">Consumer&lt;RouterSpec&lt;MethodInvokingRouter&gt;&gt;</code>.
+The fluent API also provides <code class="literal">AbstractMappingMessageRouter</code> options like <code class="literal">channelMapping(String key, String channelName)</code> pairs:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow routeFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"routerInput"</span>)
+            .&lt;Integer, Boolean&gt;route(p -&gt; p % <span class="hl-number">2</span> == <span class="hl-number">0</span>,
+                    m -&gt; m.suffix(<span class="hl-string">"Channel"</span>)
+                            .channelMapping(<span class="hl-string">"true"</span>, <span class="hl-string">"even"</span>)
+                            .channelMapping(<span class="hl-string">"false"</span>, <span class="hl-string">"odd"</span>)
+            )
+            .get();
+}</pre>
+<p>A simple expression-based router:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow routeFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"routerInput"</span>)
+            .route(<span class="hl-string">"headers['destChannel']"</span>)
+            .get();
+}</pre>
+<p>The <code class="literal">routeToRecipients()</code> method takes a <code class="literal">Consumer&lt;RecipientListRouterSpec&gt;</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow recipientListFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"recipientListInput"</span>)
+            .&lt;String, String&gt;transform(p -&gt; p.replaceFirst(<span class="hl-string">"Payload"</span>, <span class="hl-string">""</span>))
+                        .routeToRecipients(r -&gt; r
+                .recipient(<span class="hl-string">"foo-channel"</span>, <span class="hl-string">"'foo' == payload"</span>)
+                .recipient(<span class="hl-string">"bar-channel"</span>, m -&gt;
+                    m.getHeaders().containsKey(<span class="hl-string">"recipient"</span>)
+                        &amp;&amp; (<span class="hl-keyword">boolean</span>) m.getHeaders().get(<span class="hl-string">"recipient"</span>))
+                .recipientFlow(<span class="hl-string">"'foo' == payload or 'bar' == payload or 'baz' == payload"</span>,
+                    f -&gt; f.&lt;String, String&gt;transform(String::toUpperCase)
+                        .channel(c -&gt; c.queue(<span class="hl-string">"recipientListSubFlow1Result"</span>)))
+                .recipientFlow((String p) -&gt; p.startsWith(<span class="hl-string">"baz"</span>),
+                    f -&gt; f.transform(<span class="hl-string">"Hello "</span>::concat)
+                        .channel(c -&gt; c.queue(<span class="hl-string">"recipientListSubFlow2Result"</span>)))
+                .recipientFlow(<span class="hl-keyword">new</span> FunctionExpression&lt;Message&lt;?&gt;&gt;(m -&gt;
+                                             <span class="hl-string">"bax"</span>.equals(m.getPayload())),
+                    f -&gt; f.channel(c -&gt; c.queue(<span class="hl-string">"recipientListSubFlow3Result"</span>)))
+                .defaultOutputToParentFlow())
+            .get();
+}</pre>
+<p>The <code class="literal">.defaultOutputToParentFlow()</code> of the <code class="literal">.routeToRecipients()</code> allows to make the router&#8217;s <code class="literal">defaultOutput</code> as a gateway to continue a process for the unmatched messages in the main flow.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-splitters" href="#java-dsl-splitters"></a>9.10&nbsp;Splitters</h2></div></div></div>
+
+<p>A splitter is created using the <code class="literal">split()</code> EIP-method.
+By default, if the payload is a <code class="literal">Iterable</code>, <code class="literal">Iterator</code>, <code class="literal">Array</code>, <code class="literal">Stream</code> or Reactive <code class="literal">Publisher</code>, this will output each item as an individual message.
+This takes a Lambda, SpEL expression, any <code class="literal">AbstractMessageSplitter</code> implementation, or can be used without parameters to provide the <code class="literal">DefaultMessageSplitter</code>.
+For example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow splitFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"splitInput"</span>)
+              .split(s -&gt;
+                      s.applySequence(false).get().getT2().setDelimiters(<span class="hl-string">","</span>))
+              .channel(MessageChannels.executor(<span class="hl-keyword">this</span>.taskExecutor()))
+              .get();
+}</pre>
+<p>This creates a splitter that splits a message containing a comma delimited String.
+Note: the <code class="literal">getT2()</code> method comes from <code class="literal">Tuple</code> <code class="literal">Collection</code> which is the result of <code class="literal">EndpointSpec.get()</code> and represents a pair of <code class="literal">ConsumerEndpointFactoryBean</code> and <code class="literal">DefaultMessageSplitter</code> for the example above.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-aggregators" href="#java-dsl-aggregators"></a>9.11&nbsp;Aggregators and Resequencers</h2></div></div></div>
+
+<p>An <code class="literal">Aggregator</code> is conceptually the converse of a <code class="literal">Splitter</code>.
+It aggregates a sequence of individual messages into a single message and is necessarily more complex.
+By default, an aggregator will return a message containing a collection of payloads from incoming messages.
+The same rules are applied for the <code class="literal">Resequencer</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow splitAggregateFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"splitAggregateInput"</span>)
+            .split()
+            .channel(MessageChannels.executor(<span class="hl-keyword">this</span>.taskExecutor()))
+            .resequence()
+            .aggregate()
+            .get();
+}</pre>
+<p>The above is a canonical example of splitter/aggregator pattern.
+The <code class="literal">split()</code> method splits the list into individual messages and sends them to the <code class="literal">ExecutorChannel</code>.
+The <code class="literal">resequence()</code> method reorders messages by sequence details from message headers.
+The <code class="literal">aggregate()</code> method just collects those messages to the result list.</p>
+<p>However, you may change the default behavior by specifying a release strategy and correlation strategy, among other things.
+Consider the following:</p>
+<pre class="programlisting">.aggregate(a -&gt;
+        a.correlationStrategy(m -&gt; m.getHeaders().get(<span class="hl-string">"myCorrelationKey"</span>))
+            .releaseStrategy(g -&gt; g.size() &gt; <span class="hl-number">10</span>)
+            .messageStore(messageStore()))</pre>
+<p>The similar Lambda configurations are provided for the <code class="literal">resequence()</code> EIP-method.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-handle" href="#java-dsl-handle"></a>9.12&nbsp;ServiceActivators (.handle())</h2></div></div></div>
+
+<p>The <code class="literal">.handle()</code> EIP-method&#8217;s goal is to invoke any <code class="literal">MessageHandler</code> implementation or any method on some POJO.
+Another option to define "activity" via Lambda expression.
+Hence a generic <code class="literal">GenericHandler&lt;P&gt;</code> functional interface has been introduced.
+Its <code class="literal">handle</code> method requires two arguments - <code class="literal">P payload</code> and <code class="literal">Map&lt;String, Object&gt; headers</code>.
+Having that we can define a flow like this:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow myFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"flow3Input"</span>)
+        .&lt;Integer&gt;handle((p, h) -&gt; p * <span class="hl-number">2</span>)
+        .get();
+}</pre>
+<p>However one main goal of Spring Integration an achieving of <code class="literal">loose coupling</code> via runtime type conversion from message payload to target arguments of message handler.
+Since Java doesn&#8217;t support generic type resolution for Lambda classes, we introduced a workaround with additional <code class="literal">payloadType</code> argument for the most EIP-methods and <code class="literal">LambdaMessageProcessor</code>, which delegates the hard conversion work to the Spring&#8217;s <code class="literal">ConversionService</code> using provided <code class="literal">type</code> and requested message to target method arguments.
+The <code class="literal">IntegrationFlow</code> might look like this:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow integerFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"input"</span>)
+            .&lt;<span class="hl-keyword">byte</span>[], String&gt;transform(p - &gt; <span class="hl-keyword">new</span> String(p, <span class="hl-string">"UTF-8"</span>))
+            .handle(Integer.<span class="hl-keyword">class</span>, (p, h) -&gt; p * <span class="hl-number">2</span>)
+            .get();
+}</pre>
+<p>Of course we register some custom <code class="literal">BytesToIntegerConverter</code> within <code class="literal">ConversionService</code> and get rid of that additional <code class="literal">.transform()</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-log" href="#java-dsl-log"></a>9.13&nbsp;Operator log()</h2></div></div></div>
+
+<p>For convenience to log the message journey throw the Spring Integration flow (<code class="literal">&lt;logging-channel-adapter&gt;</code>), a <code class="literal">log()</code> operator is presented.
+Underneath it is represented by the <code class="literal">WireTap</code> <code class="literal">ChannelInterceptor</code> and <code class="literal">LoggingHandler</code> as subscriber.
+It is responsible to log message incoming into the next endpoint or for the current channel:</p>
+<pre class="programlisting">.filter(...)
+.log(LoggingHandler.Level.ERROR, <span class="hl-string">"test.category"</span>, m -&gt; m.getHeaders().getId())
+.route(...)</pre>
+<p>In this example an <code class="literal">id</code> header will be logged with <code class="literal">ERROR</code> level onto "test.category" only for messages passed the filter and before routing.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-wiretap" href="#java-dsl-wiretap"></a>9.14&nbsp;MessageChannelSpec.wireTap()</h2></div></div></div>
+
+<p>A <code class="literal">.wireTap()</code> fluent API exists for <code class="literal">MessageChannelSpec</code> builders.
+A target configuration gains much more from Java DSL usage:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> QueueChannelSpec myChannel() {
+    <span class="hl-keyword">return</span> MessageChannels.queue()
+            .wireTap(<span class="hl-string">"loggingFlow.input"</span>);
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow loggingFlow() {
+    <span class="hl-keyword">return</span> f -&gt; f.log();
+}</pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">log()</code> or <code class="literal">wireTap()</code> opearators are applied to the current <code class="literal">MessageChannel</code> (if it is an instance of <code class="literal">ChannelInterceptorAware</code>) or an intermediate <code class="literal">DirectChannel</code> is injected into the flow for the currently configured endpoint.
+In the example below the <code class="literal">WireTap</code> interceptor is added to the <code class="literal">myChannel</code> directly, because <code class="literal">DirectChannel</code> implements <code class="literal">ChannelInterceptorAware</code>:</p>
+</td></tr></table></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+MessageChannel myChannel() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+}
+
+...
+    .channel(myChannel())
+    .log()
+}</pre>
+<p>When current <code class="literal">MessageChannel</code> doesn&#8217;t implement <code class="literal">ChannelInterceptorAware</code>, an implicit <code class="literal">DirectChannel</code> and <code class="literal">BridgeHandler</code> are injected into the <code class="literal">IntegrationFlow</code> and the <code class="literal">WireTap</code> is added to this new <code class="literal">DirectChannel</code>.
+And when there is not any channel declaration like in this sample:</p>
+<pre class="programlisting">.handle(...)
+.log()
+}</pre>
+<p>an implicit <code class="literal">DirectChannel</code> is injected in the current position of the <code class="literal">IntegrationFlow</code> and it is used as an output channel for the currently configured <code class="literal">ServiceActivatingHandler</code> (the <code class="literal">.handle()</code> above).</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If <code class="literal">log()</code> or <code class="literal">wireTap()</code> are used in the end of flow they are considered one-way <code class="literal">MessageHandler</code> s.
+If the integration flow is expected to return a reply, a <code class="literal">bridge()</code> should be added to the end, after <code class="literal">log()</code> or <code class="literal">wireTap()</code>:</p>
+</td></tr></table></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow sseFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows
+        .from(WebFlux.inboundGateway(<span class="hl-string">"/sse"</span>)
+            .requestMapping(m -&gt;
+                m.produces(MediaType.TEXT_EVENT_STREAM_VALUE)))
+        .handle((p, h) -&gt; Flux.just(<span class="hl-string">"foo"</span>, <span class="hl-string">"bar"</span>, <span class="hl-string">"baz"</span>))
+        .log(LoggingHandler.Level.WARN)
+        .bridge()
+        .get();
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-flows" href="#java-dsl-flows"></a>9.15&nbsp;Working With Message Flows</h2></div></div></div>
+
+<p>As we have seen, <code class="literal">IntegrationFlowBuilder</code> provides a top level API to produce Integration components wired to message flows.
+This is convenient if your integration may be accomplished with a single flow (which is often the case).
+Alternately <code class="literal">IntegrationFlow</code> s can be joined via <code class="literal">MessageChannel</code> s.</p>
+<p>By default, the <span class="strong"><strong>MessageFlow</strong></span> behaves as a <span class="strong"><strong>Chain</strong></span> in Spring Integration parlance.
+That is, the endpoints are automatically wired implicitly via <code class="literal">DirectChannel</code> s.
+The message flow is not actually constructed as a chain, affording much more flexibility.
+For example, you may send a message to any component within the flow, if you know its <code class="literal">inputChannel</code> name, i.e., explicitly define it.
+You may also reference externally defined channels within a flow to allow the use of channel adapters to enable remote transport protocols, file I/O, and the like, instead of direct channels.
+As such, the DSL does not support the Spring Integration <span class="strong"><strong>chain</strong></span> element since it doesn&#8217;t add much value.</p>
+<p>Since the Spring Integration Java DSL produces the same bean definition model as any other configuration options and is based on the existing Spring Framework <code class="literal">@Configuration</code> infrastructure, it can be used together with Integration XML definitions and wired with Spring Integration Messaging Annotations configuration.</p>
+<p>Another alternative to define <span class="strong"><strong>direct</strong></span> <code class="literal">IntegrationFlow</code> s is based on a fact that <code class="literal">IntegrationFlow</code> can be declared as <span class="strong"><strong>Lambda</strong></span> too:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow lambdaFlow() {
+    <span class="hl-keyword">return</span> f -&gt; f.filter(<span class="hl-string">"World"</span>::equals)
+                   .transform(<span class="hl-string">"Hello "</span>::concat)
+                   .handle(System.out::println);
+}</pre>
+<p>The result of this definition is the same bunch of Integration components wired with implicit direct channel.
+Only limitation is here, that this flow is started with named direct channel - <code class="literal">lambdaFlow.input</code>.
+And Lambda flow can&#8217;t start from <code class="literal">MessageSource</code> or <code class="literal">MessageProducer</code>.</p>
+<p>Starting with <span class="emphasis"><em>version 5.0.6</em></span>, the generated bean names for the components in an <code class="literal">IntegrationFlow</code> include the flow bean followed by a dot as a prefix.
+For example the <code class="literal">ConsumerEndpointFactoryBean</code> for the <code class="literal">.transform("Hello "::concat)</code> in the sample above, will end up with te bean name like <code class="literal">lambdaFlow.org.springframework.integration.config.ConsumerEndpointFactoryBean#0</code>.
+The <code class="literal">Transformer</code> implementation bean for that endpoint will have a bean name such as <code class="literal">lambdaFlow.org.springframework.integration.transformer.MethodInvokingTransformer#0</code>.
+These generated bean names are prepended with the flow id prefix for purposes such as parsing logs or grouping components together in some analysis tool, as well as to avoid a race condition when we concurrently register integration flows at runtime.
+See <a class="xref" href="java-dsl.html#java-dsl-runtime-flows" title="9.20&nbsp;Dynamic and runtime Integration Flows">Section&nbsp;9.20, &#8220;Dynamic and runtime Integration Flows&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-function-expression" href="#java-dsl-function-expression"></a>9.16&nbsp;FunctionExpression</h2></div></div></div>
+
+<p>The <code class="literal">FunctionExpression</code> (an implementation of SpEL <code class="literal">Expression</code>) has been introduced to get a gain of Java and Lambda usage for the method and its <code class="literal">generics</code> context.
+The <code class="literal">Function&lt;T, R&gt;</code> option is provided for the DSL components alongside with <code class="literal">expression</code> option, when there is the implicit <code class="literal">Strategy</code> variant from Core Spring Integration.
+The usage may look like:</p>
+<pre class="programlisting">.enrich(e -&gt; e.requestChannel(<span class="hl-string">"enrichChannel"</span>)
+            .requestPayload(Message::getPayload)
+            .propertyFunction(<span class="hl-string">"date"</span>, m -&gt; <span class="hl-keyword">new</span> Date()))</pre>
+<p>The <code class="literal">FunctionExpression</code> also supports runtime type conversion as it is done in the standard <code class="literal">SpelExpression</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-subflows" href="#java-dsl-subflows"></a>9.17&nbsp;Sub Flows support</h2></div></div></div>
+
+<p>Some of <code class="literal">if...else</code> and <code class="literal">publish-subscribe</code> components provide the support to specify their logic or mapping using <span class="strong"><strong>Sub Flows</strong></span>.
+The simplest sample is <code class="literal">.publishSubscribeChannel()</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow subscribersFlow() {
+    <span class="hl-keyword">return</span> flow -&gt; flow
+            .publishSubscribeChannel(Executors.newCachedThreadPool(), s -&gt; s
+                    .subscribe(f -&gt; f
+                            .&lt;Integer&gt;handle((p, h) -&gt; p / <span class="hl-number">2</span>)
+                            .channel(c -&gt; c.queue(<span class="hl-string">"subscriber1Results"</span>)))
+                    .subscribe(f -&gt; f
+                            .&lt;Integer&gt;handle((p, h) -&gt; p * <span class="hl-number">2</span>)
+                            .channel(c -&gt; c.queue(<span class="hl-string">"subscriber2Results"</span>))))
+            .&lt;Integer&gt;handle((p, h) -&gt; p * <span class="hl-number">3</span>)
+            .channel(c -&gt; c.queue(<span class="hl-string">"subscriber3Results"</span>));
+}</pre>
+<p>Of course the same result we can achieve with separate <code class="literal">IntegrationFlow</code> <code class="literal">@Bean</code> definitions, but we hope you&#8217;ll find the subflow style of logic composition useful.</p>
+<p>Similar <code class="literal">publish-subscribe</code> subflow composition provides <code class="literal">.routeToRecipients()</code>.</p>
+<p>Another sample is <code class="literal">.discardFlow()</code> on the <code class="literal">.filter()</code> instead of <code class="literal">.discardChannel()</code>.</p>
+<p>The <code class="literal">.route()</code> deserves special attention.
+As a sample:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow routeFlow() {
+    <span class="hl-keyword">return</span> f -&gt; f
+            .&lt;Integer, Boolean&gt;route(p -&gt; p % <span class="hl-number">2</span> == <span class="hl-number">0</span>,
+                    m -&gt; m.channelMapping(<span class="hl-string">"true"</span>, <span class="hl-string">"evenChannel"</span>)
+                            .subFlowMapping(<span class="hl-string">"false"</span>, sf -&gt;
+                                    sf.&lt;Integer&gt;handle((p, h) -&gt; p * <span class="hl-number">3</span>)))
+            .transform(Object::toString)
+            .channel(c -&gt; c.queue(<span class="hl-string">"oddChannel"</span>));
+}</pre>
+<p>The <code class="literal">.channelMapping()</code> continues to work as in regular <code class="literal">Router</code> mapping, but the <code class="literal">.subFlowMapping()</code> tied that subflow with main flow.
+In other words, any router&#8217;s subflow returns to the main flow after <code class="literal">.route()</code>.</p>
+<p>Of course, subflows can be nested with any depth, but we don&#8217;t recommend to do that because, in fact, even in the router case, adding complex subflows within a flow would quickly begin to look like a plate of spaghetti and difficult for a human to parse.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-protocol-adapters" href="#java-dsl-protocol-adapters"></a>9.18&nbsp;Using Protocol Adapters</h2></div></div></div>
+
+<p>All of the examples so far illustrate how the DSL supports a messaging architecture using the Spring Integration programming model, but we haven&#8217;t done any real integration yet.
+This requires access to remote resources via http, jms, amqp, tcp, jdbc, ftp, smtp, and the like, or access to the local file system.
+Spring Integration supports all of these and more.
+Ideally, the DSL should offer first class support for all of them but it is a daunting task to implement all of these and keep up as new adapters are added to Spring Integration.
+So the expectation is that the DSL will continually be catching up with Spring Integration.</p>
+<p>Anyway we are providing the hi-level API to define protocol-specific seamlessly.
+This is achieved with <span class="strong"><strong>Factory</strong></span> and <span class="strong"><strong>Builder</strong></span> patterns and, of course, with Lambdas.
+The factory classes can be considered "Namespace Factories", because they play the same role as XML namespace for components from the concrete protocol-specific Spring Integration modules.
+Currently, Spring Integration Java DSL supports <code class="literal">Amqp</code>, <code class="literal">Feed</code>, <code class="literal">Jms</code>, <code class="literal">Files</code>, <code class="literal">(S)Ftp</code>, <code class="literal">Http</code>, <code class="literal">JPA</code>, <code class="literal">MongoDb</code>,  <code class="literal">TCP/UDP</code>, <code class="literal">Mail</code>, <code class="literal">WebFlux</code> and <code class="literal">Scripts</code> namespace factories:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow amqpFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(Amqp.inboundGateway(<span class="hl-keyword">this</span>.rabbitConnectionFactory, queue()))
+            .transform(<span class="hl-string">"hello "</span>::concat)
+            .transform(String.<span class="hl-keyword">class</span>, String::toUpperCase)
+            .get();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow jmsOutboundGatewayFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"jmsOutboundGatewayChannel"</span>)
+            .handle(Jms.outboundGateway(<span class="hl-keyword">this</span>.jmsConnectionFactory)
+                        .replyContainer(c -&gt;
+                                    c.concurrentConsumers(<span class="hl-number">3</span>)
+                                            .sessionTransacted(true))
+                        .requestDestination(<span class="hl-string">"jmsPipelineTest"</span>))
+            .get();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow sendMailFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"sendMailChannel"</span>)
+            .handle(Mail.outboundAdapter(<span class="hl-string">"localhost"</span>)
+                            .port(smtpPort)
+                            .credentials(<span class="hl-string">"user"</span>, <span class="hl-string">"pw"</span>)
+                            .protocol(<span class="hl-string">"smtp"</span>)
+                            .javaMailProperties(p -&gt; p.put(<span class="hl-string">"mail.debug"</span>, <span class="hl-string">"true"</span>)),
+                    e -&gt; e.id(<span class="hl-string">"sendMailEndpoint"</span>))
+            .get();
+}</pre>
+<p>We show here the usage of namespace factories as inline adapters declarations, however they can be used from <code class="literal">@Bean</code> definitions to make the <code class="literal">IntegrationFlow</code> method-chain more readable.</p>
+<p>We are soliciting community feedback on these namespace factories before we spend effort on others; we&#8217;d also appreciate some prioritization for which adapters/gateways we should support next.</p>
+<p>See more Java DSL samples in the protocol-specific chapter throughout this reference manual.</p>
+<p>All other protocol channel adapters may be configured as generic beans and wired to the <code class="literal">IntegrationFlow</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> QueueChannelSpec wrongMessagesChannel() {
+    <span class="hl-keyword">return</span> MessageChannels
+            .queue()
+            .wireTap(<span class="hl-string">"wrongMessagesWireTapChannel"</span>);
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow xpathFlow(MessageChannel wrongMessagesChannel) {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"inputChannel"</span>)
+            .filter(<span class="hl-keyword">new</span> StringValueTestXPathMessageSelector(<span class="hl-string">"namespace-uri(/*)"</span>, <span class="hl-string">"my:namespace"</span>),
+                    e -&gt; e.discardChannel(wrongMessagesChannel))
+            .log(LoggingHandler.Level.ERROR, <span class="hl-string">"test.category"</span>, m -&gt; m.getHeaders().getId())
+            .route(xpathRouter(wrongMessagesChannel))
+            .get();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> AbstractMappingMessageRouter xpathRouter(MessageChannel wrongMessagesChannel) {
+    XPathRouter router = <span class="hl-keyword">new</span> XPathRouter(<span class="hl-string">"local-name(/*)"</span>);
+    router.setEvaluateAsString(true);
+    router.setResolutionRequired(false);
+    router.setDefaultOutputChannel(wrongMessagesChannel);
+    router.setChannelMapping(<span class="hl-string">"Tags"</span>, <span class="hl-string">"splittingChannel"</span>);
+    router.setChannelMapping(<span class="hl-string">"Tag"</span>, <span class="hl-string">"receivedChannel"</span>);
+    <span class="hl-keyword">return</span> router;
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-flow-adapter" href="#java-dsl-flow-adapter"></a>9.19&nbsp;IntegrationFlowAdapter</h2></div></div></div>
+
+<p>The <code class="literal">IntegrationFlow</code> as an interface can be implemented directly and specified as component for scanning:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Component</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MyFlow <span class="hl-keyword">implements</span> IntegrationFlow {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> configure(IntegrationFlowDefinition&lt;?&gt; f) {
+        f.&lt;String, String&gt;transform(String::toUpperCase);
+    }
+
+}</pre>
+<p>And yes, it is picked up by the <code class="literal">IntegrationFlowBeanPostProcessor</code> and correctly parsed and registered in the application context.</p>
+<p>For convenience and loosely coupled architecture the <code class="literal">IntegrationFlowAdapter</code> base class implementation is provided.
+It requires a <code class="literal">buildFlow()</code> method implementation to produce an <code class="literal">IntegrationFlowDefinition</code> using one of <code class="literal">from()</code> support methods:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Component</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MyFlowAdapter <span class="hl-keyword">extends</span> IntegrationFlowAdapter {
+
+    <span class="hl-keyword">private</span> <span class="hl-keyword">final</span> AtomicBoolean invoked = <span class="hl-keyword">new</span> tomicBoolean();
+
+    <span class="hl-keyword">public</span> Date nextExecutionTime(TriggerContext triggerContext) {
+          <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.invoked.getAndSet(true) ? null : <span class="hl-keyword">new</span> Date();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> IntegrationFlowDefinition&lt;?&gt; buildFlow() {
+        <span class="hl-keyword">return</span> from(<span class="hl-keyword">this</span>, <span class="hl-string">"messageSource"</span>,
+                      e -&gt; e.poller(p -&gt; p.trigger(<span class="hl-keyword">this</span>::nextExecutionTime)))
+                 .split(<span class="hl-keyword">this</span>)
+  	   .transform(<span class="hl-keyword">this</span>)
+  	   .aggregate(a -&gt; a.processor(<span class="hl-keyword">this</span>, null), null)
+  	   .enrichHeaders(Collections.singletonMap(<span class="hl-string">"foo"</span>, <span class="hl-string">"FOO"</span>))
+  	   .filter(<span class="hl-keyword">this</span>)
+  	   .handle(<span class="hl-keyword">this</span>)
+  	   .channel(c -&gt; c.queue(<span class="hl-string">"myFlowAdapterOutput"</span>));
+    }
+
+    <span class="hl-keyword">public</span> String messageSource() {
+         <span class="hl-keyword">return</span> <span class="hl-string">"B,A,R"</span>;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Splitter</span></em>
+    <span class="hl-keyword">public</span> String[] split(String payload) {
+         <span class="hl-keyword">return</span> StringUtils.commaDelimitedListToStringArray(payload);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Transformer</span></em>
+    <span class="hl-keyword">public</span> String transform(String payload) {
+         <span class="hl-keyword">return</span> payload.toLowerCase();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Aggregator</span></em>
+    <span class="hl-keyword">public</span> String aggregate(List&lt;String&gt; payloads) {
+           <span class="hl-keyword">return</span> payloads.stream().collect(Collectors.joining());
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Filter</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">boolean</span> filter(<em><span class="hl-annotation" style="color: gray">@Header</span></em> Optional&lt;String&gt; foo) {
+            <span class="hl-keyword">return</span> foo.isPresent();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator</span></em>
+    <span class="hl-keyword">public</span> String handle(String payload, <em><span class="hl-annotation" style="color: gray">@Header</span></em> String foo) {
+           <span class="hl-keyword">return</span> payload + <span class="hl-string">":"</span> + foo;
+    }
+
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-runtime-flows" href="#java-dsl-runtime-flows"></a>9.20&nbsp;Dynamic and runtime Integration Flows</h2></div></div></div>
+
+<p>The <code class="literal">IntegrationFlow</code> s and therefore all its dependant components can be registered at runtime.
+This was done previously by the <code class="literal">BeanFactory.registerSingleton()</code> hook and now via newly introduced in the Spring Framework <code class="literal">5.0</code> programmatic <code class="literal">BeanDefinition</code> registration with the <code class="literal">instanceSupplier</code> hook:</p>
+<pre class="programlisting">BeanDefinition beanDefinition =
+         BeanDefinitionBuilder.genericBeanDefinition((Class&lt;Object&gt;) bean.getClass(), () -&gt; bean)
+               .getRawBeanDefinition();
+
+((BeanDefinitionRegistry) <span class="hl-keyword">this</span>.beanFactory).registerBeanDefinition(beanName, beanDefinition);</pre>
+<p>and all the necessary bean initialization and lifecycle is done automatically as it is with the standard context configuration bean definitions.</p>
+<p>To simplify the development experience Spring Integration introduced <code class="literal">IntegrationFlowContext</code> to register and manage <code class="literal">IntegrationFlow</code> instances at runtime:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<span class="hl-keyword">private</span> AbstractServerConnectionFactory server1;
+
+<em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<span class="hl-keyword">private</span> IntegrationFlowContext flowContext;
+
+...
+
+<em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> testTcpGateways() {
+    TestingUtilities.waitListening(<span class="hl-keyword">this</span>.server1, null);
+
+    IntegrationFlow flow = f -&gt; f
+            .handle(Tcp.outboundGateway(Tcp.netClient(<span class="hl-string">"localhost"</span>, <span class="hl-keyword">this</span>.server1.getPort())
+                    .serializer(TcpCodecs.crlf())
+                    .deserializer(TcpCodecs.lengthHeader1())
+                    .id(<span class="hl-string">"client1"</span>))
+                .remoteTimeout(m -&gt; <span class="hl-number">5000</span>))
+            .transform(Transformers.objectToString());
+
+    IntegrationFlowRegistration theFlow = <span class="hl-keyword">this</span>.flowContext.registration(flow).register();
+    assertThat(theFlow.getMessagingTemplate().convertSendAndReceive(<span class="hl-string">"foo"</span>, String.<span class="hl-keyword">class</span>), equalTo(<span class="hl-string">"FOO"</span>));
+}</pre>
+<p>This is useful when we have multi configuration options and have to create several instances of similar flows.
+So, we can iterate our options and create and register <code class="literal">IntegrationFlow</code> s within loop.
+Another variant when our source of data isn&#8217;t Spring-based and we must create it on the fly.
+Such a sample is Reactive Streams event source:</p>
+<pre class="programlisting">Flux&lt;Message&lt;?&gt;&gt; messageFlux =
+    Flux.just(<span class="hl-string">"1,2,3,4"</span>)
+        .map(v -&gt; v.split(<span class="hl-string">","</span>))
+        .flatMapIterable(Arrays::asList)
+        .map(Integer::parseInt)
+        .map(GenericMessage&lt;Integer&gt;::<span class="hl-keyword">new</span>);
+
+QueueChannel resultChannel = <span class="hl-keyword">new</span> QueueChannel();
+
+IntegrationFlow integrationFlow =
+    IntegrationFlows.from(messageFlux)
+        .&lt;Integer, Integer&gt;transform(p -&gt; p * <span class="hl-number">2</span>)
+        .channel(resultChannel)
+        .get();
+
+<span class="hl-keyword">this</span>.integrationFlowContext.registration(integrationFlow)
+            .register();</pre>
+<p>The <code class="literal">IntegrationFlowRegistrationBuilder</code> (as a result of the <code class="literal">IntegrationFlowContext.registration()</code>) can be used to specify a bean name for the <code class="literal">IntegrationFlow</code> to register, to control its <code class="literal">autoStartup</code> and also for additional, non Integration beans registration.
+Usually those additional beans are connection factories (AMQP, JMS, (S)FTP, TCP/UDP etc.), serializers/deserializers or any other required support components.</p>
+<p>Such a dynamically registered <code class="literal">IntegrationFlow</code> and all its dependant beans can be removed afterwards using <code class="literal">IntegrationFlowRegistration.destroy()</code> callback.
+See <code class="literal">IntegrationFlowContext</code> JavaDocs for more information.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Starting with <span class="emphasis"><em>version 5.0.6</em></span>, all generated bean names in an <code class="literal">IntegrationFlow</code> definition are prepended with flow id as a prefix.
+It is recommended to always specify an explicit flow id, otherwise a synchronization barrier is initiated in the <code class="literal">IntegrationFlowContext</code> to generate the bean name for the <code class="literal">IntegrationFlow</code> and register its beans.
+We synchronize on these two operations to avoid a race condition when the same generated bean name may be used for different <code class="literal">IntegrationFlow</code> instances.</p>
+</td></tr></table></div>
+<p>Also, starting with <span class="emphasis"><em>version 5.0.6</em></span>, the registration builder API has a new method <code class="literal">useFlowIdAsPrefix()</code>.
+This is useful if you wish to declare multiple instances of the same flow and avoid bean name collisions if components in the flows have the same id.</p>
+<p>For example:</p>
+<pre class="programlisting"><span class="hl-keyword">private</span> <span class="hl-keyword">void</span> registerFlows() {
+    IntegrationFlowRegistration flow1 =
+              <span class="hl-keyword">this</span>.flowContext.registration(buildFlow(<span class="hl-number">1234</span>))
+                    .id(<span class="hl-string">"tcp1"</span>)
+                    .useFlowIdAsPrefix()
+                    .register();
+
+    IntegrationFlowRegistration flow2 =
+              <span class="hl-keyword">this</span>.flowContext.registration(buildFlow(<span class="hl-number">1235</span>))
+                    .id(<span class="hl-string">"tcp2"</span>)
+                    .useFlowIdAsPrefix()
+                    .register();
+}
+
+<span class="hl-keyword">private</span> IntegrationFlow buildFlow(<span class="hl-keyword">int</span> port) {
+    <span class="hl-keyword">return</span> f -&gt; f
+            .handle(Tcp.outboundGateway(Tcp.netClient(<span class="hl-string">"localhost"</span>, port)
+                    .serializer(TcpCodecs.crlf())
+                    .deserializer(TcpCodecs.lengthHeader1())
+                    .id(<span class="hl-string">"client"</span>))
+                .remoteTimeout(m -&gt; <span class="hl-number">5000</span>))
+            .transform(Transformers.objectToString());
+}</pre>
+<p>In this case, the message handler for the first flow can be referenced with bean name <code class="literal">tcp1.client.handler</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>an <code class="literal">id</code> is required when using <code class="literal">useFlowIdAsPrefix()</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="java-dsl-gateway" href="#java-dsl-gateway"></a>9.21&nbsp;IntegrationFlow as Gateway</h2></div></div></div>
+
+<p>The <code class="literal">IntegrationFlow</code> can start from the service interface providing <code class="literal">GatewayProxyFactoryBean</code> component:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> ControlBusGateway {
+
+    <span class="hl-keyword">void</span> send(String command);
+}
+
+...
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow controlBusFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(ControlBusGateway.<span class="hl-keyword">class</span>)
+            .controlBus()
+            .get();
+}</pre>
+<p>All the proxy for interface methods are supplied with the channel to send messages to the next integration component in the <code class="literal">IntegrationFlow</code>.
+The service interface can be marked with the <code class="literal">@MessagingGateway</code> as well as methods with the <code class="literal">@Gateway</code> annotations.
+Nevertheless the <code class="literal">requestChannel</code> is ignored and overridden with that internal channel for the next component in the <code class="literal">IntegrationFlow</code>.
+Otherwise such a configuration via <code class="literal">IntegrationFlow</code> won&#8217;t make sense.</p>
+<p>By default a <code class="literal">GatewayProxyFactoryBean</code> gets a conventional bean name like <code class="literal">[FLOW_BEAN_NAME.gateway]</code>.
+That id can be changed via <code class="literal">@MessagingGateway.name()</code> attribute or the overloaded <code class="literal">from(Class&lt;?&gt; serviceInterface, String beanName)</code> factory method.</p>
+<p>With the Java 8 on board we even can create such an Integration Gateway with the <code class="literal">java.util.function</code> interfaces:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow errorRecovererFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(Function.<span class="hl-keyword">class</span>, <span class="hl-string">"errorRecovererFunction"</span>)
+            .handle((GenericHandler&lt;?&gt;) (p, h) -&gt; {
+                <span class="hl-keyword">throw</span> <span class="hl-keyword">new</span> RuntimeException(<span class="hl-string">"intentional"</span>);
+            }, e -&gt; e.advice(retryAdvice()))
+            .get();
+}</pre>
+<p>That can be used lately as:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<em><span class="hl-annotation" style="color: gray">@Qualifier("errorRecovererFunction")</span></em>
+<span class="hl-keyword">private</span> Function&lt;String, String&gt; errorRecovererFlowGateway;</pre>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="messaging-endpoints-chapter.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-core-messaging.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="system-management-chapter.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">8.&nbsp;Messaging Endpoints&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;10.&nbsp;System Management</td></tr></table></div></body></html>

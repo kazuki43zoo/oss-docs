@@ -1,0 +1,1024 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>20.&nbsp;JPA Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="jdbc.html" title="19.&nbsp;JDBC Support"><link rel="next" href="jms.html" title="21.&nbsp;JMS Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">20.&nbsp;JPA Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="jdbc.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="jms.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="jpa" href="#jpa"></a>20.&nbsp;JPA Support</h2></div></div></div>
+
+<p>Spring Integration&#8217;s JPA (Java Persistence API) module provides components for performing various database operations using JPA.
+The following components are provided:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em><a class="link" href="jpa.html#jpa-inbound-channel-adapter" title="20.4&nbsp;Inbound Channel Adapter">Inbound Channel Adapter</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="jpa.html#jpa-outbound-channel-adapter" title="20.5&nbsp;Outbound Channel Adapter">Outbound Channel Adapter</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="jpa.html#jpa-updating-outbound-gateway" title="20.6.2&nbsp;Updating Outbound Gateway">Updating Outbound Gateway</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="jpa.html#jpa-retrieving-outbound-gateway" title="20.6.5&nbsp;Retrieving Outbound Gateway">Retrieving Outbound Gateway</a></em></span>
+</li></ul></div>
+<p>These components can be used to perform <span class="emphasis"><em>select</em></span>, <span class="emphasis"><em>create</em></span>, <span class="emphasis"><em>update</em></span> and <span class="emphasis"><em>delete</em></span> operations on the target databases by sending/receiving messages to them.</p>
+<p>The JPA <span class="emphasis"><em>Inbound Channel Adapter</em></span> lets you poll and retrieve (select) data from the database using JPA whereas the JPA <span class="emphasis"><em>Outbound Channel Adapter</em></span> lets you create, update and delete entities.</p>
+<p>Outbound Gateways for JPA can be used to persist entities to the database, yet allowing you to continue with the flow and execute further components downstream.
+Similarly, you can use an Outbound Gateway to retrieve entities from the database.</p>
+<p>For example, you may use the Outbound Gateway, which receives a Message with a <code class="literal">userId</code> as payload on its request channel, to query the database and retrieve the User entity and pass it downstream for further processing.</p>
+<p>Recognizing these semantic differences, Spring Integration provides 2 separate JPA Outbound Gateways:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>Retrieving Outbound Gateway</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>Updating Outbound Gateway</em></span>
+</li></ul></div>
+<p><span class="emphasis"><em>Functionality</em></span></p>
+<p>All JPA components perform their respective JPA operations by using either one of the following:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>Entity classes</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>Java Persistence Query Language (JPQL) for update, select and delete (inserts are not supported by JPQL)</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>Native Query</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>Named Query</em></span>
+</li></ul></div>
+<p>In the following sections we will describe each of these components in more detail.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jpa-supported-persistence-providers" href="#jpa-supported-persistence-providers"></a>20.1&nbsp;Supported Persistence Providers</h2></div></div></div>
+
+<p>The Spring Integration JPA support has been tested using the following persistence providers:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>Hibernate</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>EclipseLink</em></span>
+</li></ul></div>
+<p>When using a persistence provider, please ensure that the provider is compatible with JPA 2.1.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jpa-java-implementation" href="#jpa-java-implementation"></a>20.2&nbsp;Java Implementation</h2></div></div></div>
+
+<p>Each of the provided components uses the <code class="literal">o.s.i.jpa.core.JpaExecutor</code> class which, in turn, uses an implementation of the <code class="literal">o.s.i.jpa.core.JpaOperations</code> interface.
+<code class="literal">JpaOperations</code> operates like a typical Data Access Object (DAO) and provides methods such as <span class="emphasis"><em>find</em></span>, <span class="emphasis"><em>persist</em></span>, <span class="emphasis"><em>executeUpdate</em></span> etc.
+For most use cases the provided default implementation <code class="literal">o.s.i.jpa.core.DefaultJpaOperations</code> should be sufficient.
+Nevertheless, you have the option to specify your own implementation in case you require custom behavior.</p>
+<p>For initializing a <code class="literal">JpaExecutor</code> you have to use one of 3 available constructors that accept one of:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>EntityManagerFactory</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>EntityManager</em></span> or
+</li><li class="listitem">
+<span class="emphasis"><em>JpaOperations</em></span>
+</li></ul></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> JpaExecutor jpaExecutor() {
+    JpaExecutor executor = <span class="hl-keyword">new</span> JpaExecutor(<span class="hl-keyword">this</span>.entityManagerFactory);
+    executor.setJpaParameters(Collections.singletonList(<span class="hl-keyword">new</span> JpaParameter(<span class="hl-string">"firstName"</span>, null, <span class="hl-string">"#this"</span>)));
+    executor.setUsePayloadAsParameterSource(true);
+    executor.setExpectSingleResult(true);
+    <span class="hl-keyword">return</span> executor;
+}
+
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "getEntityChannel")</span></em>
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MessageHandler retrievingJpaGateway() {
+    JpaOutboundGateway gateway = <span class="hl-keyword">new</span> JpaOutboundGateway(jpaExecutor());
+    gateway.setGatewayType(OutboundGatewayType.RETRIEVING);
+    gateway.setOutputChannelName(<span class="hl-string">"resultsChannel"</span>);
+    <span class="hl-keyword">return</span> gateway;
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jpa-namespace-support" href="#jpa-namespace-support"></a>20.3&nbsp;Namespace Support</h2></div></div></div>
+
+<p>When using XML namespace support, the underlying parser classes will instantiate the relevant Java classes for you.
+Thus, you typically don&#8217;t have to deal with the inner workings of the JPA adapter.
+This section will document the XML Namespace Support provided by the Spring Integration and will show you how to use the XML Namespace Support to configure the Jpa components.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jpa-namespace-support-common-attributes" href="#jpa-namespace-support-common-attributes"></a>20.3.1&nbsp;Common XML Namespace Configuration Attributes</h3></div></div></div>
+
+<p>Certain configuration parameters are shared amongst all JPA components and are described below:</p>
+<p><span class="strong"><strong>auto-startup</strong></span></p>
+<p>Lifecycle attribute signaling if this component should be started during Application Context startup.
+Defaults to <code class="literal">true</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+<p><span class="strong"><strong>id</strong></span></p>
+<p>Identifies the underlying Spring bean definition, which is an instance of either <code class="literal">EventDrivenConsumer</code> or <code class="literal">PollingConsumer</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+<p><span class="strong"><strong>entity-manager-factory</strong></span></p>
+<p>The reference to the JPA Entity Manager Factory that will be used by the adapter to create the <code class="literal">EntityManager</code>.
+Either this attribute or the <span class="emphasis"><em>entity-manager</em></span> attribute or the <span class="emphasis"><em>jpa-operations</em></span> attribute must be provided.</p>
+<p><span class="strong"><strong>entity-manager</strong></span></p>
+<p>The reference to the JPA Entity Manager that will be used by the component.
+Either this attribute or the <span class="emphasis"><em>entity-manager-factory</em></span> attribute or the <span class="emphasis"><em>jpa-operations</em></span> attribute must be provided.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Usually your Spring Application Context only defines a JPA Entity Manager Factory and the <code class="literal">EntityManager</code> is injected using the <code class="literal">@PersistenceContext</code> annotation.
+This, however, is not applicable for the Spring Integration JPA components.
+Usually, injecting the JPA Entity Manager Factory will be best but in case you want to inject an <code class="literal">EntityManager</code> explicitly, you have to define a <code class="literal">SharedEntityManagerBean</code>.
+For more information, please see the relevant <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/orm/jpa/support/SharedEntityManagerBean.html" target="_top">JavaDoc</a>.</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"entityManager"</span>
+      <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.orm.jpa.support.SharedEntityManagerBean"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"entityManagerFactory"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"entityManagerFactoryBean"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p><span class="strong"><strong>jpa-operations</strong></span></p>
+<p>Reference to a bean implementing the <code class="literal">JpaOperations</code> interface.
+In rare cases it might be advisable to provide your own implementation of the <code class="literal">JpaOperations</code> interface, instead of relying on the default implementation <code class="literal">org.springframework.integration.jpa.core.DefaultJpaOperations</code>.
+As <code class="literal">JpaOperations</code> wraps the necessary datasource; the JPA Entity Manager or JPA Entity Manager Factory must not be provided, if the <span class="emphasis"><em>jpa-operations</em></span> attribute is used.</p>
+<p><span class="strong"><strong>entity-class</strong></span></p>
+<p>The fully qualified name of the entity class.
+The exact semantics of this attribute vary, depending on whether we are performing a persist/update operation or whether we are retrieving objects from the database.</p>
+<p>When retrieving data, you can specify the <span class="emphasis"><em>entity-class</em></span> attribute to indicate that you would like to retrieve objects of this type from the database.
+In that case you must not define any of the query attributes ( <span class="emphasis"><em>jpa-query</em></span>, <span class="emphasis"><em>native-query</em></span> or <span class="emphasis"><em>named-query</em></span> )</p>
+<p>When persisting data, the <span class="emphasis"><em>entity-class</em></span> attribute will indicate the type of object to persist.
+If not specified (for persist operations) the entity class will be automatically retrieved from the Message&#8217;s payload.</p>
+<p><span class="strong"><strong>jpa-query</strong></span></p>
+<p>Defines the JPA query (Java Persistence Query Language) to be used.</p>
+<p><span class="strong"><strong>native-query</strong></span></p>
+<p>Defines the native SQL query to be used.</p>
+<p><span class="strong"><strong>named-query</strong></span></p>
+<p>This attribute refers to a named query.
+A named query can either be defined in Native SQL or JPAQL but the underlying JPA persistence provider handles that distinction internally.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jpa-parameters" href="#jpa-parameters"></a>20.3.2&nbsp;Providing JPA Query Parameters</h3></div></div></div>
+
+<p>For providing parameters, the <span class="emphasis"><em>parameter</em></span> XML sub-element can be used.
+It provides a mechanism to provide parameters for the queries that are either based on the Java Persistence Query Language (JPQL) or native SQL queries.
+Parameters can also be provided for Named Queries.</p>
+<p><span class="emphasis"><em>Expression based Parameters</em></span></p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.name"</span> <span class="hl-attribute">name</span>=<span class="hl-value">"firstName"</span><span class="hl-tag">/&gt;</span></pre>
+<p><span class="emphasis"><em>Value based Parameters</em></span></p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"name"</span> <span class="hl-attribute">type</span>=<span class="hl-value">"java.lang.String"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"myName"</span><span class="hl-tag">/&gt;</span></pre>
+<p><span class="emphasis"><em>Positional Parameters</em></span></p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.name"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">type</span>=<span class="hl-value">"java.lang.Integer"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"21"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jpa-transactions" href="#jpa-transactions"></a>20.3.3&nbsp;Transaction Handling</h3></div></div></div>
+
+<p>All JPA operations like <code class="literal">INSERT</code>, <code class="literal">UPDATE</code> and <code class="literal">DELETE</code> require a transaction to be active whenever they are performed.
+For Inbound Channel Adapters there is nothing special to be done, it is similar to the way we configure transaction managers with pollers used with other inbound channel adapters.
+The xml snippet below shows a sample where a transaction manager is configured with the poller used with an <span class="emphasis"><em>Inbound Channel Adapter</em></span>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:inbound-channel-adapter</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"inboundChannelAdapterOne"</span>
+    <span class="hl-attribute">entity-manager</span>=<span class="hl-value">"em"</span>
+    <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">jpa-query</span>=<span class="hl-value">"select s from Student s"</span>
+    <span class="hl-attribute">expect-single-result</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">delete-after-poll</span>=<span class="hl-value">"true"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"2000"</span><span class="hl-tag"> &gt;</span>
+        <span class="hl-tag">&lt;int:transactional</span> <span class="hl-attribute">propagation</span>=<span class="hl-value">"REQUIRED"</span>
+            <span class="hl-attribute">transaction-manager</span>=<span class="hl-value">"transactionManager"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/int:poller&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:inbound-channel-adapter&gt;</span></pre>
+<p>However, it may be necessary to specifically start a transaction when using an <span class="emphasis"><em>Outbound Channel Adapter</em></span>/<span class="emphasis"><em>Gateway</em></span>.
+If a <span class="emphasis"><em>DirectChannel</em></span> is an input channel for the outbound adapter/gateway, and if transaction is active in the current thread of execution, the JPA operation will be performed in the same transaction context.
+We can also configure to execute this JPA operation in a new transaction as below.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:outbound-gateway</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"namedQueryRequestChannel"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"namedQueryResponseChannel"</span>
+    <span class="hl-attribute">named-query</span>=<span class="hl-value">"updateStudentByRollNumber"</span>
+    <span class="hl-attribute">entity-manager</span>=<span class="hl-value">"em"</span>
+    <span class="hl-attribute">gateway-type</span>=<span class="hl-value">"UPDATING"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"lastName"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"rollNumber"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers['rollNumber']"</span><span class="hl-tag">/&gt;</span>
+		<span class="hl-tag">&lt;int-jpa:transactional</span> <span class="hl-attribute">propagation</span>=<span class="hl-value">"REQUIRES_NEW"</span>
+        <span class="hl-attribute">transaction-manager</span>=<span class="hl-value">"transactionManager"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:outbound-gateway&gt;</span></pre>
+<p>As we can see above, the <span class="emphasis"><em>transactional</em></span> sub element of the outbound gateway/adapter will be used to specify the transaction attributes.
+It is optional to define this child element if you have <span class="emphasis"><em>DirectChannel</em></span> as an input channel to the adapter and you want the adapter to execute the operations in the same transaction context as the caller.
+If, however, you are using an <span class="emphasis"><em>ExecutorChannel</em></span>, it is required to have the <span class="emphasis"><em>transactional</em></span> sub element as the invoking client&#8217;s transaction context is not propagated.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Unlike the <span class="emphasis"><em>transactional</em></span> sub element of the poller which is defined in the spring integration&#8217;s namespace, the <span class="emphasis"><em>transactional</em></span> sub element for the outbound gateway/adapter is defined in the jpa namespace.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jpa-inbound-channel-adapter" href="#jpa-inbound-channel-adapter"></a>20.4&nbsp;Inbound Channel Adapter</h2></div></div></div>
+
+<p>An <span class="emphasis"><em>Inbound Channel Adapter</em></span> is used to execute a <span class="emphasis"><em>select</em></span> query over the database using JPA QL and return the result.
+The message payload will be either a single entity or a <code class="literal">List</code> of entities.
+Below is a sample xml snippet that shows a sample usage of <span class="emphasis"><em>inbound-channel-adapter</em></span>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:inbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"inboundChannelAdapterOne"</span>  <a name="CO28-1" href="#CO28-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                    entity-manager="em"  <a name="CO28-2" href="#CO28-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                    auto-startup="true"  <a name="CO28-3" href="#CO28-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                    query="select s from Student s"  <a name="CO28-4" href="#CO28-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                    expect-single-result="true"  <a name="CO28-5" href="#CO28-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                    max-results=""  <a name="CO28-6" href="#CO28-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                    max-results-expression=""  <a name="CO28-7" href="#CO28-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                    delete-after-poll="true"  <a name="CO28-8" href="#CO28-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                    flush-after-delete="true"&gt;  <a name="CO28-9" href="#CO28-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"2000"</span><span class="hl-tag"> &gt;</span>
+      <span class="hl-tag">&lt;int:transactional</span> <span class="hl-attribute">propagation</span>=<span class="hl-value">"REQUIRED"</span> <span class="hl-attribute">transaction-manager</span>=<span class="hl-value">"transactionManager"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/int:poller&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:inbound-channel-adapter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel over which the <span class="emphasis"><em>inbound-channel-adapter</em></span> will put the messages with the payload received after executing the provided JPA QL in the <span class="emphasis"><em>query</em></span> attribute.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">EntityManager</code> instance that will be used to perform the required JPA operations.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Attribute signalling if the component should be automatically started on startup of the Application Context.
+The value defaults to <code class="literal">true</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The JPA QL that needs to be executed and whose result needs to be sent out as the payload of the message</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The attribute that tells if the executed JPQL query gives a single entity in the result or a <code class="literal">List</code> of entities.
+If the value is set to <code class="literal">true</code>, the single entity retrieved is sent as the payload of the message.
+If, however, multiple results are returned after setting this to <code class="literal">true</code>, a <code class="literal">MessagingException</code> is thrown.
+The value defaults to <code class="literal">false</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This non zero, non negative integer value tells the adapter not to select more than given number of rows on execution of the select operation.
+By default, if this attribute is not set, all the possible records are selected by given query.
+This attribute is mutually exclusive with <code class="literal">max-results-expression</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An expression, mutually exclusive with <code class="literal">max-results</code>, that can be used to provide an expression that will be evaluated to find the maximum number of results in a result set.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set this value to <code class="literal">true</code> if you want to delete the rows received after execution of the query.
+Please ensure that the component is operating as part of a transaction.
+Otherwise, you may encounter an Exception such as: <span class="emphasis"><em>java.lang.IllegalArgumentException: Removing
+                         a detached instance &#8230;&#8203;</em></span></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set this value to <code class="literal">true</code> if you want to the persistence context immediately after deleting received entities and if you don&#8217;t want rely on the <code class="literal">EntityManager</code>'s flushMode.
+The default value is set to <code class="literal">false</code>.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jpaInboundChannelAdapterParameters" href="#jpaInboundChannelAdapterParameters"></a>20.4.1&nbsp;Configuration Parameter Reference</h3></div></div></div>
+
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:inbound-channel-adapter</span>
+  <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"true"</span>  <a name="CO29-1" href="#CO29-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+  channel=""  <a name="CO29-2" href="#CO29-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+  delete-after-poll="false"   <a name="CO29-3" href="#CO29-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+  delete-per-row="false"   <a name="CO29-4" href="#CO29-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+  entity-class=""   <a name="CO29-5" href="#CO29-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+  entity-manager=""  <a name="CO29-6" href="#CO29-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+  entity-manager-factory=""  <a name="CO29-7" href="#CO29-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+  expect-single-result="false"  <a name="CO29-8" href="#CO29-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+  id=""
+  jpa-operations=""  <a name="CO29-9" href="#CO29-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+  jpa-query=""  <a name="CO29-10" href="#CO29-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+  named-query=""  <a name="CO29-11" href="#CO29-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+  native-query=""  <a name="CO29-12" href="#CO29-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+  parameter-source=""  <a name="CO29-13" href="#CO29-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+  send-timeout=""&gt;  <a name="CO29-14" href="#CO29-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span>
+  <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"myPoller"</span><span class="hl-tag">/&gt;</span>
+ <span class="hl-tag">&lt;/int-jpa:inbound-channel-adapter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This <span class="emphasis"><em>Lifecycle</em></span> attribute signaled if this component should be started during startup of the Application Context.
+This attribute defaults to true.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which the adapter will send a message with the payload that was received after performing the desired JPA operation.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A boolean flag that indicates whether the records selected are to be deleted after they are being polled by the adapter.
+By default the value is <code class="literal">false</code>, that is, the records will not be deleted.
+Please ensure that the component is operating as part of a transaction.
+Otherwise, you may encounter an Exception such as: <span class="emphasis"><em>java.lang.IllegalArgumentException: Removing a detached instance &#8230;&#8203;</em></span>.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A boolean flag that indicates whether the records can be deleted in bulk or are deleted one record at a time.
+By default the value is <code class="literal">false</code>, that is, the records are bulk deleted.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The fully qualified name of the entity class that would be queried from the database.
+The adapter will automatically build a JPA Query to be executed based on the entity class name provided.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An instance of <code class="literal">javax.persistence.EntityManager</code> that will be used to perform the JPA operations.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An instance of <code class="literal">javax.persistence.EntityManagerFactory</code> that will be used to obtain an instance of <code class="literal">javax.persistence.EntityManager</code> that will perform the JPA operations.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A boolean flag indicating whether the select operation is expected to return a single result or a <code class="literal">List</code> of results.
+If this flag is set to <code class="literal">true</code>, the single entity selected is sent as the payload of the message.
+If multiple entities are returned, an exception is thrown.
+If <code class="literal">false</code>, the <code class="literal">List</code> of entities is being sent as the payload of the message.
+By default the value is <code class="literal">false</code>.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An implementation of <code class="literal">org.springframework.integration.jpa.core.JpaOperations</code> that would be used to perform the JPA operations.
+It is recommended not to provide an implementation of your own but use the default <code class="literal">org.springframework.integration.jpa.core.DefaultJpaOperations</code> implementation.
+Either of the <span class="emphasis"><em>entity-manager</em></span>, <span class="emphasis"><em>entity-manager-factory</em></span> or <span class="emphasis"><em>jpa-operations</em></span> attributes is to be used.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The JPA QL that needs to be executed by this adapter.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The named query that needs to be executed by this adapter.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The native query that will be executed by this adapter.
+Either of the <span class="emphasis"><em>jpa-query</em></span>, <span class="emphasis"><em>named-query</em></span>,<span class="emphasis"><em>entity-class</em></span> or <span class="emphasis"><em>native-query</em></span> attributes are to be used.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An implementation of <code class="literal">o.s.i.jpa.support.parametersource.ParameterSource</code> which will be used to resolve the values of the parameters provided in the query.
+Ignored if <span class="emphasis"><em>entity-class</em></span> attribute is provided.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO29-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Maximum amount of time in milliseconds to wait when sending a message to the channel.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_15" href="#_configuring_with_java_configuration_15"></a>20.4.2&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using Java configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@EntityScan(basePackageClasses = StudentDomain.class)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> JpaJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(JpaJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> EntityManagerFactory entityManagerFactory;
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> JpaExecutor jpaExecutor() {
+        JpaExecutor executor = <span class="hl-keyword">new</span> JpaExecutor(<span class="hl-keyword">this</span>.entityManagerFactory);
+        jpaExecutor.setJpaQuery(<span class="hl-string">"from Student"</span>);
+        <span class="hl-keyword">return</span> executor;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter(channel = "jpaInputChannel",
+                     poller = @Poller(fixedDelay = "${poller.interval}"))</span></em>
+    <span class="hl-keyword">public</span> MessageSource&lt;?&gt; jpaInbound() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> JpaPollingChannelAdapter(jpaExecutor());
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "jpaInputChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler handler() {
+        <span class="hl-keyword">return</span> message -&gt; System.out.println(message.getPayload());
+    }
+
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_14" href="#_configuring_with_the_java_dsl_14"></a>20.4.3&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the Inbound Adapter using the Java DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@EntityScan(basePackageClasses = StudentDomain.class)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> JpaJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(JpaJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> EntityManagerFactory entityManagerFactory;
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow pollingAdapterFlow() {
+        <span class="hl-keyword">return</span> IntegrationFlows
+            .from(Jpa.inboundAdapter(<span class="hl-keyword">this</span>.entityManagerFactory)
+                        .entityClass(StudentDomain.<span class="hl-keyword">class</span>)
+                        .maxResults(<span class="hl-number">1</span>)
+                        .expectSingleResult(true),
+                e -&gt; e.poller(p -&gt; p.trigger(<span class="hl-keyword">new</span> OnlyOnceTrigger())))
+            .channel(c -&gt; c.queue(<span class="hl-string">"pollingResults"</span>))
+            .get();
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jpa-outbound-channel-adapter" href="#jpa-outbound-channel-adapter"></a>20.5&nbsp;Outbound Channel Adapter</h2></div></div></div>
+
+<p>The JPA Outbound channel adapter allows you to accept messages over a request channel.
+The payload can either be used as the entity to be persisted, or used along with the headers in parameter expressions for a defined JPQL query to be executed.
+In the following sub sections we shall see what those possible ways of performing these operations are.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_an_entity_class" href="#_using_an_entity_class"></a>20.5.1&nbsp;Using an Entity Class</h3></div></div></div>
+
+<p>The XML snippet below shows how we can use the Outbound Channel Adapter to persist an entity to the database.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"entityTypeChannel"</span>  <a name="CO30-1" href="#CO30-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    entity-class="org.springframework.integration.jpa.test.entity.Student"  <a name="CO30-2" href="#CO30-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    persist-mode="PERSIST"  <a name="CO30-3" href="#CO30-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    entity-manager="em"/ &gt; <a name="CO30-4" href="#CO30-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO30-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel over which a valid JPA entity will be sent to the JPA Outbound Channel Adapter.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO30-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The fully qualified name of the entity class that would be accepted by the adapter to be persisted in the database.
+You can actually leave off this attribute in most cases as the adapter can determine the entity class automatically from the Spring Integration Message payload.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO30-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The operation that needs to be done by the adapter, valid values are <span class="emphasis"><em>PERSIST</em></span>, <span class="emphasis"><em>MERGE</em></span> and <span class="emphasis"><em>DELETE</em></span>.
+The default value is <span class="emphasis"><em>MERGE</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO30-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The JPA entity manager to be used.</p>
+</td></tr></table></div>
+<p>As we can see above these 4 attributes of the <span class="emphasis"><em>outbound-channel-adapter</em></span> are all we need to configure it to accept entities over the input channel and process them to <span class="emphasis"><em>PERSIST</em></span>,<span class="emphasis"><em>MERGE</em></span> or <span class="emphasis"><em>DELETE</em></span> it from the underlying data source.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>As of <span class="emphasis"><em>Spring Integration 3.0</em></span>, payloads to <span class="emphasis"><em>PERSIST</em></span> or <span class="emphasis"><em>MERGE</em></span> can also be of type <code class="literal">http://docs.oracle.com/javase/7/docs/api/java/lang/Iterable.html[java.lang.Iterable]</code>.
+In that case, each object returned by the <code class="literal">Iterable</code> is treated as an entity and persisted or merged using the underlying <code class="literal">EntityManager</code>.
+<span class="emphasis"><em>NULL</em></span> values returned by the iterator are ignored.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_jpa_query_language_jpa_ql" href="#_using_jpa_query_language_jpa_ql"></a>20.5.2&nbsp;Using JPA Query Language (JPA QL)</h3></div></div></div>
+
+<p>We have seen in the above sub section how to perform a <span class="emphasis"><em>PERSIST</em></span> action using an entity We will now see how to use the outbound channel adapter which uses JPA QL (Java Persistence API Query Language)</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"jpaQlChannel"</span>  <a name="CO31-1" href="#CO31-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+  jpa-query="update Student s set s.firstName = :firstName where s.rollNumber = :rollNumber"  <a name="CO31-2" href="#CO31-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+  entity-manager="em"&gt;  <a name="CO31-3" href="#CO31-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"firstName"</span>  <span class="hl-attribute">expression</span>=<span class="hl-value">"payload['firstName']"</span><span class="hl-tag">/&gt;</span>  <a name="CO31-4" href="#CO31-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"rollNumber"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload['rollNumber']"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:outbound-channel-adapter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO31-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The input channel over which the message is being sent to the outbound channel adapter</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO31-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The JPA QL that needs to be executed.This query may contain parameters that will be evaluated using the <span class="emphasis"><em>parameter</em></span> child tag.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO31-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The entity manager used by the adapter to perform the JPA operations</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO31-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This sub element, one for each parameter will be used to evaluate the value of the parameter names specified in the JPA QL specified in the <span class="emphasis"><em>query</em></span> attribute</p>
+</td></tr></table></div>
+<p>The <span class="emphasis"><em>parameter</em></span> sub element accepts an attribute <span class="emphasis"><em>name</em></span> which corresponds to the named parameter specified in the provided JPA QL (point 2 in the above mentioned sample).
+The value of the parameter can either be static or can be derived using an expression.
+The static value and the expression to derive the value is specified using the <span class="emphasis"><em>value</em></span> and the <span class="emphasis"><em>expression</em></span> attributes respectively.
+These attributes are mutually exclusive.</p>
+<p>If the <span class="emphasis"><em>value</em></span> attribute is specified we can provide an optional <span class="emphasis"><em>type</em></span> attribute.
+The value of this attribute is the fully qualified name of the class whose value is represented by the <span class="emphasis"><em>value</em></span> attribute.
+By default the type is assumed to be a <code class="literal">java.lang.String</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:outbound-channel-adapter</span> <span class="hl-attribute">...</span><span class="hl-tag">
+&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"level"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"2"</span> <span class="hl-attribute">type</span>=<span class="hl-value">"java.lang.Integer"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"name"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload['name']"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:outbound-channel-adapter&gt;</span></pre>
+<p>As seen in the above snippet, it is perfectly valid to use multiple <span class="emphasis"><em>parameter</em></span> sub elements within an outbound channel adapter tag and derive some parameters using expressions and some with static value.
+However, care should be taken not to specify the same parameter name multiple times, and, provide one <span class="emphasis"><em>parameter</em></span> sub element for each named parameter specified in the JPA query.
+For example, we are specifying two parameters <span class="emphasis"><em>level</em></span> and <span class="emphasis"><em>name</em></span> where <span class="emphasis"><em>level</em></span> attribute is a static value of type <code class="literal">java.lang.Integer</code>, where as the <span class="emphasis"><em>name</em></span> attribute is derived from the payload of the message</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Though specifying <span class="emphasis"><em>select</em></span> is valid for JPA QL, it makes no sense as outbound channel adapters will not be returning any result.
+If you want to select some values, consider using the outbound gateway instead.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_native_queries" href="#_using_native_queries"></a>20.5.3&nbsp;Using Native Queries</h3></div></div></div>
+
+<p>In this section we will see how to use native queries to perform the operations using JPA outbound channel adapter.
+Using native queries is similar to using JPA QL, except that the query specified here is a native database query.
+By choosing native queries we lose the database vendor independence which we get using JPA QL.</p>
+<p>One of the things we can achieve using native queries is to perform database inserts, which is not possible using JPA QL (To perform inserts we send JPA entities to the channel adapter as we have seen earlier).
+Below is a small xml fragment that demonstrates the use of native query to insert values in a table.
+Please note that we have only mentioned the important attributes below.
+All other attributes like <span class="emphasis"><em>channel</em></span>, <span class="emphasis"><em>entity-manager</em></span> and the <span class="emphasis"><em>parameter</em></span> sub element has the same semantics as when we use JPA QL.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Please be aware that named parameters may not be supported by your JPA provider in conjunction with native SQL queries.
+While they work fine using Hibernate, OpenJPA and EclipseLink do NOT support them: <a class="ulink" href="https://issues.apache.org/jira/browse/OPENJPA-111" target="_top">https://issues.apache.org/jira/browse/OPENJPA-111</a> Section 3.8.12 of the JPA 2.0 spec states: "Only positional parameter binding and positional access to result items may be portably used for native queries."</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"nativeQlChannel"</span>
+  <span class="hl-attribute">native-query</span>=<span class="hl-value">"insert into STUDENT_TABLE(FIRST_NAME,LAST_UPDATED) values (:lastName,:lastUpdated)"</span>  <a name="CO32-1" href="#CO32-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+  entity-manager="em"&gt;
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"lastName"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload['updatedLastName']"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"lastUpdated"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"new java.util.Date()"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:outbound-channel-adapter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO32-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The native query that will be executed by this outbound channel adapter</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_named_queries" href="#_using_named_queries"></a>20.5.4&nbsp;Using Named Queries</h3></div></div></div>
+
+<p>We will now see how to use named queries after seeing using entity, JPA QL and native query in previous sub sections.
+Using named query is also very similar to using JPA QL or a native query, except that we specify a named query instead of a query.
+Before we go further and see the xml fragment for the declaration of the <span class="emphasis"><em>outbound-channel-adapter</em></span>, we will see how named JPA named queries are defined.</p>
+<p>In our case, if we have an entity called <code class="literal">Student</code>, then we have the following in the class to define two named queries <span class="emphasis"><em>selectStudent</em></span> and <span class="emphasis"><em>updateStudent</em></span>.
+Below is a way to define named queries using annotations</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Entity</span></em>
+<em><span class="hl-annotation" style="color: gray">@Table(name="Student")</span></em>
+<em><span class="hl-annotation" style="color: gray">@NamedQueries({
+    @NamedQuery(name="selectStudent",
+        query="select s from Student s where s.lastName = 'Last One'"),
+    @NamedQuery(name="updateStudent",
+        query="update Student s set s.lastName = :lastName,
+               lastUpdated = :lastUpdated where s.id in (select max(a.id) from Student a)")
+})</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Student {
+
+...</pre>
+<p>You can alternatively use the <span class="emphasis"><em>orm.xml</em></span> to define named queries as seen below</p>
+<pre class="programlisting"><span class="hl-tag">&lt;entity-mappings</span> <span class="hl-attribute">...&gt;</span>
+    <span class="hl-attribute">...</span>
+    <span class="hl-attribute">&lt;named-query</span> <span class="hl-attribute">name</span>=<span class="hl-value">"selectStudent"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;query&gt;</span>select s from Student s where s.lastName = 'Last One'<span class="hl-tag">&lt;/query&gt;</span>
+    <span class="hl-tag">&lt;/named-query&gt;</span>
+<span class="hl-tag">&lt;/entity-mappings&gt;</span></pre>
+<p>Now that we have seen how we can define named queries using annotations or using <span class="emphasis"><em>orm.xml</em></span>, we will now see a small xml fragment for defining an <span class="emphasis"><em>outbound-channel-adapter</em></span> using named query</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"namedQueryChannel"</span>
+            <span class="hl-attribute">named-query</span>=<span class="hl-value">"updateStudent"</span>	 <a name="CO33-1" href="#CO33-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+            entity-manager="em"&gt;
+        <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"lastName"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload['updatedLastName']"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"lastUpdated"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"new java.util.Date()"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:outbound-channel-adapter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO33-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The named query that we want the adapter to execute when it receives a message over the channel</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jpaOutboundChannelAdapterParameters" href="#jpaOutboundChannelAdapterParameters"></a>20.5.5&nbsp;Configuration Parameter Reference</h3></div></div></div>
+
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:outbound-channel-adapter</span>
+  <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"true"</span>  <a name="CO34-1" href="#CO34-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+  channel=""  <a name="CO34-2" href="#CO34-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+  entity-class=""  <a name="CO34-3" href="#CO34-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+  entity-manager=""  <a name="CO34-4" href="#CO34-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+  entity-manager-factory=""  <a name="CO34-5" href="#CO34-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+  id=""
+  jpa-operations=""  <a name="CO34-6" href="#CO34-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+  jpa-query=""  <a name="CO34-7" href="#CO34-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+  named-query=""  <a name="CO34-8" href="#CO34-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+  native-query=""  <a name="CO34-9" href="#CO34-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+  order=""  <a name="CO34-10" href="#CO34-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+  parameter-source-factory=""   <a name="CO34-11" href="#CO34-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+  persist-mode="MERGE"   <a name="CO34-12" href="#CO34-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+  flush="true"   <a name="CO34-13" href="#CO34-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+  flush-size="10"   <a name="CO34-14" href="#CO34-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span>
+  clear-on-flush="true"   <a name="CO34-15" href="#CO34-15"></a><span><img src="images/callouts/15.png" alt="15" border="0"></span>
+  use-payload-as-parameter-source="true"   <a name="CO34-16" href="#CO34-16"></a>(16)
+	<span class="hl-tag">&lt;int:poller/&gt;</span>
+	<span class="hl-tag">&lt;int-jpa:transactional/&gt;</span>    <a name="CO34-17" href="#CO34-17"></a>(17)
+	<span class="hl-tag">&lt;int-jpa:parameter/&gt;</span>    <a name="CO34-18" href="#CO34-18"></a>(18)
+<span class="hl-tag">&lt;/int-jpa:outbound-channel-adapter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Lifecycle attribute signaling if this component should be started during Application Context startup.
+Defaults to <code class="literal">true</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel from which the outbound adapter will receive messages for performing the desired operation.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The fully qualified name of the entity class for the JPA Operation.
+The attributes <span class="emphasis"><em>entity-class</em></span>, <span class="emphasis"><em>query</em></span> and <span class="emphasis"><em>named-query</em></span> are mutually exclusive.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An instance of <code class="literal">javax.persistence.EntityManager</code> that will be used to perform the JPA operations.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An instance of <code class="literal">javax.persistence.EntityManagerFactory</code> that will be used to obtain an instance of <code class="literal">javax.persistence.EntityManager</code> that will perform the JPA operations.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An implementation of <code class="literal">org.springframework.integration.jpa.core.JpaOperations</code> that would be used to perform the JPA operations.
+It is recommended not to provide an implementation of your own but use the default <code class="literal">org.springframework.integration.jpa.core.DefaultJpaOperations</code> implementation.
+Either of the <span class="emphasis"><em>entity-manager</em></span>, <span class="emphasis"><em>entity-manager-factory</em></span> or <span class="emphasis"><em>jpa-operations</em></span> attributes is to be used.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The JPA QL that needs to be executed by this adapter.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The named query that needs to be executed by this adapter.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The native query that will be executed by this adapter.
+Either of the <span class="emphasis"><em>jpa-query</em></span>, <span class="emphasis"><em>named-query</em></span> or <span class="emphasis"><em>native-query</em></span> attributes are to be used.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The order for this consumer when multiple consumers are registered thereby managing load- balancing and/or failover.
+Optional (Defaults to <span class="emphasis"><em>Ordered.LOWEST_PRECEDENCE</em></span>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An instance of <code class="literal">o.s.i.jpa.support.parametersource.ParameterSourceFactory</code> that will be used to get an instance of <code class="literal">o.s.i.jpa.support.parametersource.ParameterSource</code> which will be used to resolve the values of the parameters provided in the query.
+Ignored if operations are performed using a JPA entity.
+If a parameter sub element is used, the factory must be of type <code class="literal">ExpressionEvaluatingParameterSourceFactory</code> located in package <code class="literal">o.s.i.jpa.support.parametersource</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Accepts one of the following: <span class="emphasis"><em>PERSIST</em></span>, <span class="emphasis"><em>MERGE</em></span> or <span class="emphasis"><em>DELETE</em></span>.
+Indicates the operation that the adapter needs to perform.
+Relevant only if an entity is being used for JPA operations.
+Ignored if JPA QL, named query or native query is provided.
+Defaults to <span class="emphasis"><em>MERGE</em></span>.
+<span class="emphasis"><em>Optional</em></span>.
+As of <span class="strong"><strong>Spring Integration 3.0</strong></span>, payloads to <span class="emphasis"><em>persist</em></span> or <span class="emphasis"><em>merge</em></span> can also be of type <code class="literal">http://docs.oracle.com/javase/7/docs/api/java/lang/Iterable.html[java.lang.Iterable]</code>.
+In that case, each object returned by the <code class="literal">Iterable</code> is treated as an entity and persisted or merged using the underlying <code class="literal">EntityManager</code>.
+<span class="emphasis"><em>NULL</em></span> values returned by the iterator are ignored.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set this value to <code class="literal">true</code> if you want to flush the persistence context immediately after persist, merge or delete operations and don&#8217;t want to rely on the <code class="literal">EntityManager</code>'s flushMode.
+The default value is set to <code class="literal">false</code>.
+Applies only if the <code class="literal">flush-size</code> attribute isn&#8217;t specified.
+If this attribute is set to <code class="literal">true</code>, then <code class="literal">flush-size</code> will be implicitly set to <code class="literal">1</code>, if it wasn&#8217;t configured to any other value.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set this attribute to a value greater than <span class="emphasis"><em>0</em></span> if you want to flush the persistence context immediately after persist, merge or delete operations and don&#8217;t want to rely on the <code class="literal">EntityManager</code><span class="emphasis"><em>s flushMode.
+The default value is set to <code class="literal">0</code> which means 'no flush</em></span>.
+This attribute is geared towards messages with <code class="literal">Iterable</code> payloads.
+For instance, if <code class="literal">flush-size</code> is set to <code class="literal">3</code>, then <code class="literal">entityManager.flush()</code> is called after every third entity.
+Furthermore, <code class="literal">entityManager.flush()</code> will be called once more after the entire loop.
+There is no reason to configure the <code class="literal">flush</code> attribute, if the <span class="emphasis"><em>flush-size</em></span> attribute is specified with a value greater than <span class="emphasis"><em>0</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-15"><span><img src="images/callouts/15.png" alt="15" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set this value to <span class="emphasis"><em>true</em></span> if you want to clear persistence context immediately after each flush operation.
+The attribute&#8217;s value is applied only if the <code class="literal">flush</code> attribute is set to <code class="literal">true</code> or if the <code class="literal">flush-size</code> attribute is set to a value greater than <code class="literal">0</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-16">(16)</a> </p></td><td valign="top" align="left">
+<p>If set to true, the payload of the Message will be used as a source for providing parameters.
+If false, however, the entire Message will be available as a source for parameters.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-17">(17)</a> </p></td><td valign="top" align="left">
+<p>Defines the transaction management attributes and the reference to transaction manager to be used by the JPA adapter.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO34-18">(18)</a> </p></td><td valign="top" align="left">
+<p>One or more <span class="emphasis"><em>parameter</em></span> attributes, one for each parameter used in the query.
+The value or expression provided will be evaluated to compute the value of the parameter.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_16" href="#_configuring_with_java_configuration_16"></a>20.5.6&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using Java configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@EntityScan(basePackageClasses = StudentDomain.class)</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> JpaJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(JpaJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> EntityManagerFactory entityManagerFactory;
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway</span></em>
+    <span class="hl-keyword">interface</span> JpaGateway {
+
+       <em><span class="hl-annotation" style="color: gray">@Gateway(requestChannel = "jpaPersistChannel")</span></em>
+       <em><span class="hl-annotation" style="color: gray">@Transactional</span></em>
+       <span class="hl-keyword">void</span> persistStudent(StudentDomain payload);
+
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> JpaExecutor jpaExecutor() {
+        JpaExecutor executor = <span class="hl-keyword">new</span> JpaExecutor(<span class="hl-keyword">this</span>.entityManagerFactory);
+        jpaExecutor.setEntityClass(StudentDomain.<span class="hl-keyword">class</span>);
+        jpaExecutor.setPersistMode(PersistMode.PERSIST);
+        <span class="hl-keyword">return</span> executor;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(channel = "jpaPersistChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler jpaOutbound() {
+        JpaOutboundGateway adapter = <span class="hl-keyword">new</span> JpaOutboundGateway(jpaExecutor());
+        adapter.setProducesReply(false);
+        <span class="hl-keyword">return</span> adapter;
+    }
+
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_15" href="#_configuring_with_the_java_dsl_15"></a>20.5.7&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the Inbound Adapter using the Java DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@EntityScan(basePackageClasses = StudentDomain.class)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> JpaJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(JpaJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> EntityManagerFactory entityManagerFactory;
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow outboundAdapterFlow() {
+        <span class="hl-keyword">return</span> f -&gt; f
+                .handle(Jpa.outboundAdapter(<span class="hl-keyword">this</span>.entityManagerFactory)
+                                .entityClass(StudentDomain.<span class="hl-keyword">class</span>)
+                                .persistMode(PersistMode.PERSIST),
+                        e -&gt; e.transactional());
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jpa-outbound-gateways" href="#jpa-outbound-gateways"></a>20.6&nbsp;Outbound Gateways</h2></div></div></div>
+
+<p>The JPA <span class="emphasis"><em>Inbound Channel Adapter</em></span> allows you to poll a database in order to retrieve one or more JPA entities and the retrieved data is consequently used to start a Spring Integration flow using the retrieved data as message payload.</p>
+<p>Additionally, you may use JPA <span class="emphasis"><em>Outbound Channel Adapters</em></span> at the end of your flow in order to persist data, essentially terminating the flow at the end of the persistence operation.</p>
+<p>However, how can you execute JPA persistence operation in the middle of a flow? For example, you may have business data that you are processing in your Spring Integration message flow, that you would like to persist, yet you still need to execute other components further downstream.
+Or instead of polling the database using a poller, you rather have the need to execute JPQL queries and retrieve data actively which then is used to being processed in subsequent components within your flow.</p>
+<p>This is where JPA Outbound Gateways come into play.
+They give you the ability to persist data as well as retrieving data.
+To facilitate these uses, Spring Integration provides two types of JPA Outbound Gateways:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>Updating Outbound Gateway</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>Retrieving Outbound Gateway</em></span>
+</li></ul></div>
+<p>Whenever the Outbound Gateway is used to perform an action that saves, updates or solely deletes some records in the database, you need to use an <span class="emphasis"><em>Updating Outbound Gateway</em></span> gateway.
+If for example an <span class="emphasis"><em>entity</em></span> is used to persist it, then a merged/persisted entity is returned as a result.
+In other cases the number of records affected (updated or deleted) is returned instead.</p>
+<p>When retrieving (selecting) data from the database, we use a <span class="emphasis"><em>Retrieving Outbound Gateway</em></span>.
+With a <span class="emphasis"><em>Retrieving Outbound Gateway</em></span> gateway, we can use either JPQL, Named Queries (native or JPQL-based) or Native Queries (SQL) for selecting the data and retrieving the results.</p>
+<p>An <span class="emphasis"><em>Updating Outbound Gateway</em></span> is functionally very similar to an <span class="emphasis"><em>Outbound Channel Adapter</em></span>, except that an <span class="emphasis"><em>Updating Outbound Gateway</em></span> is used to send a result to the Gateway&#8217;s <span class="emphasis"><em>reply channel</em></span> after performing the given JPA operation.</p>
+<p>A <span class="emphasis"><em>Retrieving Outbound Gateway</em></span> is quite similar to an <span class="emphasis"><em>Inbound Channel Adapter</em></span>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>We recommend you to first refer to the JPA Outbound Channel Adapter section and the JPA Inbound Channel Adapter sections above, as most of the common concepts are being explained there.</p>
+</td></tr></table></div>
+<p>This similarity was the main factor to use the central <code class="literal">JpaExecutor</code> class to unify common functionality as much as possible.</p>
+<p>Common for all JPA Outbound Gateways and simlar to the <span class="emphasis"><em>outbound-channel-adapter</em></span>, we can use</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>Entity classes</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>JPA Query Language (JPQL)</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>Native query</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>Named query</em></span>
+</li></ul></div>
+<p>for performing various JPA operations.
+For configuration examples please see <a class="xref" href="jpa.html#outboundGatewaySamples" title="20.6.8&nbsp;JPA Outbound Gateway Samples">Section&nbsp;20.6.8, &#8220;JPA Outbound Gateway Samples&#8221;</a>.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jpa-outbound-gateway-common-parameters" href="#jpa-outbound-gateway-common-parameters"></a>20.6.1&nbsp;Common Configuration Parameters</h3></div></div></div>
+
+<p>JPA Outbound Gateways always have access to the Spring Integration Message as input.
+As such the following parameters are available:</p>
+<p><span class="emphasis"><em>parameter-source-factory</em></span></p>
+<p>An instance of <code class="literal">o.s.i.jpa.support.parametersource.ParameterSourceFactory</code> that will be used to get an instance of <code class="literal">o.s.i.jpa.support.parametersource.ParameterSource</code>.
+The <span class="emphasis"><em>ParameterSource</em></span> is used to resolve the values of the parameters provided in the query.
+The_parameter-source-factory_ attribute is ignored, if operations are performed using a JPA entity.
+If a <span class="emphasis"><em>parameter</em></span> sub-element is used, the factory must be of type <code class="literal">ExpressionEvaluatingParameterSourceFactory</code>, located in package <span class="emphasis"><em>o.s.i.jpa.support.parametersource</em></span>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+<p><span class="emphasis"><em>use-payload-as-parameter-source</em></span></p>
+<p>If set to <span class="emphasis"><em>true</em></span>, the payload of the Message will be used as a source for providing parameters.
+If set to <span class="emphasis"><em>false</em></span>, the entire Message will be available as a source for parameters.
+If no JPA Parameters are passed in, this property will default to <span class="emphasis"><em>true</em></span>.
+This means that using a default <code class="literal">BeanPropertyParameterSourceFactory</code>, the bean properties of the payload will be used as a source for parameter values for the to-be-executed JPA query.
+However, if JPA Parameters are passed in, then this property will by default evaluate to <span class="emphasis"><em>false</em></span>.
+The reason is that JPA Parameters allow for SpEL Expressions to be provided and therefore it is highly beneficial to have access to the entire Message, including the Headers.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jpa-updating-outbound-gateway" href="#jpa-updating-outbound-gateway"></a>20.6.2&nbsp;Updating Outbound Gateway</h3></div></div></div>
+
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:updating-outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">""</span>  <a name="CO35-1" href="#CO35-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    auto-startup="true"
+    entity-class=""
+    entity-manager=""
+    entity-manager-factory=""
+    id=""
+    jpa-operations=""
+    jpa-query=""
+    named-query=""
+    native-query=""
+    order=""
+    parameter-source-factory=""
+    persist-mode="MERGE"
+    reply-channel=""  <a name="CO35-2" href="#CO35-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    reply-timeout=""  <a name="CO35-3" href="#CO35-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    use-payload-as-parameter-source="true"&gt;
+
+    <span class="hl-tag">&lt;int:poller/&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:transactional/&gt;</span>
+
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">type</span>=<span class="hl-value">""</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">expression</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:updating-outbound-gateway&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO35-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel from which the outbound gateway will receive messages for performing the desired operation.
+This attribute is similar to <span class="emphasis"><em>channel</em></span> attribute of the outbound-channel-adapter.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO35-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which the gateway will send the response after performing the required JPA operation.
+If this attribute is not defined, the request message must have a replyChannel header.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO35-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specifies the time the gateway will wait to send the result to the reply channel.
+Only applies when the reply channel itself might block the send (for example a bounded QueueChannel that is currently full).
+By default the Gateway will wait indefinitely.
+The value is specified in milliseconds.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_17" href="#_configuring_with_java_configuration_17"></a>20.6.3&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using Java configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@EntityScan(basePackageClasses = StudentDomain.class)</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> JpaJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(JpaJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> EntityManagerFactory entityManagerFactory;
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway</span></em>
+    <span class="hl-keyword">interface</span> JpaGateway {
+
+       <em><span class="hl-annotation" style="color: gray">@Gateway(requestChannel = "jpaUpdateChannel")</span></em>
+       <em><span class="hl-annotation" style="color: gray">@Transactional</span></em>
+       <span class="hl-keyword">void</span> updateStudent(StudentDomain payload);
+
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(channel = "jpaUpdateChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler jpaOutbound() {
+        JpaOutboundGateway adapter =
+               <span class="hl-keyword">new</span> JpaOutboundGateway(<span class="hl-keyword">new</span> JpaExecutor(<span class="hl-keyword">this</span>.entityManagerFactory));
+        adapter.setOutputChannelName(<span class="hl-string">"updateResults"</span>);
+        <span class="hl-keyword">return</span> adapter;
+    }
+
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_16" href="#_configuring_with_the_java_dsl_16"></a>20.6.4&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the Inbound Adapter using the Java DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@EntityScan(basePackageClasses = StudentDomain.class)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> JpaJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(JpaJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> EntityManagerFactory entityManagerFactory;
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow updatingGatewayFlow() {
+        <span class="hl-keyword">return</span> f -&gt; f
+                .handle(Jpa.updatingGateway(<span class="hl-keyword">this</span>.entityManagerFactory),
+                        e -&gt; e.transactional(true))
+                .channel(c -&gt; c.queue(<span class="hl-string">"updateResults"</span>));
+    }
+
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jpa-retrieving-outbound-gateway" href="#jpa-retrieving-outbound-gateway"></a>20.6.5&nbsp;Retrieving Outbound Gateway</h3></div></div></div>
+
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:retrieving-outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">""</span>
+    <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">delete-after-poll</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">delete-in-batch</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">entity-class</span>=<span class="hl-value">""</span>
+    <span class="hl-attribute">id-expression</span>=<span class="hl-value">""</span>  <a name="CO36-1" href="#CO36-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    entity-manager=""
+    entity-manager-factory=""
+    expect-single-result="false"  <a name="CO36-2" href="#CO36-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    id=""
+    jpa-operations=""
+    jpa-query=""
+    max-results=""  <a name="CO36-3" href="#CO36-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    max-results-expression=""  <a name="CO36-4" href="#CO36-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    first-result=""  <a name="CO36-5" href="#CO36-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    first-result-expression=""  <a name="CO36-6" href="#CO36-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+    named-query=""
+    native-query=""
+    order=""
+    parameter-source-factory=""
+    reply-channel=""
+    reply-timeout=""
+    use-payload-as-parameter-source="true"&gt;
+    <span class="hl-tag">&lt;int:poller&gt;</span><span class="hl-tag">&lt;/int:poller&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:transactional/&gt;</span>
+
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">type</span>=<span class="hl-value">""</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">expression</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:retrieving-outbound-gateway&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO36-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>(Since <span class="emphasis"><em>Spring Integration 4.0</em></span>) The SpEL expression to determine the <code class="literal">primaryKey</code> value for <code class="literal">EntityManager.find(Class entityClass, Object primaryKey)</code> method against the <code class="literal">requestMessage</code> as root object of evaluation context.
+The <code class="literal">entityClass</code> argument is determined from <code class="literal">entity-class</code> attribute, if presented, otherwise from <code class="literal">payload</code> class.
+All other attributed are disallowed in case of <code class="literal">id-expression</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO36-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A boolean flag indicating whether the select operation is expected to return a single result or a <code class="literal">List</code> of results.
+If this flag is set to <code class="literal">true</code>, the single entity selected is sent as the payload of the message.
+If multiple entities are returned, an exception is thrown.
+If <code class="literal">false</code>, the <code class="literal">List</code> of entities is being sent as the payload of the message.
+By default the value is <code class="literal">false</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO36-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This non zero, non negative integer value tells the adapter not to select more than given number of rows on execution of the select operation.
+By default, if this attribute is not set, all the possible records are selected by given query.
+This attribute is mutually exclusive with <code class="literal">max-results-expression</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO36-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An expression, mutually exclusive with <code class="literal">max-results</code>, that can be used to provide an expression that will be evaluated to find the maximum number of results in a result set.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO36-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This non zero, non negative integer value tells the adapter the first record from which the results are to be retrieved This attribute is mutually exclusive to <code class="literal">first-result-expression</code>.
+This attribute is introduced since version 3.0.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO36-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This expression is evaluated against the message to find the position of first record in the result set to be retrieved This attribute is mutually exclusive to <code class="literal">first-result</code>.
+This attribute is introduced since version 3.0.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_18" href="#_configuring_with_java_configuration_18"></a>20.6.6&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter using Java configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@EntityScan(basePackageClasses = StudentDomain.class)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> JpaJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(JpaJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> EntityManagerFactory entityManagerFactory;
+
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> JpaExecutor jpaExecutor() {
+        JpaExecutor executor = <span class="hl-keyword">new</span> JpaExecutor(<span class="hl-keyword">this</span>.entityManagerFactory);
+        jpaExecutor.setJpaQuery(<span class="hl-string">"from Student s where s.id = :id"</span>);
+        executor.setJpaParameters(Collections.singletonList(<span class="hl-keyword">new</span> JpaParameter(<span class="hl-string">"id"</span>, null, <span class="hl-string">"payload"</span>)));
+        jpaExecutor.setExpectSingleResult(true);
+        <span class="hl-keyword">return</span> executor;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(channel = "jpaRetrievingChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler jpaOutbound() {
+        JpaOutboundGateway adapter = <span class="hl-keyword">new</span> JpaOutboundGateway(jpaExecutor());
+        adapter.setOutputChannelName(<span class="hl-string">"retrieveResults"</span>);
+        adapter.setGatewayType(OutboundGatewayType.RETRIEVING);
+        <span class="hl-keyword">return</span> adapter;
+    }
+
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_17" href="#_configuring_with_the_java_dsl_17"></a>20.6.7&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the Inbound Adapter using the Java DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@EntityScan(basePackageClasses = StudentDomain.class)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> JpaJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(JpaJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> EntityManagerFactory entityManagerFactory;
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow retrievingGatewayFlow() {
+        <span class="hl-keyword">return</span> f -&gt; f
+                .handle(Jpa.retrievingGateway(<span class="hl-keyword">this</span>.entityManagerFactory)
+                       .jpaQuery(<span class="hl-string">"from Student s where s.id = :id"</span>)
+                       .expectSingleResult(true)
+                       .parameterExpression(<span class="hl-string">"id"</span>, <span class="hl-string">"payload"</span>))
+                .channel(c -&gt; c.queue(<span class="hl-string">"retrieveResults"</span>));
+    }
+
+}</pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>When choosing to delete entities upon retrieval and you have retrieved a collection of entities, please be aware that by default entities are deleted on a per entity basis.
+This may cause performance issues.</p>
+<p>Alternatively, you can set attribute <span class="emphasis"><em>deleteInBatch</em></span> to <span class="emphasis"><em>true</em></span>, which will perform a batch delete.
+However, please be aware of the limitation that in that case cascading deletes are not supported.</p>
+<p><span class="emphasis"><em>JSR 317: Java&#8482; Persistence 2.0</em></span> states in chapter Chapter 4.10, Bulk Update and Delete Operations that:</p>
+<p>"A delete operation only applies to entities of the specified class and its subclasses.
+It does not cascade to related entities."</p>
+<p>For more information please see <a class="ulink" href="http://jcp.org/en/jsr/detail?id=317" target="_top">JSR 317: Java&#8482; Persistence 2.0</a></p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="outboundGatewaySamples" href="#outboundGatewaySamples"></a>20.6.8&nbsp;JPA Outbound Gateway Samples</h3></div></div></div>
+
+<p>This section contains various examples of the <span class="emphasis"><em>Updating Outbound Gateway</em></span> and <span class="emphasis"><em>Retrieving Outbound Gateway</em></span></p>
+<p><span class="emphasis"><em>Update using an Entity Class</em></span></p>
+<p>In this example an <span class="emphasis"><em>Updating Outbound Gateway</em></span> is persisted using solely the entity class <code class="literal">org.springframework.integration.jpa.test.entity.Student</code> as JPA defining parameter.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:updating-outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"entityRequestChannel"</span>  <a name="CO37-1" href="#CO37-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    reply-channel="entityResponseChannel"  <a name="CO37-2" href="#CO37-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    entity-class="org.springframework.integration.jpa.test.entity.Student"
+    entity-manager="em"/&gt;</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO37-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This is the request channel for the outbound gateway, this is similar to the <span class="emphasis"><em>channel</em></span> attribute of the <span class="emphasis"><em>outbound-channel-adapter</em></span></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO37-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This is where a gateway differs from an outbound adapter, this is the channel over which the reply of the performed JPA operation is received.
+If,however, you are not interested in the reply received and just want to perform the operation, then using a JPA <span class="emphasis"><em>outbound-channel-adapter</em></span> is the appropriate choice.
+In above case, where we are using entity class, the reply will be the entity object that was created/merged as a result of the JPA operation.</p>
+</td></tr></table></div>
+<p><span class="emphasis"><em>Update using JPQL</em></span></p>
+<p>In this example, we will see how we can update an entity using the Java Persistence Query Language (JPQL).
+For this we use an_Updating Outbound Gateway_.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:updating-outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"jpaqlRequestChannel"</span>
+  <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"jpaqlResponseChannel"</span>
+  <span class="hl-attribute">jpa-query</span>=<span class="hl-value">"update Student s set s.lastName = :lastName where s.rollNumber = :rollNumber"</span>  <a name="CO38-1" href="#CO38-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+  entity-manager="em"&gt;
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"lastName"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"rollNumber"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers['rollNumber']"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:updating-outbound-gateway&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO38-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The JPQL query that will be executed by the gateway.
+Since an <span class="emphasis"><em>Updating Outbound Gateway</em></span> is used, only <span class="emphasis"><em>update</em></span> and <span class="emphasis"><em>delete</em></span> JPQL queries would be sensible choices.</p>
+</td></tr></table></div>
+<p>When sending a message with a String payload and containing a header <span class="emphasis"><em>rollNumber</em></span> with a <span class="emphasis"><em>long</em></span> value, the last name of the student with the provided roll number is updated to the value provided in the message payload.
+When using an <span class="emphasis"><em>UPDATING</em></span> gateway, the return value is <span class="emphasis"><em>always</em></span> an integer value which denotes the number of records affected by execution of the JPA QL.</p>
+<p><span class="emphasis"><em>Retrieving an Entity using JPQL</em></span></p>
+<p>The following examples uses a <span class="emphasis"><em>Retrieving Outbound Gateway</em></span> together with JPQL to retrieve (select) one or more entities from the database.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:retrieving-outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"retrievingGatewayReqChannel"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"retrievingGatewayReplyChannel"</span>
+    <span class="hl-attribute">jpa-query</span>=<span class="hl-value">"select s from Student s where s.firstName = :firstName and s.lastName = :lastName"</span>
+    <span class="hl-attribute">entity-manager</span>=<span class="hl-value">"em"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"firstName"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"lastName"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers['lastName']"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:outbound-gateway&gt;</span></pre>
+<p><span class="emphasis"><em>Retrieving an Entity using id-expression</em></span></p>
+<p>The following examples uses a <span class="emphasis"><em>Retrieving Outbound Gateway</em></span> together with <code class="literal">id-expression</code> to retrieve (find) one and only one entity from the database.
+The <code class="literal">primaryKey</code> is the result of <code class="literal">id-expression</code> evaluation.
+The <code class="literal">entityClass</code> is a class of Message <code class="literal">payload</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:retrieving-outbound-gateway</span>
+	<span class="hl-attribute">request-channel</span>=<span class="hl-value">"retrievingGatewayReqChannel"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"retrievingGatewayReplyChannel"</span>
+    <span class="hl-attribute">id-expression</span>=<span class="hl-value">"payload.id"</span>
+    <span class="hl-attribute">entity-manager</span>=<span class="hl-value">"em"</span><span class="hl-tag">/&gt;</span></pre>
+<p><span class="emphasis"><em>Update using a Named Query</em></span></p>
+<p>Using a Named Query is basically the same as using a JPQL query directly.
+The difference is that the <span class="emphasis"><em>named-query</em></span> attribute is used instead, as seen in the xml snippet below.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-jpa:updating-outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"namedQueryRequestChannel"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"namedQueryResponseChannel"</span>
+    <span class="hl-attribute">named-query</span>=<span class="hl-value">"updateStudentByRollNumber"</span>
+    <span class="hl-attribute">entity-manager</span>=<span class="hl-value">"em"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"lastName"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jpa:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"rollNumber"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers['rollNumber']"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jpa:outbound-gateway&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>You can find a complete Sample application for using Spring Integration&#8217;s JPA adapter at <a class="ulink" href="https://github.com/spring-projects/spring-integration-samples/tree/master/basic/jpa" target="_top">jpa sample</a>.</p>
+</td></tr></table></div>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="jdbc.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="jms.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">19.&nbsp;JDBC Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;21.&nbsp;JMS Support</td></tr></table></div></body></html>
