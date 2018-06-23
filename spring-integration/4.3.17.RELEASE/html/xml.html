@@ -1,0 +1,807 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>35.&nbsp;XML Support - Dealing with XML Payloads</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="ws.html" title="34.&nbsp;Web Services Support"><link rel="next" href="xmpp.html" title="36.&nbsp;XMPP Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">35.&nbsp;XML Support - Dealing with XML Payloads</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ws.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="xmpp.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="xml" href="#xml"></a>35.&nbsp;XML Support - Dealing with XML Payloads</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xml-intro" href="#xml-intro"></a>35.1&nbsp;Introduction</h2></div></div></div>
+
+<p>Spring Integration&#8217;s XML support extends the core of Spring Integration with the following components:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xml-transformation" title="35.3&nbsp;Transforming XML Payloads">Marshalling Transformer</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xml-transformation" title="35.3&nbsp;Transforming XML Payloads">Unmarshalling Transformer</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xml-transformation" title="35.3&nbsp;Transforming XML Payloads">Xslt Transformer</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xml-xpath-transformer" title="35.4&nbsp;Transforming XML Messages Using XPath">XPath Transformer</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xml-xpath-splitting" title="35.5&nbsp;Splitting XML Messages">XPath Splitter</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xml-xpath-routing" title="35.6&nbsp;Routing XML Messages Using XPath">XPath Router</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xml-xpath-header-enricher" title="35.7&nbsp;XPath Header Enricher">XPath Header Enricher</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xml-xpath-filter" title="35.8&nbsp;Using the XPath Filter">XPath Filter</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xpath-spel-function" title="35.9&nbsp;#xpath SpEL Function">#xpath SpEL Function</a></em></span>
+</li><li class="listitem">
+<span class="emphasis"><em><a class="link" href="xml.html#xml-validating-filter" title="35.10&nbsp;XML Validating Filter">Validating Filter</a></em></span>
+</li></ul></div>
+<p>These components are designed to make working with XML messages in Spring Integration simple.
+The provided messaging components are designed to work with XML represented in a range of formats including instances of <code class="literal">java.lang.String</code>, <code class="literal">org.w3c.dom.Document</code> and <code class="literal">javax.xml.transform.Source</code>.
+It should be noted however that where a DOM representation is required, for example in order to evaluate an XPath expression, the <code class="literal">String</code> payload will be converted into the required type and then converted back again to <code class="literal">String</code>.
+Components that require an instance of <code class="literal">DocumentBuilder</code> will create a namespace-aware instance if one is not provided.
+In cases where you require greater control over document creation, you can provide an appropriately configured instance of <code class="literal">DocumentBuilder</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xpath-namespace-support" href="#xpath-namespace-support"></a>35.2&nbsp;Namespace Support</h2></div></div></div>
+
+<p>All components within the Spring Integration XML module provide namespace support.
+In order to enable namespace support, you need to import the respective schema for the Spring Integration XML Module.
+A typical setup is shown below:</p>
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;beans</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://www.springframework.org/schema/beans"</span>
+  <span class="hl-attribute">xmlns:xsi</span>=<span class="hl-value">"http://www.w3.org/2001/XMLSchema-instance"</span>
+  <span class="hl-attribute">xmlns:int</span>=<span class="hl-value">"http://www.springframework.org/schema/integration"</span>
+  <span class="hl-attribute">xmlns:int-xml</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/xml"</span>
+  <span class="hl-attribute">xsi:schemaLocation</span>=<span class="hl-value">"http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/integration
+    http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/xml
+    http://www.springframework.org/schema/integration/xml/spring-integration-xml.xsd"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;/beans&gt;</span></pre>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="xml-xpath-expressions" href="#xml-xpath-expressions"></a>35.2.1&nbsp;XPath Expressions</h3></div></div></div>
+
+<p>Many of the components within the Spring Integration XML module work with XPath Expressions.
+Each of those components will either reference an XPath Expression that has been defined as top-level element or via a nested <code class="literal">&lt;xpath-expression/&gt;</code> element.</p>
+<p>All forms of XPath expressions result in the creation of an <code class="literal">XPathExpression</code> using the Spring <code class="literal">org.springframework.xml.xpath.XPathExpressionFactory</code>.
+When creating XPath expressions, the best XPath implementation that is available on the classpath is being used, either JAXP 1.3+ or Jaxen, whereby JAXP is preferred.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Spring Integration under the covers uses the XPath functionality as provided by the <span class="emphasis"><em>Spring Web Services</em></span> project (<a class="ulink" href="http://www.spring.io/spring-ws" target="_top">http://www.spring.io/spring-ws</a>).
+Specifically, Spring Web Services' XML module (spring-xml-x.x.x.jar) is being used.
+Therefore, for a deeper understanding, please refer to the respective documentation as well at: <a class="ulink" href="http://docs.spring.io/spring-ws/docs/current/reference/html/common.html#xpath" target="_top">http://docs.spring.io/spring-ws/docs/current/reference/html/common.html#xpath</a></p>
+</td></tr></table></div>
+<p>Here is an overview of all available configuration parameters of the <code class="literal">xpath-expression</code> element:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">""</span> <a name="CO55-1" href="#CO55-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+          id=""              <a name="CO55-2" href="#CO55-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+          namespace-map=""   <a name="CO55-3" href="#CO55-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+          ns-prefix=""       <a name="CO55-4" href="#CO55-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+          ns-uri=""&gt;         <a name="CO55-5" href="#CO55-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    <span class="hl-tag">&lt;map&gt;</span><span class="hl-tag">&lt;/map&gt;</span>              <a name="CO55-6" href="#CO55-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+<span class="hl-tag">&lt;/int-xml:xpath-expression&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO55-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Defines an XPath xpression.
+<span class="emphasis"><em>Required</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO55-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The Identifier of the underlying bean definition.
+Will be an instance of `org.springframework.xml.xpath.XPathExpression`<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO55-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Reference to a map containing namespaces.
+The key of the map defines the namespace prefix and the value of the map sets the namespace URI.
+It is not valid to specify both this attribute and the <code class="literal">map</code> sub element, or setting the <code class="literal">ns-prefix</code> and <code class="literal">ns-uri</code> attribute.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO55-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Allows you to set the namspace prefix directly as and attribute on the XPath expression element.
+If you set <code class="literal">ns-prefix</code>, you must also set the <code class="literal">ns-uri</code> attribute.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO55-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Allows you to set the namspace URI directly as an attribute on the XPath expression element.
+If you set <code class="literal">ns-uri</code>, you must also set the <code class="literal">ns-prefix</code> attribute.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO55-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Defines a map containing namespaces.
+Only one map child element is allowed.
+The key of the map defines the namespace prefix and the value of the map sets the namespace URI.</p>
+</td></tr></table></div>
+<p>It is not valid to specify both this sub-element and the <code class="literal">map</code> attribute, or setting the <code class="literal">ns-prefix</code> and <code class="literal">ns-uri</code> attributes.
+<span class="emphasis"><em>Optional</em></span>.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_providing_namespaces_optional_to_xpath_expressions" href="#_providing_namespaces_optional_to_xpath_expressions"></a>Providing Namespaces (Optional) to XPath Expressions</h4></div></div></div>
+
+<p>For the XPath Expression Element, namespace information can be optionally provided as configuration parameters.
+As such, namespaces can be defined using one of the following 3 choices:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Reference a map using the <code class="literal">namespace-map</code> attribute
+</li><li class="listitem">
+Provide a map of namespaces using the <code class="literal">map</code> sub-element
+</li><li class="listitem">
+Specifying the <code class="literal">ns-prefix</code> and the <code class="literal">ns-uri</code> attribute
+</li></ul></div>
+<p>All three options are mutually exclusive.
+Only one option can be set.</p>
+<p>Below, please find several different usage examples on how to use XPath expressions using the XML namespace support including the various option for setting the XML namespaces as discussed above.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-filter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filterReferencingXPathExpression"</span>
+                      <span class="hl-attribute">xpath-expression-ref</span>=<span class="hl-value">"refToXpathExpression"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">id</span>=<span class="hl-value">"refToXpathExpression"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/name"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-xml:xpath-filter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filterWithoutNamespace"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/name"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-filter&gt;</span>
+
+<span class="hl-tag">&lt;int-xml:xpath-filter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filterWithOneNamespace"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/ns1:name"</span>
+                              <span class="hl-attribute">ns-prefix</span>=<span class="hl-value">"ns1"</span> <span class="hl-attribute">ns-uri</span>=<span class="hl-value">"www.example.org"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-filter&gt;</span>
+
+<span class="hl-tag">&lt;int-xml:xpath-filter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filterWithTwoNamespaces"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/ns1:name/ns2:type"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;map&gt;</span>
+            <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"ns1"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"www.example.org/one"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"ns2"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"www.example.org/two"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/map&gt;</span>
+    <span class="hl-tag">&lt;/int-xml:xpath-expression&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-filter&gt;</span>
+
+<span class="hl-tag">&lt;int-xml:xpath-filter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"filterWithNamespaceMapReference"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/ns1:name/ns2:type"</span>
+                              <span class="hl-attribute">namespace-map</span>=<span class="hl-value">"defaultNamespaces"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-filter&gt;</span>
+
+<span class="hl-tag">&lt;util:map</span> <span class="hl-attribute">id</span>=<span class="hl-value">"defaultNamespaces"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;util:entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"ns1"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"www.example.org/one"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;util:entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"ns2"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"www.example.org/two"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/util:map&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_using_xpath_expressions_with_default_namespaces" href="#_using_xpath_expressions_with_default_namespaces"></a>Using XPath Expressions with Default Namespaces</h4></div></div></div>
+
+<p>When working with default namespaces, you may run into situations that behave differently than originally expected.
+Let&#8217;s assume we have the following XML document:</p>
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;order&gt;</span>
+    <span class="hl-tag">&lt;orderItem&gt;</span>
+        <span class="hl-tag">&lt;isbn&gt;</span>0321200683<span class="hl-tag">&lt;/isbn&gt;</span>
+        <span class="hl-tag">&lt;quantity&gt;</span>2<span class="hl-tag">&lt;/quantity&gt;</span>
+    <span class="hl-tag">&lt;/orderItem&gt;</span>
+    <span class="hl-tag">&lt;orderItem&gt;</span>
+        <span class="hl-tag">&lt;isbn&gt;</span>1590596439<span class="hl-tag">&lt;/isbn&gt;</span>
+        <span class="hl-tag">&lt;quantity&gt;</span>1<span class="hl-tag">&lt;/quantity&gt;</span>
+    <span class="hl-tag">&lt;/orderItem&gt;</span>
+<span class="hl-tag">&lt;/order&gt;</span></pre>
+<p>This document is not declaring any namespace.
+Therefore, applying the following XPath Expression will work as expected:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/order/orderItem"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>You might expect that the same expression will also work for the following XML file.
+It looks exactly the same as the previous example but in addition it also declares a default namespace:</p>
+<p><span class="emphasis"><em><a class="ulink" href="http://www.example.org/orders" target="_top">http://www.example.org/orders</a></em></span></p>
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;order</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://www.example.org/orders"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;orderItem&gt;</span>
+		<span class="hl-tag">&lt;isbn&gt;</span>0321200683<span class="hl-tag">&lt;/isbn&gt;</span>
+		<span class="hl-tag">&lt;quantity&gt;</span>2<span class="hl-tag">&lt;/quantity&gt;</span>
+	<span class="hl-tag">&lt;/orderItem&gt;</span>
+	<span class="hl-tag">&lt;orderItem&gt;</span>
+		<span class="hl-tag">&lt;isbn&gt;</span>1590596439<span class="hl-tag">&lt;/isbn&gt;</span>
+		<span class="hl-tag">&lt;quantity&gt;</span>1<span class="hl-tag">&lt;/quantity&gt;</span>
+	<span class="hl-tag">&lt;/orderItem&gt;</span>
+<span class="hl-tag">&lt;/order&gt;</span></pre>
+<p>However, the XPath Expression used previously will fail in this case.</p>
+<p>In order to solve this issue, you must provide a namespace prefix and a namespace URI using either the <span class="emphasis"><em>ns-prefix</em></span> and <span class="emphasis"><em>ns-uri</em></span> attribute or by providing a <span class="emphasis"><em>namespace-map</em></span> attribute instead.
+The namespace URI must match the namespace declared in your XML document, which in this example is <span class="emphasis"><em><a class="ulink" href="http://www.example.org/orders" target="_top">http://www.example.org/orders</a></em></span>.</p>
+<p>The namespace prefix, however, can be arbitrarily chosen.
+In fact, just providing an empty String will actually work (Null is not allowed).
+In the case of a namespace prefix consisting of an empty String, your Xpath Expression will use a colon (":") to indicate the default namespace.
+If you leave the colon off, the XPath expression will not match.
+The following XPath Expression will match against the XML document above:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/:order/:orderItem"</span>
+    <span class="hl-attribute">ns-prefix</span>=<span class="hl-value">""</span> <span class="hl-attribute">ns-uri</span>=<span class="hl-value">"http://www.example.org/prodcuts"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Of course you can also provide any other arbitrarily chosen namespace prefix.
+The following XPath expression using the <span class="emphasis"><em>myorder</em></span> namespace prefix will match also:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/myorder:order/myorder:orderItem"</span>
+    <span class="hl-attribute">ns-prefix</span>=<span class="hl-value">"myorder"</span> <span class="hl-attribute">ns-uri</span>=<span class="hl-value">"http://www.example.org/prodcuts"</span><span class="hl-tag">/&gt;</span></pre>
+<p>It is important to remember that the namespace URI is the really important piece of information to declare, not the prefix itself.
+The <a class="ulink" href="http://jaxen.codehaus.org/faq.html" target="_top">Jaxen FAQ</a> summarizes the point very well:</p>
+<div class="blockquote"><blockquote class="blockquote">
+<p>In XPath 1.0, all unprefixed names are unqualified.
+There is no requirement that the prefixes used in the XPath expression are the same as the prefixes used in the document being queried.
+Only the namespace URIs need to match, not the prefixes.</p>
+</blockquote></div>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xml-transformation" href="#xml-transformation"></a>35.3&nbsp;Transforming XML Payloads</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="xml-transformation-beans" href="#xml-transformation-beans"></a>35.3.1&nbsp;Configuring Transformers as Beans</h3></div></div></div>
+
+<p>This section will explain the workings of the following transformers and how to configure them as <span class="emphasis"><em>beans</em></span>:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="ulink" href="#xml-unmarshalling-transformer" target="_top">UnmarshallingTransformer</a>
+</li><li class="listitem">
+<a class="ulink" href="#xml-marshalling-transformer" target="_top">MarshallingTransformer</a>
+</li><li class="listitem">
+<a class="ulink" href="#xml-xslt-payload-transformers" target="_top">XsltPayloadTransformer</a>
+</li></ul></div>
+<p>All of the provided XML transformers extend <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/transformer/AbstractTransformer.html" target="_top">AbstractTransformer</a> or  <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/transformer/AbstractPayloadTransformer.html" target="_top">AbstractPayloadTransformer</a> and therefore implement  <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/transformer/Transformer.html" target="_top">Transformer</a>.
+When configuring XML transformers as beans in Spring Integration, you would normally configure the <span class="emphasis"><em>Transformer</em></span> in conjunction with a  <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/transformer/MessageTransformingHandler.html" target="_top">MessageTransformingHandler</a>.
+This allows the transformer to be used as an <span class="emphasis"><em>Endpoint</em></span>.
+Finally, the namespace support will be discussed, which allows for the simple configuration of the transformers as elements in XML.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="xml-unmarshalling-transformer" href="#xml-unmarshalling-transformer"></a>UnmarshallingTransformer</h4></div></div></div>
+
+<p>An <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/transformer/UnmarshallingTransformer.html" target="_top">UnmarshallingTransformer</a> allows an XML <code class="literal">Source</code> to be unmarshalled using implementations of the <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/oxm.html" target="_top">Spring OXM</a> <code class="literal">Unmarshaller</code>.
+Spring&#8217;s Object/XML Mapping support provides several implementations supporting marshalling and unmarshalling using <a class="ulink" href="http://en.wikipedia.org/wiki/Java_Architecture_for_XML_Binding" target="_top">JAXB</a>, <a class="ulink" href="http://www.castor.org/" target="_top">Castor</a> and <a class="ulink" href="http://jibx.sourceforge.net/" target="_top">JiBX</a> amongst others.
+The unmarshaller requires an instance of <code class="literal">Source</code>.
+If the message payload is not an instance of <code class="literal">Source</code>, conversion will be attempted.
+Currently <code class="literal">String</code>, <code class="literal">File</code> and <code class="literal">org.w3c.dom.Document</code> payloads are supported.
+Custom conversion to a <code class="literal">Source</code> is also supported by injecting an implementation of a <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/source/SourceFactory.html" target="_top">SourceFactory</a>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If a <code class="literal">SourceFactory</code> is not set explicitly, the property on the <code class="literal">UnmarshallingTransformer</code> will by default be set to a <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/source/DomSourceFactory.html" target="_top">DomSourceFactory</a>.</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"unmarshallingTransformer"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.xml.transformer.UnmarshallingTransformer"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.oxm.jaxb.Jaxb2Marshaller"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"contextPath"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"org.example"</span><span class="hl-tag"> /&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="xml-marshalling-transformer" href="#xml-marshalling-transformer"></a>MarshallingTransformer</h4></div></div></div>
+
+<p>The <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/transformer/MarshallingTransformer.html" target="_top">MarshallingTransformer</a> allows an object graph to be converted into XML using a Spring OXM <code class="literal">Marshaller</code>.
+By default the <code class="literal">MarshallingTransformer</code> will return a <code class="literal">DomResult</code>.
+However, the type of result can be controlled by configuring an alternative <code class="literal">ResultFactory</code> such as <code class="literal">StringResultFactory</code>.
+In many cases it will be more convenient to transform the payload into an alternative XML format.
+To achieve this, configure a <code class="literal">ResultTransformer</code>.
+Two implementations are provided, one which converts to <code class="literal">String</code> and another which converts to <code class="literal">Document</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"marshallingTransformer"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.xml.transformer.MarshallingTransformer"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.oxm.jaxb.Jaxb2Marshaller"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"contextPath"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"org.example"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.xml.transformer.ResultToDocumentTransformer"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>By default, the <code class="literal">MarshallingTransformer</code> will pass the payload Object to the <code class="literal">Marshaller</code>, but if its boolean <code class="literal">extractPayload</code> property is set to <code class="literal">false</code>, the entire <code class="literal">Message</code> instance will be passed to the <code class="literal">Marshaller</code> instead.
+That may be useful for certain custom implementations of the <code class="literal">Marshaller</code> interface, but typically the payload is the appropriate source Object for marshalling when delegating to any of the various out-of-the-box <code class="literal">Marshaller</code> implementations.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="xml-xslt-payload-transformers" href="#xml-xslt-payload-transformers"></a>XsltPayloadTransformer</h4></div></div></div>
+
+<p><a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/transformer/XsltPayloadTransformer.html" target="_top">XsltPayloadTransformer</a> transforms XML payloads using <a class="ulink" href="http://en.wikipedia.org/wiki/XSL_Transformations" target="_top">Extensible Stylesheet Language Transformations</a> (XSLT).
+The transformer&#8217;s constructor requires an instance of either <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/core/io/Resource.html" target="_top">Resource</a> or <a class="ulink" href="http://docs.oracle.com/javase/6/docs/api/javax/xml/transform/Templates.html" target="_top">Templates</a> to be passed in.
+Passing in a <code class="literal">Templates</code> instance allows for greater configuration of the <code class="literal">TransformerFactory</code> used to create the template instance.</p>
+<p>As with the <a class="ulink" href="#xml-unmarshalling-transformer" target="_top">UnmarshallingTransformer</a>, the <code class="literal">XsltPayloadTransformer</code> will do the actual XSLT transformation using instances of <code class="literal">Source</code>.
+Therefore, if the message payload is not an instance of <code class="literal">Source</code>, conversion will be attempted.
+<code class="literal">String</code> and <code class="literal">Document</code> payloads are supported directly.</p>
+<p>Custom conversion to a <code class="literal">Source</code> is also supported by injecting an implementation of a <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/source/SourceFactory.html" target="_top">SourceFactory</a>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If a <code class="literal">SourceFactory</code> is not set explicitly, the property on the <code class="literal">XsltPayloadTransformer</code> will by default be set to a  <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/source/DomSourceFactory.html" target="_top">DomSourceFactory</a>.</p>
+</td></tr></table></div>
+<p>By default, the <code class="literal">XsltPayloadTransformer</code> will create a message with a <a class="ulink" href="http://docs.oracle.com/javase/6/docs/api/javax/xml/transform/Result.html" target="_top">Result</a> payload, similar to the <code class="literal">XmlPayloadMarshallingTransformer</code>.
+This can be customised by providing a <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/result/ResultFactory.html" target="_top">ResultFactory</a> and/or a  <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/transformer/ResultTransformer.html" target="_top">ResultTransformer</a>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"xsltPayloadTransformer"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.xml.transformer.XsltPayloadTransformer"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"classpath:org/example/xsl/transform.xsl"</span><span class="hl-tag">/&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.xml.transformer.ResultToDocumentTransformer"</span><span class="hl-tag">/&gt;</span>
+  <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>Starting with Spring Integration 3.0, you can now specify the transformer factory class name using a constructor argument.
+This is configured using the <code class="literal">transformer-factory-class</code> attribute when using the namespace.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="xml-using-result-transformers" href="#xml-using-result-transformers"></a>ResultTransformers</h4></div></div></div>
+
+<p>Both the <code class="literal">MarshallingTransformer</code> and the <code class="literal">XsltPayloadTransformer</code> allow you to specify a <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/transformer/ResultTransformer.html" target="_top">ResultTransformer</a>.
+Thus, if the Marshalling or XSLT transformation returns a <a class="ulink" href="http://docs.oracle.com/javase/6/docs/api/javax/xml/transform/Result.html" target="_top">Result</a>, than you have the option to also use a <code class="literal">ResultTransformer</code> to transform the <code class="literal">Result</code> into another format.
+Spring Integration provides 2 concrete`ResultTransformer` implementations:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/transformer/ResultToDocumentTransformer.html" target="_top">ResultToDocumentTransformer</a>
+</li><li class="listitem">
+<a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/transformer/ResultToStringTransformer.html" target="_top">ResultToStringTransformer</a>
+</li></ul></div>
+<p><span class="emphasis"><em>Using ResultTransformers with the MarshallingTransformer</em></span></p>
+<p>By default, the <span class="emphasis"><em>MarshallingTransformer</em></span> will always return a <a class="ulink" href="http://docs.oracle.com/javase/6/docs/api/javax/xml/transform/Result.html" target="_top">Result</a>.
+By specifying a <code class="literal">ResultTransformer</code>, you can customize the type of payload returned.</p>
+<p><span class="emphasis"><em>Using ResultTransformers with the XsltPayloadTransformer</em></span></p>
+<p>The behavior is slighly more complex for the <span class="emphasis"><em>XsltPayloadTransformer</em></span>.
+By default, if the input payload is an instance of <code class="literal">String</code> or <a class="ulink" href="http://docs.oracle.com/javase/6/docs/api/org/w3c/dom/Document.html" target="_top">Document</a> the <span class="emphasis"><em>resultTransformer</em></span> property is ignored.</p>
+<p>However, if the input payload is a <a class="ulink" href="http://docs.oracle.com/javase/6/docs/api/javax/xml/transform/Source.html" target="_top">Source</a> or any other type, then the <span class="emphasis"><em>resultTransformer</em></span> property is applied.
+Additionally, you can set the property <span class="emphasis"><em>alwaysUseResultFactory</em></span> to <code class="literal">true</code>, which will also cause the specified <span class="emphasis"><em>resultTransformer</em></span> to being used.</p>
+<p>For more information and examples, please see <a class="xref" href="xml.html#xml-using-result-transformers-namespace" title="35.3.3&nbsp;Namespace Configuration and ResultTransformers">Section&nbsp;35.3.3, &#8220;Namespace Configuration and ResultTransformers&#8221;</a></p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="xml-transformer-namespace" href="#xml-transformer-namespace"></a>35.3.2&nbsp;Namespace Support for XML Transformers</h3></div></div></div>
+
+<p>Namespace support for all XML transformers is provided in the Spring Integration XML namespace, a template for which can be seen below.
+The namespace support for transformers creates an instance of either`EventDrivenConsumer` or <code class="literal">PollingConsumer</code> according to the type of the provided input channel.
+The namespace support is designed to reduce the amount of XML configuration by allowing the creation of an endpoint and transformer using one element.</p>
+<p><span class="emphasis"><em>UnmarshallingTransformer</em></span></p>
+<p>The namespace support for the <code class="literal">UnmarshallingTransformer</code> is shown below.
+Since the namespace is now creating an endpoint instance rather than a transformer, a poller can also be nested within the element to control the polling of the input channel.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:unmarshalling-transformer</span> <span class="hl-attribute">id</span>=<span class="hl-value">"defaultUnmarshaller"</span>
+    <span class="hl-attribute">input-channel</span>=<span class="hl-value">"input"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">unmarshaller</span>=<span class="hl-value">"unmarshaller"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-xml:unmarshalling-transformer</span> <span class="hl-attribute">id</span>=<span class="hl-value">"unmarshallerWithPoller"</span>
+    <span class="hl-attribute">input-channel</span>=<span class="hl-value">"input"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">unmarshaller</span>=<span class="hl-value">"unmarshaller"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"2000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int-xml:unmarshalling-transformer/&gt;</span></pre>
+<p><span class="emphasis"><em>MarshallingTransformer</em></span></p>
+<p>The namespace support for the marshalling transformer requires an <code class="literal">input-channel</code>, <code class="literal">output-channel</code> and a reference to a <code class="literal">marshaller</code>.
+The optional <code class="literal">result-type</code> attribute can be used to control the type of result created.
+Valid values are <code class="literal">StringResult</code> or <code class="literal">DomResult</code> (the default).</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:marshalling-transformer</span>
+     <span class="hl-attribute">input-channel</span>=<span class="hl-value">"marshallingTransformerStringResultFactory"</span>
+     <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+     <span class="hl-attribute">marshaller</span>=<span class="hl-value">"marshaller"</span>
+     <span class="hl-attribute">result-type</span>=<span class="hl-value">"StringResult"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-xml:marshalling-transformer</span>
+    <span class="hl-attribute">input-channel</span>=<span class="hl-value">"marshallingTransformerWithResultTransformer"</span>
+    <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">marshaller</span>=<span class="hl-value">"marshaller"</span>
+    <span class="hl-attribute">result-transformer</span>=<span class="hl-value">"resultTransformer"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"resultTransformer"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.xml.transformer.ResultToStringTransformer"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Where the provided result types are not sufficient, a reference to a custom implementation of <code class="literal">ResultFactory</code> can be provided as an alternative to setting the <code class="literal">result-type</code> attribute, using the <code class="literal">result-factory</code> attribute.
+The attributes <span class="emphasis"><em>result-type</em></span> and <span class="emphasis"><em>result-factory</em></span> are mutually exclusive.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Internally, the result types <code class="literal">StringResult</code> and <code class="literal">DomResult</code> are represented by the <code class="literal">ResultFactory</code> s  <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/result/StringResultFactory.html" target="_top">StringResultFactory</a> and  <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/result/DomResultFactory.html" target="_top">DomResultFactory</a> respectively.</p>
+</td></tr></table></div>
+<p><span class="emphasis"><em>XsltPayloadTransformer</em></span></p>
+<p>Namespace support for the <code class="literal">XsltPayloadTransformer</code> allows you to either pass in a <code class="literal">Resource</code>, in order to create the <a class="ulink" href="http://docs.oracle.com/javase/6/docs/api/javax/xml/transform/Templates.html" target="_top">Templates</a> instance, or alternatively, you can pass in a precreated <code class="literal">Templates</code> instance as a reference.
+In common with the marshalling transformer, the type of the result output can be controlled by specifying either the <code class="literal">result-factory</code> or <code class="literal">result-type</code> attribute.
+A <code class="literal">result-transformer</code> attribute can also be used to reference an implementation of <code class="literal">ResultTransformer</code> where conversion of the result is required before sending.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If you specify the <code class="literal">result-factory</code> or the <code class="literal">result-type</code> attribute, then the <code class="literal">alwaysUseResultFactory</code> property on the underlying <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/transformer/XsltPayloadTransformer.html" target="_top">XsltPayloadTransformer</a> will be set to <code class="literal">true</code> by the <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/config/XsltPayloadTransformerParser.html" target="_top">XsltPayloadTransformerParser</a>.</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xslt-transformer</span> <span class="hl-attribute">id</span>=<span class="hl-value">"xsltTransformerWithResource"</span>
+    <span class="hl-attribute">input-channel</span>=<span class="hl-value">"withResourceIn"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">xsl-resource</span>=<span class="hl-value">"org/springframework/integration/xml/config/test.xsl"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-xml:xslt-transformer</span> <span class="hl-attribute">id</span>=<span class="hl-value">"xsltTransformerWithTemplatesAndResultTransformer"</span>
+    <span class="hl-attribute">input-channel</span>=<span class="hl-value">"withTemplatesAndResultTransformerIn"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">xsl-templates</span>=<span class="hl-value">"templates"</span>
+    <span class="hl-attribute">result-transformer</span>=<span class="hl-value">"resultTransformer"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Often you may need to have access to Message data, such as the Message Headers, in order to assist with transformation.
+For example, you may need to get access to certain Message Headers and pass them on as parameters to a transformer (e.g., <code class="literal">transformer.setParameter(..)</code>).
+Spring Integration provides two convenient ways to accomplish this, as illustrated in following example:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xslt-transformer</span> <span class="hl-attribute">id</span>=<span class="hl-value">"paramHeadersCombo"</span>
+    <span class="hl-attribute">input-channel</span>=<span class="hl-value">"paramHeadersComboChannel"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">xsl-resource</span>=<span class="hl-value">"classpath:transformer.xslt"</span>
+    <span class="hl-attribute">xslt-param-headers</span>=<span class="hl-value">"testP*, *foo, bar, baz"</span><span class="hl-tag">&gt;</span>
+
+    <span class="hl-tag">&lt;int-xml:xslt-param</span> <span class="hl-attribute">name</span>=<span class="hl-value">"helloParameter"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"hello"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xslt-param</span> <span class="hl-attribute">name</span>=<span class="hl-value">"firstName"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers.fname"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xslt-transformer&gt;</span></pre>
+<p>If message header names match 1:1 to parameter names, you can simply use <code class="literal">xslt-param-headers</code>&nbsp;attribute.
+There you can also use wildcards for simple pattern matching, which supports the following simple pattern styles: "xxx*", "<span class="strong"><strong>xxx", "*xxx</strong></span>" and "xxx*yyy".</p>
+<p>You can also configure individual Xslt parameters via&nbsp;the <span class="emphasis"><em>&lt;xslt-param/&gt;</em></span> sub element.
+There you can use&nbsp;either the <code class="literal">expression</code>&nbsp;or <code class="literal">value</code> attribute.
+The <code class="literal">expression</code> attribute should be any valid SpEL expression with Message being the root object of the expression evaluation context.
+The <code class="literal">value</code> attribute, just like any <code class="literal">value</code> in Spring beans, allows you to specify simple scalar values.
+You can also use property placeholders (e.g., ${some.value}).
+So as you can see, with the <code class="literal">expression</code> and <code class="literal">value</code> attribute, Xslt parameters could now be mapped to any accessible part of the Message as well as any literal value.</p>
+<p>Starting with Spring Integration 3.0, you can now specify the transformer factory class name using the <code class="literal">transformer-factory-class</code> attribute.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="xml-using-result-transformers-namespace" href="#xml-using-result-transformers-namespace"></a>35.3.3&nbsp;Namespace Configuration and ResultTransformers</h3></div></div></div>
+
+<p>The usage of <code class="literal">ResultTransformers</code> was previously introduced in <a class="xref" href="xml.html#xml-using-result-transformers" title="ResultTransformers">the section called &#8220;ResultTransformers&#8221;</a>.
+The following example illustrates several special use-cases using XML namespace configuration.
+First, we define the <code class="literal">ResultTransformer</code>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"resultToDoc"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.xml.transformer.ResultToDocumentTransformer"</span><span class="hl-tag">/&gt;</span></pre>
+<p>This <code class="literal">ResultTransformer</code> will accept either a <code class="literal">StringResult</code> or a <code class="literal">DOMResult</code> as input and converts the input into a <code class="literal">Document</code>.</p>
+<p>Now, let&#8217;s declare the transformer:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xslt-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"fahrenheitChannel"</span>
+    <span class="hl-attribute">xsl-resource</span>=<span class="hl-value">"classpath:noop.xslt"</span> <span class="hl-attribute">result-transformer</span>=<span class="hl-value">"resultToDoc"</span><span class="hl-tag">/&gt;</span></pre>
+<p>If the incoming message&#8217;s payload is of type <code class="literal">Source</code>, then as first step the <code class="literal">Result</code> is determined using the <code class="literal">ResultFactory</code>.
+As we did not specify a <code class="literal">ResultFactory</code>, the default <code class="literal">DomResultFactory</code> is used, meaning that the transformation will yield a <code class="literal">DomResult</code>.</p>
+<p>However, as we specified a <span class="emphasis"><em>ResultTransformer</em></span>, it will be used and the resulting Message payload will be of type`Document`.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If the incoming message&#8217;s payload is of type <code class="literal">String</code>, the payload after the Xslt transformation will be a String.
+Similarly, if the incoming message&#8217;s payload is of type <code class="literal">Document</code>, the payload after the Xslt transformation will be a`Document`.
+The specified <span class="emphasis"><em>ResultTransformer</em></span> will be ignored with <code class="literal">String</code> or <code class="literal">Document</code> payloads.</p>
+</td></tr></table></div>
+<p>If the message payload is neither a <code class="literal">Source</code>, <code class="literal">String</code> or <code class="literal">Document</code>, as a fallback option, it is attempted to create a`Source` using the default  <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/source/SourceFactory.html" target="_top">SourceFactory</a>.
+As we did not specify a <code class="literal">SourceFactory</code> explicitly using the <span class="emphasis"><em>source-factory</em></span> attribute, the default  <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/source/DomSourceFactory.html" target="_top">DomSourceFactory</a> is used.
+If successful, the XSLT transformation is executed as if the payload was of type <code class="literal">Source</code>, which we described in the previous paragraphs.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">DomSourceFactory</code> supports the creation of a <code class="literal">DOMSource</code> from a either <code class="literal">Document</code>, <code class="literal">File</code> or <code class="literal">String</code> payloads.</p>
+</td></tr></table></div>
+<p>The next transformer declaration adds a <span class="emphasis"><em>result-type</em></span> attribute using <code class="literal">StringResult</code> as its value.
+First, the <span class="emphasis"><em>result-type</em></span> is internally represented by the <code class="literal">StringResultFactory</code>.
+Thus, you could have also added a reference to a <code class="literal">StringResultFactory</code>, using the <span class="emphasis"><em>result-factory</em></span> attribute, which would haven been the same.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xslt-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"fahrenheitChannel"</span>
+		<span class="hl-attribute">xsl-resource</span>=<span class="hl-value">"classpath:noop.xslt"</span> <span class="hl-attribute">result-transformer</span>=<span class="hl-value">"resultToDoc"</span>
+		<span class="hl-attribute">result-type</span>=<span class="hl-value">"StringResult"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Because we are using a <code class="literal">ResultFactory</code>, the <span class="emphasis"><em>alwaysUseResultFactory</em></span> property of the <code class="literal">XsltPayloadTransformer</code> class will be implicitly set to <code class="literal">true</code>.
+Consequently, the referenced <code class="literal">ResultToDocumentTransformer</code> will be used.</p>
+<p>Therefore, if you transform a payload of type <code class="literal">String</code>, the resulting payload will be of type <a class="ulink" href="http://docs.oracle.com/javase/6/docs/api/org/w3c/dom/Document.html" target="_top">Document</a>.</p>
+<p><span class="emphasis"><em>XsltPayloadTransformer and &lt;xsl:output method="text"/&gt;</em></span></p>
+<p><code class="literal">&lt;xsl:output method="text"/&gt;</code> tells the XSLT template to only produce text content from the input source.
+In this particular case there is no reason to have a <code class="literal">DomResult</code>.
+Therefore, the <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xml/transformer/XsltPayloadTransformer.html" target="_top">XsltPayloadTransformer</a> defaults to <code class="literal">StringResult</code> if the <a class="ulink" href="http://docs.oracle.com/javase/7/docs/api/javax/xml/transform/Transformer.html#getOutputProperties()" target="_top">output property</a> called <code class="literal">method</code> of the underlying <code class="literal">javax.xml.transform.Transformer</code> returns <code class="literal">"text"</code>.
+This coercion is performed independent from the inbound payload type.
+Keep in mind that this [quote]
+smart behavior is only available, if the <code class="literal">result-type</code> or <code class="literal">result-factory</code> attributes aren&#8217;t provided for the respective <code class="literal">&lt;int-xml:xslt-transformer&gt;</code> component.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xml-xpath-transformer" href="#xml-xpath-transformer"></a>35.4&nbsp;Transforming XML Messages Using XPath</h2></div></div></div>
+
+<p>When it comes to message transformation XPath is a great way to transform Messages that have XML payloads by defining XPath transformers via &lt;xpath-transformer/&gt; element.</p>
+<p><span class="emphasis"><em>Simple XPath transformation</em></span></p>
+<p>Let&#8217;s look at the following transformer configuration:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputChannel"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputChannel"</span>
+      <span class="hl-attribute">xpath-expression</span>=<span class="hl-value">"/person/@name"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>...and Message</p>
+<pre class="programlisting">Message&lt;?&gt; message =
+  MessageBuilder.withPayload(<span class="hl-string">"&lt;person name='John Doe' age='42' married='true'/&gt;"</span>).build();</pre>
+<p>After sending this message to the <span class="emphasis"><em>inputChannel</em></span> the XPath transformer configured above will transform this XML Message to a simple Message with payload of <span class="emphasis"><em>John Doe</em></span> all based on the simple XPath Expression specified in the <code class="literal">xpath-expression</code> attribute.</p>
+<p>XPath also has the capability to perform simple conversion of extracted elements to a desired type.
+Valid return types are defined in <code class="literal">javax.xml.xpath.XPathConstants</code> and follows the conversion rules specified by the <code class="literal">javax.xml.xpath.XPath</code> interface.</p>
+<p>The following constants are defined by the <code class="literal">XPathConstants</code> class: <span class="emphasis"><em>BOOLEAN, DOM_OBJECT_MODEL, NODE, NODESET, NUMBER, STRING</em></span></p>
+<p>You can configure the desired type by simply using the <code class="literal">evaluation-type</code> attribute of the <code class="literal">&lt;xpath-transformer/&gt;</code> element.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"numberInput"</span> <span class="hl-attribute">xpath-expression</span>=<span class="hl-value">"/person/@age"</span>
+                           <span class="hl-attribute">evaluation-type</span>=<span class="hl-value">"NUMBER_RESULT"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-xml:xpath-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"booleanInput"</span>
+                           <span class="hl-attribute">xpath-expression</span>=<span class="hl-value">"/person/@married = 'true'"</span>
+                           <span class="hl-attribute">evaluation-type</span>=<span class="hl-value">"BOOLEAN_RESULT"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span></pre>
+<p><span class="emphasis"><em>Node Mappers</em></span></p>
+<p>If you need to provide custom mapping for the node extracted by the XPath expression simply provide a reference to the implementation of the <code class="literal">org.springframework.xml.xpath.NodeMapper</code> - an interface used by <code class="literal">XPathOperations</code> implementations for mapping Node objects on a per-node basis.
+To provide a reference to a <code class="literal">NodeMapper</code> simply use <code class="literal">node-mapper</code> attribute:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"nodeMapperInput"</span> <span class="hl-attribute">xpath-expression</span>=<span class="hl-value">"/person/@age"</span>
+                           <span class="hl-attribute">node-mapper</span>=<span class="hl-value">"testNodeMapper"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span></pre>
+<p>...and Sample NodeMapper implementation:</p>
+<pre class="programlisting"><span class="hl-keyword">class</span> TestNodeMapper <span class="hl-keyword">implements</span> NodeMapper {
+  <span class="hl-keyword">public</span> Object mapNode(Node node, <span class="hl-keyword">int</span> nodeNum) <span class="hl-keyword">throws</span> DOMException {
+    <span class="hl-keyword">return</span> node.getTextContent() + <span class="hl-string">"-mapped"</span>;
+  }
+}</pre>
+<p><span class="emphasis"><em>XML Payload Converter</em></span></p>
+<p>You can also use an implementation of the <code class="literal">org.springframework.integration.xml.XmlPayloadConverter</code> to provide more granular transformation:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"customConverterInput"</span>
+                           <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span> <span class="hl-attribute">xpath-expression</span>=<span class="hl-value">"/test/@type"</span>
+                           <span class="hl-attribute">converter</span>=<span class="hl-value">"testXmlPayloadConverter"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>...and Sample XmlPayloadConverter implementation:</p>
+<pre class="programlisting"><span class="hl-keyword">class</span> TestXmlPayloadConverter <span class="hl-keyword">implements</span> XmlPayloadConverter {
+  <span class="hl-keyword">public</span> Source convertToSource(Object object) {
+    <span class="hl-keyword">throw</span> <span class="hl-keyword">new</span> UnsupportedOperationException();
+  }
+  <span class="hl-comment">//</span>
+  <span class="hl-keyword">public</span> Node convertToNode(Object object) {
+    <span class="hl-keyword">try</span> {
+      <span class="hl-keyword">return</span> DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(
+          <span class="hl-keyword">new</span> InputSource(<span class="hl-keyword">new</span> StringReader(<span class="hl-string">"&lt;test type='custom'/&gt;"</span>)));
+    }
+    <span class="hl-keyword">catch</span> (Exception e) {
+      <span class="hl-keyword">throw</span> <span class="hl-keyword">new</span> IllegalStateException(e);
+    }
+  }
+  <span class="hl-comment">//</span>
+  <span class="hl-keyword">public</span> Document convertToDocument(Object object) {
+    <span class="hl-keyword">throw</span> <span class="hl-keyword">new</span> UnsupportedOperationException();
+  }
+}</pre>
+<p>The <code class="literal">DefaultXmlPayloadConverter</code> is used if this reference is not provided, and it should be sufficient in most cases since it can convert from <code class="literal">Node</code>, <code class="literal">Document</code>, <code class="literal">Source</code>, <code class="literal">File</code>, <code class="literal">String</code>, <code class="literal">InputStream</code> and <code class="literal">byte[]</code> typed payloads.
+If you need to extend beyond the capabilities of that default implementation, then an upstream <code class="literal">Transformer</code> is probably a better option than providing a reference to a custom implementation of this strategy here.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xml-xpath-splitting" href="#xml-xpath-splitting"></a>35.5&nbsp;Splitting XML Messages</h2></div></div></div>
+
+<p><code class="literal">XPathMessageSplitter</code> supports messages with either <code class="literal">String</code> or <code class="literal">Document</code> payloads.
+The splitter uses the provided XPath expression to split the payload into a number of nodes.
+By default this will result in each <code class="literal">Node</code> instance becoming the payload of a new message.
+Where it is preferred that each message be a Document the <code class="literal">createDocuments</code> flag can be set.
+Where a <code class="literal">String</code> payload is passed in the payload will be converted then split before being converted back to a number of String messages.
+The XPath splitter implements <code class="literal">MessageHandler</code> and should therefore be configured in conjunction with an appropriate endpoint (see the namespace support below for a simpler configuration alternative).</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"splittingEndpoint"</span>
+      <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.endpoint.EventDrivenConsumer"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"orderChannel"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.xml.splitter.XPathMessageSplitter"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"/order/items"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"documentBuilder"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"customisedDocumentBuilder"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"outputChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"orderItemsChannel"</span><span class="hl-tag"> /&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>XPath splitter namespace support allows the creation of a Message Endpoint with an input channel and output channel.</p>
+<pre class="programlisting"><span class="hl-comment">&lt;!-- Split the order into items creating a new message for each item node --&gt;</span>
+<span class="hl-tag">&lt;int-xml:xpath-splitter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"orderItemSplitter"</span>
+                       <span class="hl-attribute">input-channel</span>=<span class="hl-value">"orderChannel"</span>
+                       <span class="hl-attribute">output-channel</span>=<span class="hl-value">"orderItemsChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/order/items"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-splitter&gt;</span>
+
+<span class="hl-comment">&lt;!-- Split the order into items creating a new document for each item--&gt;</span>
+<span class="hl-tag">&lt;int-xml:xpath-splitter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"orderItemDocumentSplitter"</span>
+                       <span class="hl-attribute">input-channel</span>=<span class="hl-value">"orderChannel"</span>
+                       <span class="hl-attribute">output-channel</span>=<span class="hl-value">"orderItemsChannel"</span>
+                       <span class="hl-attribute">create-documents</span>=<span class="hl-value">"true"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/order/items"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"2000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-splitter&gt;</span></pre>
+<p>Starting with <code class="literal">version 4.2</code>, the <code class="literal">XPathMessageSplitter</code> exposes <code class="literal">outputProperties</code>
+(such as <code class="literal">OutputKeys.OMIT_XML_DECLARATION</code>) property for the <code class="literal">javax.xml.transform.Transformer</code> instances when a
+request <code class="literal">payload</code> isn&#8217;t of <code class="literal">org.w3c.dom.Node</code> type:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;util:properties</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outputProperties"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;beans:prop</span> <span class="hl-attribute">key</span>=<span class="hl-value">"#{T (javax.xml.transform.OutputKeys).OMIT_XML_DECLARATION}"</span><span class="hl-tag">&gt;</span>yes<span class="hl-tag">&lt;/beans:prop&gt;</span>
+<span class="hl-tag">&lt;/util:properties&gt;</span>
+
+<span class="hl-tag">&lt;xpath-splitter</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"input"</span>
+             <span class="hl-attribute">output-properties</span>=<span class="hl-value">"outputProperties"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/orders/order"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/xpath-splitter&gt;</span></pre>
+<p>Starting with <code class="literal">version 4.2</code>, the <code class="literal">XPathMessageSplitter</code> exposes an <code class="literal">iterator</code> option as a <code class="literal">boolean</code> flag (defaults to <code class="literal">true</code>).
+This allows the "streaming" of split nodes in the downstream flow.
+With the <code class="literal">iterator</code> mode, each node is transformed while iterating. When false, all entries are transformed first,
+before the split nodes start being sent to the output channel (transform, send, transform, send Vs. transform,
+transform, send, send).
+See <a class="xref" href="messaging-routing-chapter.html#splitter" title="6.3&nbsp;Splitter">Section&nbsp;6.3, &#8220;Splitter&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xml-xpath-routing" href="#xml-xpath-routing"></a>35.6&nbsp;Routing XML Messages Using XPath</h2></div></div></div>
+
+<p>Similar to SpEL-based routers, Spring Integration provides support for routing messages based on XPath expressions, allowing you to create a Message Endpoint with an input channel but no output channel.
+Instead, one or more output channels are determined dynamically.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-router</span> <span class="hl-attribute">id</span>=<span class="hl-value">"orderTypeRouter"</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"orderChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/order/type"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-router&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>For an overview of attributes that are common among Routers, please see chapter: <span class="emphasis"><em><a class="xref" href="messaging-routing-chapter.html#router-common-parameters" title="6.1.2&nbsp;Common Router Parameters">Section&nbsp;6.1.2, &#8220;Common Router Parameters&#8221;</a></em></span></p>
+</td></tr></table></div>
+<p>Internally XPath expressions will be evaluated as <span class="emphasis"><em>NODESET</em></span> type and converted to a <code class="literal">List&lt;String&gt;</code> representing channel names.
+Typically such a list will contain a single channel name.
+However, based on the results of an XPath Expression, the XPath router can also take on the characteristics of a <span class="emphasis"><em>Recipient List Router</em></span> if the XPath Expression returns more then one value.
+In that case, the <code class="literal">List&lt;String&gt;</code> will contain more then one channel name and consequently Messages will be sent to all channels in the list.</p>
+<p>Thus, assuming that the XML file passed to the router configured below contains many <code class="literal">responder</code> sub-elements representing channel names, the message will be sent to all of those channels.</p>
+<pre class="programlisting"><span class="hl-comment">&lt;!-- route the order to all responders--&gt;</span>
+<span class="hl-tag">&lt;int-xml:xpath-router</span> <span class="hl-attribute">id</span>=<span class="hl-value">"responderRouter"</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"orderChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/request/responders"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-router&gt;</span></pre>
+<p>If the returned values do not represent the channel names directly, additional mapping parameters can be specified, in order to map those returned values to actual channel names.
+For example if the <code class="literal">/request/responders</code> expression results in two values <code class="literal">responderA</code> and <code class="literal">responderB</code> but you don&#8217;t want to couple the responder names to channel names, you may provide additional mapping configuration such as the following:</p>
+<pre class="programlisting"><span class="hl-comment">&lt;!-- route the order to all responders--&gt;</span>
+<span class="hl-tag">&lt;int-xml:xpath-router</span> <span class="hl-attribute">id</span>=<span class="hl-value">"responderRouter"</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"orderChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"/request/responders"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-xml:mapping</span> <span class="hl-attribute">value</span>=<span class="hl-value">"responderA"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"channelA"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-xml:mapping</span> <span class="hl-attribute">value</span>=<span class="hl-value">"responderB"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"channelB"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-router&gt;</span></pre>
+<p>As already mentioned, the default evaluation type for XPath expressions is <span class="emphasis"><em>NODESET</em></span>, which is converted to a <code class="literal">List&lt;String&gt;</code> of channel names, therefore handling single channel scenarios as well as multiple ones.</p>
+<p>Nonetheless, certain XPath expressions may evaluate as String type from the very beginning.
+Take for example the following XPath Expression:</p>
+<pre class="programlisting">name(./node())</pre>
+<p>This expression will return the name of the root node.
+It will resulting in an exception, if the default evaluation type <span class="emphasis"><em>NODESET</em></span> is being used.</p>
+<p>For these scenarious, you may use the <code class="literal">evaluate-as-string</code> attribute, which will allow you to manage the evaluation type.
+It is <code class="literal">FALSE</code> by default, however if set to <code class="literal">TRUE</code>, the String evaluation type will be used.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>To provide some background information: XPath 1.0 specifies 4 data types:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Node-sets
+</li><li class="listitem">
+Strings
+</li><li class="listitem">
+Number
+</li><li class="listitem">
+Boolean
+</li></ul></div>
+<p>When the XPath Router evaluates expressions using the optional <code class="literal">evaluate-as-string</code> attribute, the return value is determined per the <code class="literal">string()</code> function as defined in the XPath specification.
+This means that if the expression selects multiple nodes, it will return the string value of the first node.</p>
+<p>For further information, please see:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="ulink" href="http://www.w3.org/TR/xpath/" target="_top">Specification: XML Path Language (XPath) Version 1.0</a>
+</li><li class="listitem">
+<a class="ulink" href="http://www.w3.org/TR/xpath/#function-string" target="_top">XPath specification - string() function</a>
+</li></ul></div>
+</td></tr></table></div>
+<p>For example if we want to route based on the name of the root node, we can use the following configuration:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-router</span> <span class="hl-attribute">id</span>=<span class="hl-value">"xpathRouterAsString"</span>
+        <span class="hl-attribute">input-channel</span>=<span class="hl-value">"xpathStringChannel"</span>
+        <span class="hl-attribute">evaluate-as-string</span>=<span class="hl-value">"true"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"name(./node())"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xml:xpath-router&gt;</span></pre>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="xpath-routing-converter" href="#xpath-routing-converter"></a>35.6.1&nbsp;XML Payload Converter</h3></div></div></div>
+
+<p>For XPath Routers, you can also specify the Converter to use when converting payloads prior to XPath evaluation.
+As such, the XPath Router supports custom implementations of the <code class="literal">XmlPayloadConverter</code> strategy, and when configuring an <code class="literal">xpath-router</code> element in XML, a reference to such an implementation may be provided via the <code class="literal">converter</code> attribute.</p>
+<p>If this reference is not explicitly provided, the <code class="literal">DefaultXmlPayloadConverter</code> is used.
+It should be sufficient in most cases, since it can convert from Node, Document, Source, File, and String typed payloads.
+If you need to extend beyond the capabilities of that default implementation, then an upstream Transformer is generally a better option in most cases, rather than providing a reference to a custom implementation of this strategy here.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xml-xpath-header-enricher" href="#xml-xpath-header-enricher"></a>35.7&nbsp;XPath Header Enricher</h2></div></div></div>
+
+<p>The XPath Header Enricher defines a Header Enricher Message Transformer that evaluates XPath expressions against the message payload and inserts the result of the evaluation into a messsage header.</p>
+<p>Please see below for an overview of all available configuration parameters:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-header-enricher</span> <span class="hl-attribute">default-overwrite</span>=<span class="hl-value">"true"</span>    <a name="CO56-1" href="#CO56-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                               id=""                       <a name="CO56-2" href="#CO56-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                               input-channel=""            <a name="CO56-3" href="#CO56-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                               output-channel=""           <a name="CO56-4" href="#CO56-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                               should-skip-nulls="true"&gt;   <a name="CO56-5" href="#CO56-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    <span class="hl-tag">&lt;int:poller&gt;</span><span class="hl-tag">&lt;/int:poller&gt;</span>                              <a name="CO56-6" href="#CO56-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+    <span class="hl-tag">&lt;int-xml:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span>                                <a name="CO56-7" href="#CO56-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                    evaluation-type="STRING_RESULT"        <a name="CO56-8" href="#CO56-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                    header-type="int"                      <a name="CO56-9" href="#CO56-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+                    overwrite="true"                       <a name="CO56-10" href="#CO56-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+                    xpath-expression=""                    <a name="CO56-11" href="#CO56-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+                    xpath-expression-ref=""/&gt;              <a name="CO56-12" href="#CO56-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+<span class="hl-tag">&lt;/int-xml:xpath-header-enricher&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify the default boolean value for whether to overwrite existing header values.
+This will only take effect for sub-elements that do not provide their own <span class="emphasis"><em>overwrite</em></span> attribute.
+If the <span class="emphasis"><em>default- overwrite</em></span> attribute is not provided, then the specified header values will NOT overwrite any existing ones with the same header names.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Id for the underlying bean definition.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The receiving Message channel of this endpoint.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Channel to which enriched messages shall be send to.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify whether null values, such as might be returned from an expression evaluation, should be skipped.
+The default value is true.
+Set this to false if a null value should trigger removal of the corresponding header instead.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of the header to be enriched.
+<span class="emphasis"><em>Mandatory</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The result type expected from the XPath evaluation.
+This will be the type of the header value, if there is no <code class="literal">header-type</code> attribute provided.
+The following values are allowed: <code class="literal">BOOLEAN_RESULT</code>, <code class="literal">STRING_RESULT</code>, <code class="literal">NUMBER_RESULT</code>, <code class="literal">NODE_RESULT</code> and <code class="literal">NODE_LIST_RESULT</code>.
+Defaults internally to <code class="literal">XPathEvaluationType.STRING_RESULT</code> if not set.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The fully qualified class name for the header value type.
+The result of XPath evaluation will be converted to this type using the <code class="literal">ConversionService</code>.
+This allows, for example, a <code class="literal">NUMBER_RESULT</code> (a double) to be converted to an <code class="literal">Integer</code>.
+The type can be declared as a primitive (e.g. <code class="literal">int</code>) but the result will always be the equivalent wrapper class (e.g. <code class="literal">Integer</code>).
+The same integration <code class="literal">ConversionService</code> discussed in <a class="xref" href="messaging-endpoints-chapter.html#payload-type-conversion" title="8.1.6&nbsp;Payload Type Conversion">Section&nbsp;8.1.6, &#8220;Payload Type Conversion&#8221;</a> is used for the conversion, so conversion to custom types is supported, by adding a custom converter to the service.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Boolean value to indicate whether this header value should overwrite an existing header value for the same name if already present on the input Message.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The XPath Expression as a String.
+Either this attribute or <code class="literal">xpath-expression-ref</code> must be provided, but not both.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO56-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The XPath Expression reference.
+Either this attribute or <code class="literal">xpath-expression</code> must be provided, but not both.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xml-xpath-filter" href="#xml-xpath-filter"></a>35.8&nbsp;Using the XPath Filter</h2></div></div></div>
+
+<p>This component defines an XPath-based Message Filter.
+Under the covers this components uses a <code class="literal">MessageFilter</code> that wraps an instance of <code class="literal">AbstractXPathMessageSelector</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Please also refer to the chapter on <a class="link" href="messaging-routing-chapter.html#filter" title="6.2&nbsp;Filter">Message Filters</a> for further details.</p>
+</td></tr></table></div>
+<p>In order to use the XPath Filter you must as a minimum provide an XPath Expression either by declaring the <code class="literal">xpath-expression</code> sub-element or by referencing an XPath Expression using the <code class="literal">xpath-expression-ref</code> attribute.</p>
+<p>If the provided XPath expression will evaluate to a <code class="literal">boolean</code> value, no further configuration parameters are necessary.
+However, if the XPath expression will evaluate to a String, the <code class="literal">match-value</code> attribute should be specified against which the evaluation result will be matched.</p>
+<p>There are three options for the <code class="literal">match-type</code>:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="strong"><strong>exact</strong></span> - correspond to <code class="literal">equals</code> on <code class="literal">java.lang.String</code>.
+The underlying implementation uses a <code class="literal">StringValueTestXPathMessageSelector</code>
+</li><li class="listitem">
+<span class="strong"><strong>case-insensitive</strong></span> - correspond to <code class="literal">equals-ignore-case</code> on <code class="literal">java.lang.String</code>.
+The underlying implementation uses a <code class="literal">StringValueTestXPathMessageSelector</code>
+</li><li class="listitem">
+<span class="strong"><strong>regex</strong></span> - matches operations one <code class="literal">java.lang.String</code>.
+The underlying implementation uses a <code class="literal">RegexTestXPathMessageSelector</code>
+</li></ul></div>
+<p>When providing a <span class="emphasis"><em>match-type</em></span> value of <span class="emphasis"><em>regex</em></span>, the value provided with the <code class="literal">match-value</code> attribute must be a valid Regular Expression.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:xpath-filter</span> <span class="hl-attribute">discard-channel</span>=<span class="hl-value">""</span>                      <a name="CO57-1" href="#CO57-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                      id=""                                   <a name="CO57-2" href="#CO57-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                      input-channel=""                        <a name="CO57-3" href="#CO57-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                      match-type="exact"                      <a name="CO57-4" href="#CO57-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                      match-value=""                          <a name="CO57-5" href="#CO57-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                      output-channel=""                       <a name="CO57-6" href="#CO57-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                      throw-exception-on-rejection="false"    <a name="CO57-7" href="#CO57-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                      xpath-expression-ref=""&gt;                <a name="CO57-8" href="#CO57-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+    <span class="hl-tag">&lt;int-xml:xpath-expression</span> <span class="hl-attribute">...</span><span class="hl-tag"> /&gt;</span>                          <a name="CO57-9" href="#CO57-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">...</span><span class="hl-tag"> /&gt;</span>                                        <a name="CO57-10" href="#CO57-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+<span class="hl-tag">&lt;/int-xml:xpath-filter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message Channel where you want rejected messages to be sent.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Id for the underlying bean definition.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The receiving Message channel of this endpoint.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Type of match to apply between the XPath evaluation result and the <span class="emphasis"><em>match-value</em></span>.
+Default is <span class="emphasis"><em>exact</em></span>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>String value to be matched against the XPath evaluation result.
+If this attribute is not provided, then the XPath evaluation MUST produce a boolean result directly.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which Messages that matched the filter criterias shall be dispatched to.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>By default, this property is set to <span class="emphasis"><em>false</em></span> and rejected Messages (Messages that did not match the filter criteria) will be silently dropped.
+However, if set to <span class="emphasis"><em>true</em></span> message rejection will result in an error condition and the exception will be propagated upstream to the caller.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Reference to an XPath expression instance to evaluate.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This sub-element sets the XPath expression to be evaluated.
+If this is not defined you MUST define the <code class="literal">xpath-expression-ref</code> attribute.
+Also, only one <code class="literal">xpath-expression</code> element can be set.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO57-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xpath-spel-function" href="#xpath-spel-function"></a>35.9&nbsp;#xpath SpEL Function</h2></div></div></div>
+
+<p>Spring Integration, since version <span class="emphasis"><em>3.0</em></span>, provides the <code class="literal">#xpath</code> built-in SpEL function, which invokes the static method <code class="literal">XPathUtils.evaluate(...)</code>.
+This method delegates to an <code class="literal">org.springframework.xml.xpath.XPathExpression</code>.
+The following shows some usage examples:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;transformer</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"#xpath(payload, '/name')"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;filter</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"#xpath(payload, headers.xpath, 'boolean')"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;splitter</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"#xpath(payload, '//book', 'document_list')"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;router</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"#xpath(payload, '/person/@age', 'number')"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;mapping</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"output1"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"16"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;mapping</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"output2"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"45"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/router&gt;</span></pre>
+<p><code class="literal">#xpath</code> also supports a third optional parameter for converting the result of the xpath evaluation.
+It can be one of the String constants <code class="literal">'string'</code>, <code class="literal">'boolean'</code>, <code class="literal">'number'</code>, <code class="literal">'node'</code>, <code class="literal">'node_list'</code> and <code class="literal">'document_list'</code> or an <code class="literal">org.springframework.xml.xpath.NodeMapper</code> instance.
+By default the <code class="literal">#xpath</code> SpEL function returns a String representation of the xpath evaluation.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>To enable the <code class="literal">#xpath</code> SpEL function, simply add the <code class="literal">spring-integration-xml.jar</code> to the CLASSPATH; there is no need to declare any component(s) from the Spring Integration Xml Namespace.</p>
+</td></tr></table></div>
+<p>For more information see <a class="xref" href="spel.html" title="Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)">Appendix&nbsp;A, <i>Spring Expression Language (SpEL)</i></a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xml-validating-filter" href="#xml-validating-filter"></a>35.10&nbsp;XML Validating Filter</h2></div></div></div>
+
+<p>The XML Validating Filter allows you to validate incoming messages against provided schema instances.
+The following schema types are supported:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+xml-schema (<a class="ulink" href="http://www.w3.org/2001/XMLSchema" target="_top">http://www.w3.org/2001/XMLSchema</a>)
+</li><li class="listitem">
+relax-ng (<a class="ulink" href="http://relaxng.org/ns/structure/1.0" target="_top">http://relaxng.org/ns/structure/1.0</a>)
+</li></ul></div>
+<p>Messages that fail validation can either be silently dropped or they can be forwarded to a definable <code class="literal">discard-channel</code>.
+Furthermore you can configure this filter to throw an <code class="literal">Exception</code> in case validation fails.</p>
+<p>Please see below for an overview of all available configuration parameters:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-xml:validating-filter</span> <span class="hl-attribute">discard-channel</span>=<span class="hl-value">""</span>                    <a name="CO58-1" href="#CO58-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                           id=""                                 <a name="CO58-2" href="#CO58-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                           input-channel=""                      <a name="CO58-3" href="#CO58-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                           output-channel=""                     <a name="CO58-4" href="#CO58-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                           schema-location=""                    <a name="CO58-5" href="#CO58-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                           schema-type="xml-schema"              <a name="CO58-6" href="#CO58-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                           throw-exception-on-rejection="false"  <a name="CO58-7" href="#CO58-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                           xml-validator=""&gt;                     <a name="CO58-8" href="#CO58-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">.../&gt;</span>                                            <a name="CO58-9" href="#CO58-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+<span class="hl-tag">&lt;/int-xml:validating-filter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO58-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message Channel where you want rejected messages to be sent.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO58-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Id for the underlying bean definition.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO58-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The receiving Message channel of this endpoint.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO58-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message Channel where you want accepted messages to be sent.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO58-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Sets the location of the schema to validate the Message&#8217;s payload against.
+Internally uses the <code class="literal">org.springframework.core.io.Resource</code> interface.
+You can set this attribute or the <code class="literal">xml-validator</code> attribute but not both.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO58-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Sets the schema type.
+Can be either <code class="literal">xml-schema</code> or <code class="literal">relax-ng</code>.
+<span class="emphasis"><em>Optional</em></span>.
+If not set it defaults to <code class="literal">xml-schema</code> which internally translates to <code class="literal">org.springframework.xml.validation.XmlValidatorFactory#SCHEMA_W3C_XML</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO58-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>If <code class="literal">true</code> a <code class="literal">MessageRejectedException</code> is thrown in case validation fails for the provided Message&#8217;s payload.<span class="emphasis"><em>Optional</em></span>.
+Defaults to <code class="literal">false</code> if not set.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO58-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Reference to a custom <code class="literal">sorg.springframework.xml.validation.XmlValidator</code> strategy.
+You can set this attribute or the <code class="literal">schema-location</code> attribute but not both.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO58-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr></table></div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ws.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="xmpp.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">34.&nbsp;Web Services Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;36.&nbsp;XMPP Support</td></tr></table></div></body></html>

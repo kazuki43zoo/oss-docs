@@ -1,0 +1,917 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>7.&nbsp;Message Transformation</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-core-messaging.html" title="Part&nbsp;IV.&nbsp;Core Messaging"><link rel="prev" href="messaging-routing-chapter.html" title="6.&nbsp;Message Routing"><link rel="next" href="messaging-endpoints-chapter.html" title="8.&nbsp;Messaging Endpoints"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">7.&nbsp;Message Transformation</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="messaging-routing-chapter.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;IV.&nbsp;Core Messaging</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="messaging-endpoints-chapter.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="messaging-transformation-chapter" href="#messaging-transformation-chapter"></a>7.&nbsp;Message Transformation</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="transformer" href="#transformer"></a>7.1&nbsp;Transformer</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="transformer-introduction" href="#transformer-introduction"></a>7.1.1&nbsp;Introduction</h3></div></div></div>
+
+<p>Message Transformers play a very important role in enabling the loose-coupling of Message Producers and Message Consumers.
+Rather than requiring every Message-producing component to know what type is expected by the next consumer, Transformers can be added between those components.
+Generic transformers, such as one that converts a String to an XML Document, are also highly reusable.</p>
+<p>For some systems, it may be best to provide a <a class="ulink" href="http://www.eaipatterns.com/CanonicalDataModel.html" target="_top">Canonical Data Model</a>, but Spring Integration&#8217;s general philosophy is not to require any particular format.
+Rather, for maximum flexibility, Spring Integration aims to provide the simplest possible model for extension.
+As with the other endpoint types, the use of declarative configuration in XML and/or Annotations enables simple POJOs to be adapted for the role of Message Transformers.
+These configuration options will be described below.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>For the same reason of maximizing flexibility, Spring does not require XML-based Message payloads.
+Nevertheless, the framework does provide some convenient Transformers for dealing with XML-based payloads if that is indeed the right choice for your application.
+For more information on those transformers, see <a class="xref" href="xml.html" title="35.&nbsp;XML Support - Dealing with XML Payloads">Chapter&nbsp;35, <i>XML Support - Dealing with XML Payloads</i></a>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="transformer-config" href="#transformer-config"></a>7.1.2&nbsp;Configuring Transformer</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="transformer-namespace" href="#transformer-namespace"></a>Configuring Transformer with XML</h4></div></div></div>
+
+<p>The &lt;transformer&gt; element is used to create a Message-transforming endpoint.
+In addition to "input-channel" and "output-channel" attributes, it requires a "ref".
+The "ref" may either point to an Object that contains the @Transformer annotation on a single method (see below) or it may be combined with an explicit method name value provided via the "method" attribute.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:transformer</span> <span class="hl-attribute">id</span>=<span class="hl-value">"testTransformer"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"testTransformerBean"</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inChannel"</span>
+             <span class="hl-attribute">method</span>=<span class="hl-value">"transform"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outChannel"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"testTransformerBean"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.foo.TestTransformer"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>Using a <code class="literal">ref</code> attribute is generally recommended if the custom transformer handler implementation can be reused in other <code class="literal">&lt;transformer&gt;</code> definitions.
+However if the custom transformer handler implementation should be scoped to a single definition of the <code class="literal">&lt;transformer&gt;</code>, you can define an inner bean definition:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:transformer</span> <span class="hl-attribute">id</span>=<span class="hl-value">"testTransformer"</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inChannel"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"transform"</span>
+                <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outChannel"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.foo.TestTransformer"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/transformer&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Using both the "ref" attribute and an inner handler definition in the same <code class="literal">&lt;transformer&gt;</code> configuration is not allowed, as it creates an ambiguous condition and will result in an Exception being thrown.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If the "ref" attribute references a bean that extends <code class="literal">AbstractMessageProducingHandler</code> (such as transformers provided by the framework itself), the configuration is optimized by injecting the output channel into the handler directly.
+In this case, each "ref" must be to a separate bean instance (or a <code class="literal">prototype</code>-scoped bean), or use the inner <code class="literal">&lt;bean/&gt;</code> configuration type.
+If you inadvertently reference the same message handler from multiple beans, you will get a configuration exception.</p>
+</td></tr></table></div>
+<p>When using a POJO, the method that is used for transformation may expect either the <code class="literal">Message</code> type or the payload type of inbound Messages.
+It may also accept Message header values either individually or as a full map by using the <code class="literal">@Header</code> and <code class="literal">@Headers</code> parameter annotations respectively.
+The return value of the method can be any type.
+If the return value is itself a <code class="literal">Message</code>, that will be passed along to the transformer&#8217;s output channel.</p>
+<p>As of Spring Integration 2.0, a Message Transformer&#8217;s transformation method can no longer return <code class="literal">null</code>.
+Returning <code class="literal">null</code> will result in an exception since a Message Transformer should always be expected to transform each source Message into a valid target Message.
+In other words, a Message Transformer should not be used as a Message Filter since there is a dedicated <code class="literal">&lt;filter&gt;</code> option for that.
+However, if you do need this type of behavior (where a component might return NULL and that should not be considered an error), a <span class="emphasis"><em>service-activator</em></span> could be used.
+Its <code class="literal">requires-reply</code> value is FALSE by default, but that can be set to TRUE in order to have Exceptions thrown for NULL return values as with the transformer.</p>
+<p><span class="emphasis"><em>Transformers and Spring Expression Language (SpEL)</em></span></p>
+<p>Just like Routers, Aggregators and other components, as of Spring Integration 2.0 Transformers can also benefit from SpEL support (<a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/expressions.html" target="_top">http://docs.spring.io/spring/docs/current/spring-framework-reference/html/expressions.html</a>) whenever transformation logic is relatively simple.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inChannel"</span>
+	<span class="hl-attribute">output-channel</span>=<span class="hl-value">"outChannel"</span>
+	<span class="hl-attribute">expression</span>=<span class="hl-value">"payload.toUpperCase() + '- [' + T(java.lang.System).currentTimeMillis() + ']'"</span><span class="hl-tag">/&gt;</span></pre>
+<p>In the above configuration we are achieving a simple transformation of the <span class="emphasis"><em>payload</em></span> with a simple SpEL expression and without writing a custom transformer.
+Our <span class="emphasis"><em>payload</em></span> (assuming String) will be upper-cased and concatenated with the current timestamp with some simple formatting.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_common_transformers" href="#_common_transformers"></a>Common Transformers</h4></div></div></div>
+
+<p>There are also a few Transformer implementations available out of the box.</p>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="_object_to_string_transformer" href="#_object_to_string_transformer"></a>Object-to-String Transformer</h5></div></div></div>
+
+<p>Because, it is fairly common to use the <code class="literal">toString()</code> representation of an Object, Spring Integration provides an <code class="literal">ObjectToStringTransformer</code> whose output is a <code class="literal">Message</code> with a String <code class="literal">payload</code>.
+That String is the result of invoking the <code class="literal">toString()</code> operation on the inbound Message&#8217;s payload.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:object-to-string-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span><span class="hl-tag">/&gt;</span></pre>
+<p>A potential example for this would be sending some arbitrary object to the <span class="emphasis"><em>outbound-channel-adapter</em></span> in the <span class="emphasis"><em>file</em></span> namespace.
+Whereas that Channel Adapter only supports String, byte-array, or <code class="literal">java.io.File</code> payloads by default, adding this transformer immediately before the adapter will handle the necessary conversion.
+Of course, that works fine as long as the result of the <code class="literal">toString()</code> call is what you want to be written to the File.
+Otherwise, you can just provide a custom POJO-based Transformer via the generic <span class="emphasis"><em>transformer</em></span> element shown previously.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>When debugging, this transformer is not typically necessary since the <span class="emphasis"><em>logging-channel-adapter</em></span> is capable of logging the Message payload.
+Refer to <a class="xref" href="messaging-channels-section.html#channel-wiretap" title="Wire Tap">the section called &#8220;Wire Tap&#8221;</a> for more detail.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <span class="emphasis"><em>object-to-string-transformer</em></span> is very simple; it invokes <code class="literal">toString()</code> on the inbound payload.
+There are two exceptions to this (since 3.0): if the payload is a <code class="literal">char[]</code>, it invokes <code class="literal">new String(payload)</code>; if the payload is a <code class="literal">byte[]</code>, it invokes <code class="literal">new String(payload, charset)</code>, where <code class="literal">charset</code> is "UTF-8" by default.
+The <code class="literal">charset</code> can be modified by supplying the <span class="emphasis"><em>charset</em></span> attribute on the transformer.</p>
+<p>For more sophistication (such as selection of the charset dynamically, at runtime), you can use a SpEL expression-based transformer instead; for example:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span>
+       <span class="hl-attribute">expression</span>=<span class="hl-value">"new java.lang.String(payload, headers['myCharset']"</span><span class="hl-tag"> /&gt;</span></pre>
+</td></tr></table></div>
+<p>If you need to serialize an Object to a byte array or deserialize a byte array back into an Object, Spring Integration provides symmetrical serialization transformers.
+These will use standard Java serialization by default, but you can provide an implementation of Spring 3.0&#8217;s Serializer or Deserializer strategies via the <span class="emphasis"><em>serializer</em></span> and <span class="emphasis"><em>deserializer</em></span> attributes, respectively.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:payload-serializing-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"objectsIn"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"bytesOut"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:payload-deserializing-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"bytesIn"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"objectsOut"</span>
+    <span class="hl-attribute">white-list</span>=<span class="hl-value">"com.mycom.*,com.yourcom.*"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>When deserializing data from untrusted sources, you should consider adding a <code class="literal">white-list</code> of package/class patterns.
+By default, all classes will be deserialized.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="_object_to_map_and_map_to_object_transformers" href="#_object_to_map_and_map_to_object_transformers"></a>Object-to-Map and Map-to-Object Transformers</h5></div></div></div>
+
+<p>Spring Integration also provides <span class="emphasis"><em>Object-to-Map</em></span> and <span class="emphasis"><em>Map-to-Object</em></span> transformers which utilize the Spring Expression Language (SpEL) to serialize and de-serialize the object graphs.
+The object hierarchy is introspected to the most primitive types (String, int, etc.).
+The path to this type is described via SpEL, which becomes the <span class="emphasis"><em>key</em></span> in the transformed Map.
+The primitive type becomes the value.</p>
+<p>For example:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Parent{
+&nbsp;&nbsp; &nbsp;<span class="hl-keyword">private</span> Child child;
+&nbsp;&nbsp; &nbsp;<span class="hl-keyword">private</span> String name;&nbsp;
+&nbsp;&nbsp; &nbsp;<span class="hl-comment">// setters and getters are omitted</span>
+}
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Child{
+&nbsp;&nbsp;&nbsp; <span class="hl-keyword">private</span> String name;&nbsp;
+ &nbsp;&nbsp; <span class="hl-keyword">private</span> List&lt;String&gt; nickNames;
+&nbsp; &nbsp; <span class="hl-comment">// setters and getters are omitted</span>
+}</pre>
+<p>...will be transformed to a Map which looks like this: <code class="literal">{person.name=George, person.child.name=Jenna, person.child.nickNames[0]=Bimbo ... etc}</code></p>
+<p>The SpEL-based Map allows you to describe the object structure without sharing the actual types allowing you to restore/rebuild the object graph into a differently typed Object graph as long as you maintain the structure.</p>
+<p>For example: The above structure could be easily restored back to the following Object graph via the Map-to-Object transformer:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Father {
+&nbsp;&nbsp; &nbsp;<span class="hl-keyword">private</span> Kid child;
+&nbsp;&nbsp; &nbsp;<span class="hl-keyword">private</span> String name;&nbsp;
+&nbsp;&nbsp; &nbsp;<span class="hl-comment">// setters and getters are omitted</span>
+}
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Kid {
+&nbsp;&nbsp; &nbsp;<span class="hl-keyword">private</span> String name;&nbsp;
+&nbsp;&nbsp;  <span class="hl-keyword">private</span> List&lt;String&gt; nickNames;
+ &nbsp;&nbsp; <span class="hl-comment">// setters and getters are omitted</span>
+}</pre>
+<p>If you need to create a "structured" map, you can provide the <span class="emphasis"><em>flatten</em></span> attribute.
+The default value for this attribute is <span class="emphasis"><em>true</em></span> meaning the default behavior; if you provide a <span class="emphasis"><em>false</em></span> value, then the structure will be a map of maps.</p>
+<p>For example:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Parent {
+	<span class="hl-keyword">private</span> Child child;
+	<span class="hl-keyword">private</span> String name;
+	<span class="hl-comment">// setters and getters are omitted</span>
+}
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Child {
+	<span class="hl-keyword">private</span> String name;
+	<span class="hl-keyword">private</span> List&lt;String&gt; nickNames;
+	<span class="hl-comment">// setters and getters are omitted</span>
+}</pre>
+<p>...will be transformed to a Map which looks like this: <code class="literal">{name=George, child={name=Jenna, nickNames=[Bimbo, ...]}}</code></p>
+<p>To configure these transformers, Spring Integration provides namespace support Object-to-Map:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:object-to-map-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"directInput"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span></pre>
+<p>or</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:object-to-map-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"directInput"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span> <span class="hl-attribute">flatten</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Map-to-Object</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:map-to-object-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"input"</span><span class="hl-attribute">&nbsp;</span>
+  <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;output-channel</span>=<span class="hl-value">"output"</span><span class="hl-attribute">&nbsp;</span>
+  <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">type</span>=<span class="hl-value">"org.foo.Person"</span><span class="hl-tag">/&gt;</span></pre>
+<p>or</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:map-to-object-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputA"</span><span class="hl-attribute">&nbsp;</span>
+  <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputA"</span><span class="hl-attribute">&nbsp;</span>
+  <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">&nbsp;</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"person"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"person"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.foo.Person"</span> <span class="hl-attribute">scope</span>=<span class="hl-value">"prototype"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>NOTE: <span class="emphasis"><em>ref</em></span> and <span class="emphasis"><em>type</em></span> attributes are mutually exclusive.
+You can only use one.
+Also, if using the <span class="emphasis"><em>ref</em></span> attribute, you must point to a <span class="emphasis"><em>prototype</em></span> scoped bean, otherwise a BeanCreationException will be thrown.&nbsp;</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="stream-transformer" href="#stream-transformer"></a>Stream Transformer</h5></div></div></div>
+
+<p>The <code class="literal">StreamTransformer</code> transforms <code class="literal">InputStream</code> payloads to a <code class="literal">byte[]</code> or a <code class="literal">String</code> if a <code class="literal">charset</code> is provided.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:stream-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"directInput"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span> <span class="hl-comment">&lt;!-- byte[] --&gt;</span>
+
+<span class="hl-tag">&lt;int:stream-transformer</span> <span class="hl-attribute">id</span>=<span class="hl-value">"withCharset"</span> <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span>
+    <span class="hl-attribute">input-channel</span>=<span class="hl-value">"charsetChannel"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span> <span class="hl-comment">&lt;!-- String --&gt;</span></pre>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel = "stream", outputChannel = "data")</span></em>
+<span class="hl-keyword">public</span> StreamTransformer streamToBytes() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> StreamTransformer(); <span class="hl-comment">// transforms to byte[]</span>
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel = "stream", outputChannel = "data")</span></em>
+<span class="hl-keyword">public</span> StreamTransformer streamToString() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> StreamTransformer(<span class="hl-string">"UTF-8"</span>); <span class="hl-comment">// transforms to String</span>
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="_json_transformers" href="#_json_transformers"></a>JSON Transformers</h5></div></div></div>
+
+<p><span class="emphasis"><em>Object to JSON</em></span> and <span class="emphasis"><em>JSON to Object</em></span> transformers are provided.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:object-to-json-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"objectMapperInput"</span><span class="hl-tag">/&gt;</span></pre>
+<pre class="programlisting"><span class="hl-tag">&lt;int:json-to-object-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"objectMapperInput"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"foo.MyDomainObject"</span><span class="hl-tag">/&gt;</span></pre>
+<p>These use a vanilla <code class="literal">JsonObjectMapper</code> by default based on implementation from classpath.
+You can provide your own custom <code class="literal">JsonObjectMapper</code> implementation with appropriate options or based on required library (e.g.
+GSON).</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:json-to-object-transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"objectMapperInput"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"foo.MyDomainObject"</span> <span class="hl-attribute">object-mapper</span>=<span class="hl-value">"customObjectMapper"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Beginning with version 3.0, the <code class="literal">object-mapper</code> attribute references an instance of a new strategy interface <code class="literal">JsonObjectMapper</code>.
+This abstraction allows multiple implementations of json mappers to be used.
+Implementations that wraphttps://github.com/RichardHightower/boon[Boon] and <a class="ulink" href="https://github.com/FasterXML" target="_top">Jackson 2</a> are provided, with the version being detected on the classpath.
+These classes are <code class="literal">BoonJsonObjectMapper</code> and <code class="literal">Jackson2JsonObjectMapper</code>.</p>
+<p>Note, <code class="literal">BoonJsonObjectMapper</code> is provided since <span class="emphasis"><em>version 4.1</em></span>.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If there are requirements to use both Jackson libraries and/or Boon in the same application, keep in mind that before version 3.0, the JSON transformers used only Jackson 1.x.
+From <span class="emphasis"><em>4.1</em></span> on, the framework will select Jackson 2 by default ahead of the Boon implementation if both are on the classpath.
+Jackson 1.x is no longer supported by the framework internally but, of course, you can still use it within your code.
+To avoid unexpected issues with JSON mapping features, when using annotations, there may be a need to apply annotations from both Jacksons and/or Boon on domain classes:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@org.codehaus.jackson.annotate.JsonIgnoreProperties(ignoreUnknown=true)</span></em>
+<em><span class="hl-annotation" style="color: gray">@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown=true)</span></em>
+<em><span class="hl-annotation" style="color: gray">@org.boon.json.annotations.JsonIgnoreProperties("foo")</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Foo {
+
+        <em><span class="hl-annotation" style="color: gray">@org.codehaus.jackson.annotate.JsonProperty("fooBar")</span></em>
+        <em><span class="hl-annotation" style="color: gray">@com.fasterxml.jackson.annotation.JsonProperty("fooBar")</span></em>
+        <em><span class="hl-annotation" style="color: gray">@org.boon.json.annotations.JsonProperty("fooBar")</span></em>
+        <span class="hl-keyword">public</span> Object bar;
+
+}</pre>
+</td></tr></table></div>
+<p>You may wish to consider using a <code class="literal">FactoryBean</code> or simple factory method to create the <code class="literal">JsonObjectMapper</code> with the required characteristics.</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> ObjectMapperFactory {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> Jackson2JsonObjectMapper getMapper() {
+        ObjectMapper mapper = <span class="hl-keyword">new</span> ObjectMapper();
+        mapper.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> Jackson2JsonObjectMapper(mapper);
+    }
+}</pre>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"customObjectMapper"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"foo.ObjectMapperFactory"</span>
+            <span class="hl-attribute">factory-method</span>=<span class="hl-value">"getMapper"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Beginning with <span class="emphasis"><em>version 2.2</em></span>, the <code class="literal">object-to-json-transformer</code> sets the <span class="emphasis"><em>content-type</em></span> header to <code class="literal">application/json</code>, by default, if the input message does not already have that header present.</p>
+<p>It you wish to set the <span class="emphasis"><em>content type</em></span> header to some other value, or explicitly overwrite any existing header with some value (including <code class="literal">application/json</code>), use the <code class="literal">content-type</code> attribute.
+If you wish to suppress the setting of the header, set the <code class="literal">content-type</code> attribute to an empty string (<code class="literal">""</code>).
+This will result in a message with no <code class="literal">content-type</code> header, unless such a header was present on the input message.</p>
+</td></tr></table></div>
+<p>Beginning with <span class="emphasis"><em>version 3.0</em></span>, the <code class="literal">ObjectToJsonTransformer</code> adds headers, reflecting the source type, to the message.
+Similarly, the <code class="literal">JsonToObjectTransformer</code> can use those type headers when converting the JSON to an object.
+These headers are mapped in the AMQP adapters so that they are entirely compatible with the Spring-AMQP <a class="ulink" href="http://docs.spring.io/spring-amqp/api/" target="_top">JsonMessageConverter</a>.</p>
+<p>This enables the following flows to work without any special configuration&#8230;&#8203;</p>
+<p><code class="literal">...-&gt;amqp-outbound-adapter----&gt;</code></p>
+<p><code class="literal">----&gt;amqp-inbound-adapter-&gt;json-to-object-transformer-&gt;...</code></p>
+<p>Where the outbound adapter is configured with a <code class="literal">JsonMessageConverter</code> and the inbound adapter uses the default <code class="literal">SimpleMessageConverter</code>.</p>
+<p><code class="literal">...-&gt;object-to-json-transformer-&gt;amqp-outbound-adapter----&gt;</code></p>
+<p><code class="literal">----&gt;amqp-inbound-adapter-&gt;...</code></p>
+<p>Where the outbound adapter is configured with a <code class="literal">SimpleMessageConverter</code> and the inbound adapter uses the default <code class="literal">JsonMessageConverter</code>.</p>
+<p><code class="literal">...-&gt;object-to-json-transformer-&gt;amqp-outbound-adapter----&gt;</code></p>
+<p><code class="literal">----&gt;amqp-inbound-adapter-&gt;json-to-object-transformer-&gt;</code></p>
+<p>Where both adapters are configured with a <code class="literal">SimpleMessageConverter</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When using the headers to determine the type, you should <span class="strong"><strong>not</strong></span> provide a <code class="literal">class</code> attribute, because it takes precedence over the headers.</p>
+</td></tr></table></div>
+<p>In addition to JSON Transformers, Spring Integration provides a built-in <span class="emphasis"><em>#jsonPath</em></span> SpEL function for use in expressions.
+For more information see <a class="xref" href="spel.html" title="Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)">Appendix&nbsp;A, <i>Spring Expression Language (SpEL)</i></a>.</p>
+<p><a name="transformer-xpath-spel-function" href="#transformer-xpath-spel-function"></a><span class="strong"><strong>#xpath SpEL Function</strong></span></p>
+<p>Since version <span class="emphasis"><em>3.0</em></span>, Spring Integration also provides a built-in <span class="emphasis"><em>#xpath</em></span> SpEL function for use in expressions.
+For more information see <a class="xref" href="xml.html#xpath-spel-function" title="35.9&nbsp;#xpath SpEL Function">Section&nbsp;35.9, &#8220;#xpath SpEL Function&#8221;</a>.</p>
+<p>Beginning with <span class="emphasis"><em>version 4.0</em></span>, the <code class="literal">ObjectToJsonTransformer</code> supports the <code class="literal">resultType</code> property, to specify the <span class="emphasis"><em>node</em></span> JSON representation.
+The result node tree representation depends on the implementation of the provided <code class="literal">JsonObjectMapper</code>.
+By default, the <code class="literal">ObjectToJsonTransformer</code> uses a <code class="literal">Jackson2JsonObjectMapper</code> and delegates the conversion of the object to the node tree to the <code class="literal">ObjectMapper#valueToTree</code> method.
+The node JSON representation provides efficiency for using the <code class="literal">JsonPropertyAccessor</code>, when the downstream message flow uses SpEL expressions with access to the properties of the JSON data.
+See <a class="xref" href="spel.html#spel-property-accessors" title="A.4&nbsp;PropertyAccessors">Section&nbsp;A.4, &#8220;PropertyAccessors&#8221;</a>.
+When using Boon, the <code class="literal">NODE</code> representation is a <code class="literal">Map&lt;String, Object&gt;</code></p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="transformer-annotation" href="#transformer-annotation"></a>Configuring a Transformer with Annotations</h4></div></div></div>
+
+<p>The <code class="literal">@Transformer</code> annotation can also be added to methods that expect either the <code class="literal">Message</code> type or the message payload type.
+The return value will be handled in the exact same way as described above in the section describing the &lt;transformer&gt; element.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Transformer</span></em>
+Order generateOrder(String productId) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> Order(productId);
+}</pre>
+<p>Transformer methods may also accept the @Header and @Headers annotations that is documented in <a class="xref" href="configuration.html#annotations" title="F.6&nbsp;Annotation Support">Section&nbsp;F.6, &#8220;Annotation Support&#8221;</a></p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Transformer</span></em>
+Order generateOrder(String productId, <em><span class="hl-annotation" style="color: gray">@Header("customerName")</span></em> String customer) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> Order(productId, customer);
+}</pre>
+<p>Also see <a class="xref" href="messaging-endpoints-chapter.html#advising-with-annotations" title="8.9.7&nbsp;Advising Endpoints Using Annotations">Section&nbsp;8.9.7, &#8220;Advising Endpoints Using Annotations&#8221;</a>.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="header-filter" href="#header-filter"></a>7.1.3&nbsp;Header Filter</h3></div></div></div>
+
+<p>Some times your transformation use case might be as simple as removing a few headers.
+For such a use case, Spring Integration provides a <span class="emphasis"><em>Header Filter</em></span> which allows you to specify certain header names
+that should be removed from the output Message (e.g. for security reasons or a value that was only needed temporarily).
+Basically, the <span class="emphasis"><em>Header Filter</em></span> is the opposite  of the <span class="emphasis"><em>Header Enricher</em></span>.
+The latter is discussed in <a class="xref" href="messaging-transformation-chapter.html#header-enricher" title="7.2.2&nbsp;Header Enricher">Section&nbsp;7.2.2, &#8220;Header Enricher&#8221;</a>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-filter</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputChannel"</span>
+		<span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputChannel"</span> <span class="hl-attribute">header-names</span>=<span class="hl-value">"lastName, state"</span><span class="hl-tag">/&gt;</span></pre>
+<p>As you can see, configuration of a <span class="emphasis"><em>Header Filter</em></span> is quite simple.
+It is a typical endpoint with input/output channels and a <code class="literal">header-names</code> attribute.
+That attribute accepts the names of the header(s) (delimited by commas if there are multiple)
+that need to be removed.
+So, in the above example the headers named <span class="emphasis"><em>lastName</em></span> and <span class="emphasis"><em>state</em></span> will not be present on the outbound Message.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_codec_based_transformers" href="#_codec_based_transformers"></a>7.1.4&nbsp;Codec-Based Transformers</h3></div></div></div>
+
+<p>See <a class="xref" href="messaging-transformation-chapter.html#codec" title="7.4&nbsp;Codec">Section&nbsp;7.4, &#8220;Codec&#8221;</a>.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="content-enricher" href="#content-enricher"></a>7.2&nbsp;Content Enricher</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="content-enricher-introduction" href="#content-enricher-introduction"></a>7.2.1&nbsp;Introduction</h3></div></div></div>
+
+<p>At times you may have a requirement to enhance a request with more information than was provided by the target system.
+The <a class="ulink" href="http://www.eaipatterns.com/DataEnricher.html" target="_top">Content Enricher</a> pattern describes various scenarios as well as the component (Enricher), which allows you to address such requirements.</p>
+<p>The Spring Integration <code class="literal">Core</code> module includes 2 enrichers:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="messaging-transformation-chapter.html#header-enricher" title="7.2.2&nbsp;Header Enricher">Header Enricher</a>
+</li><li class="listitem">
+<a class="link" href="messaging-transformation-chapter.html#payload-enricher" title="7.2.3&nbsp;Payload Enricher">Payload Enricher</a>
+</li></ul></div>
+<p>Furthermore, several <span class="emphasis"><em>Adapter specific Header Enrichers</em></span> are included as well:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="xml.html#xml-xpath-header-enricher" title="35.7&nbsp;XPath Header Enricher">XPath Header Enricher (XML Module)</a>
+</li><li class="listitem">
+<a class="link" href="mail.html#mail-namespace" title="21.4&nbsp;Mail Namespace Support">Mail Header Enricher (Mail Module)</a>
+</li><li class="listitem">
+<a class="link" href="xmpp.html#xmpp-message-outbound-channel-adapter" title="36.3.2&nbsp;Outbound Message Channel Adapter">XMPP Header Enricher (XMPP Module)</a>
+</li></ul></div>
+<p>Please go to the adapter specific sections of this reference manual to learn more about those adapters.</p>
+<p>For more information regarding expressions support, please see <a class="xref" href="spel.html" title="Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)">Appendix&nbsp;A, <i>Spring Expression Language (SpEL)</i></a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="header-enricher" href="#header-enricher"></a>7.2.2&nbsp;Header Enricher</h3></div></div></div>
+
+<p>If you only need to add headers to a Message, and they are not dynamically determined by the Message content, then referencing a custom implementation of a Transformer may be overkill.
+For that reason, Spring Integration provides support for the <span class="emphasis"><em>Header Enricher</em></span> pattern.
+It is exposed via the <code class="literal">&lt;header-enricher&gt;</code> element.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-enricher</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"foo"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"123"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"bar"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"someBean"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span></pre>
+<p>The <span class="emphasis"><em>Header Enricher</em></span> also provides helpful sub-elements to set well-known header names.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-enricher</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:error-channel</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"applicationErrorChannel"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:reply-channel</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"quoteReplyChannel"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:correlation-id</span> <span class="hl-attribute">value</span>=<span class="hl-value">"123"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:priority</span> <span class="hl-attribute">value</span>=<span class="hl-value">"HIGHEST"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;routing-slip</span> <span class="hl-attribute">value</span>=<span class="hl-value">"channel1; routingSlipRoutingStrategy; request.headers[myRoutingSlipChannel]"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"bar"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"someBean"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span></pre>
+<p>In the above configuration you can clearly see that for well-known headers such as <code class="literal">errorChannel</code>, <code class="literal">correlationId</code>, <code class="literal">priority</code>, <code class="literal">replyChannel</code>, <code class="literal">routing-slip</code> etc., instead of using generic <span class="emphasis"><em>&lt;header&gt;</em></span> sub-elements where you would have to provide both header <span class="emphasis"><em>name</em></span> and <span class="emphasis"><em>value</em></span>, you can use convenient sub-elements to set those values directly.</p>
+<p>Starting with <span class="emphasis"><em>version 4.1</em></span> the <span class="emphasis"><em>Header Enricher</em></span> provides <code class="literal">routing-slip</code> sub-element.
+See <a class="xref" href="messaging-routing-chapter.html#routing-slip" title="Routing Slip">the section called &#8220;Routing Slip&#8221;</a> for more information.</p>
+<p><span class="strong"><strong>POJO Support</strong></span></p>
+<p>Often a header value cannot be defined statically and has to be determined dynamically based on some content in the Message.
+That is why <span class="emphasis"><em>Header Enricher</em></span> allows you to also specify a bean reference using the <code class="literal">ref</code> and <code class="literal">method</code> attribute.
+The specified method will calculate the header value.
+Let&#8217;s look at the following configuration:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-enricher</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"foo"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"computeValue"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"myBean"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"myBean"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"foo.bar.MyBean"</span><span class="hl-tag">/&gt;</span></pre>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MyBean {
+
+    <span class="hl-keyword">public</span> String computeValue(String payload){
+        <span class="hl-keyword">return</span> payload.toUpperCase() + <span class="hl-string">"_US"</span>;
+    }
+}</pre>
+<p>You can also configure your POJO as inner bean:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-enricher</span>  <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputChannel"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"some_header"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.MyEnricher"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/int:header&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span></pre>
+<p>as well as point to a Groovy script:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-enricher</span>  <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputChannel"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"some_header"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int-groovy:script</span> <span class="hl-attribute">location</span>=<span class="hl-value">"org/SampleGroovyHeaderEnricher.groovy"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/int:header&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span></pre>
+<p><span class="strong"><strong>SpEL Support</strong></span></p>
+<p>In Spring Integration 2.0 we have introduced the convenience of the <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/expressions.html" target="_top">Spring Expression Language (SpEL)</a> to help configure many different components.
+The <span class="emphasis"><em>Header Enricher</em></span> is one of them.
+Looking again at the POJO example above, you can see that the computation logic to determine the header value is actually pretty simple.
+A natural question would be: "is there a simpler way to accomplish this?".
+That is where SpEL shows its true power.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-enricher</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"foo"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.toUpperCase() + '_US'"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span></pre>
+<p>As you can see, by using SpEL for such simple cases, we no longer have to provide a separate class and configure it in the application context.
+All we need is the <span class="emphasis"><em>expression</em></span> attribute configured with a valid SpEL expression.
+The <span class="emphasis"><em>payload</em></span> and <span class="emphasis"><em>headers</em></span> variables are bound to the SpEL Evaluation Context, giving you full access to the incoming Message.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_configuring_a_header_enricher_with_java_configuration" href="#_configuring_a_header_enricher_with_java_configuration"></a>Configuring a Header Enricher with Java Configuration</h4></div></div></div>
+
+<p>The following are some examples of Java Configuration for header enrichers:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel = "enrichHeadersChannel", outputChannel = "emailChannel")</span></em>
+<span class="hl-keyword">public</span> HeaderEnricher enrichHeaders() {
+    Map&lt;String, ? <span class="hl-keyword">extends</span> HeaderValueMessageProcessor&lt;?&gt;&gt; headersToAdd =
+            Collections.singletonMap(<span class="hl-string">"emailUrl"</span>,
+                      <span class="hl-keyword">new</span> StaticHeaderValueMessageProcessor&lt;&gt;(<span class="hl-keyword">this</span>.imapUrl));
+    HeaderEnricher enricher = <span class="hl-keyword">new</span> HeaderEnricher(headersToAdd);
+    <span class="hl-keyword">return</span> enricher;
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel="enrichHeadersChannel", outputChannel="emailChannel")</span></em>
+<span class="hl-keyword">public</span> HeaderEnricher enrichHeaders() {
+    Map&lt;String, HeaderValueMessageProcessor&lt;?&gt;&gt; headersToAdd = <span class="hl-keyword">new</span> HashMap&lt;&gt;();
+    headersToAdd.put(<span class="hl-string">"emailUrl"</span>, <span class="hl-keyword">new</span> StaticHeaderValueMessageProcessor&lt;String&gt;(<span class="hl-keyword">this</span>.imapUrl));
+    Expression expression = <span class="hl-keyword">new</span> SpelExpressionParser().parseExpression(<span class="hl-string">"payload.from[0].toString()"</span>);
+    headersToAdd.put(<span class="hl-string">"from"</span>,
+               <span class="hl-keyword">new</span> ExpressionEvaluatingHeaderValueMessageProcessor&lt;&gt;(expression, String.<span class="hl-keyword">class</span>));
+    HeaderEnricher enricher = <span class="hl-keyword">new</span> HeaderEnricher(headersToAdd);
+    <span class="hl-keyword">return</span> enricher;
+}</pre>
+<p>The first adds a single literal header.
+The second adds two headers - a literal header and one based on a SpEL expression.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_configuring_a_header_enricher_with_the_java_dsl" href="#_configuring_a_header_enricher_with_the_java_dsl"></a>Configuring a Header Enricher with the Java DSL</h4></div></div></div>
+
+<p>The following is an example of Java DSL Configuration for a header enricher:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow enrichHeadersInFlow() {
+    <span class="hl-keyword">return</span> f -&gt; f
+                ...
+                .enrichHeaders(h -&gt; h.header(<span class="hl-string">"emailUrl"</span>, <span class="hl-keyword">this</span>.emailUrl)
+                                     .headerExpression(<span class="hl-string">"from"</span>, <span class="hl-string">"payload.from[0].toString()"</span>))
+                .handle(...);
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="header-channel-registry" href="#header-channel-registry"></a>Header Channel Registry</h4></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>Spring Integration 3.0</em></span>, a new sub-element <code class="literal">&lt;int:header-channels-to-string/&gt;</code> is available; it has no attributes.
+This converts existing <code class="literal">replyChannel</code> and <code class="literal">errorChannel</code> headers (when they are a <code class="literal">MessageChannel</code>) to a String and stores the channel(s) in a registry for later resolution when it is time to send a reply, or handle an error.
+This is useful for cases where the headers might be lost; for example when serializing a message into a message store or when transporting the message over JMS.
+If the header does not already exist, or it is not a <code class="literal">MessageChannel</code>, no changes are made.</p>
+<p>Use of this functionality requires the presence of a <code class="literal">HeaderChannelRegistry</code> bean.
+By default, the framework creates a <code class="literal">DefaultHeaderChannelRegistry</code> with the default expiry (60 seconds).
+Channels are removed from the registry after this time.
+To change this, simply define a bean with id <code class="literal">integrationHeaderChannelRegistry</code> and configure the required default delay using a constructor argument (milliseconds).</p>
+<p>Since <span class="emphasis"><em>version 4.1</em></span>, you can set a property <code class="literal">removeOnGet</code> to <code class="literal">true</code> on the <code class="literal">&lt;bean/&gt;</code> definition, and the mapping entry will be removed immediately on first use.
+This might be useful in a high-volume environment and when the channel is only used once, rather than waiting for the reaper to remove it.</p>
+<p>The <code class="literal">HeaderChannelRegistry</code> has a <code class="literal">size()</code> method to determine the current size of the registry.
+The <code class="literal">runReaper()</code> method cancels the current scheduled task and runs the reaper immediately; the task is then scheduled to run again based on the current delay.
+These methods can be invoked directly by getting a reference to the registry, or you can send a message with, for example, the following content to a control bus:</p>
+<pre class="screen">"@integrationHeaderChannelRegistry.runReaper()"</pre>
+<p>This sub-element is a convenience only, and is the equivalent of specifying:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:reply-channel</span>
+    <span class="hl-attribute">expression</span>=<span class="hl-value">"@integrationHeaderChannelRegistry.channelToChannelName(headers.replyChannel)"</span>
+    <span class="hl-attribute">overwrite</span>=<span class="hl-value">"true"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;int:error-channel</span>
+    <span class="hl-attribute">expression</span>=<span class="hl-value">"@integrationHeaderChannelRegistry.channelToChannelName(headers.errorChannel)"</span>
+    <span class="hl-attribute">overwrite</span>=<span class="hl-value">"true"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>Starting with <span class="emphasis"><em>version 4.1</em></span>, you can now override the registry&#8217;s configured reaper delay, so the the channel mapping is retained for at least the specified time, regardless of the reaper delay:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-enricher</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputTtl"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"next"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header-channels-to-string</span> <span class="hl-attribute">time-to-live-expression</span>=<span class="hl-value">"120000"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span>
+
+<span class="hl-tag">&lt;int:header-enricher</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputCustomTtl"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"next"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header-channels-to-string</span>
+        <span class="hl-attribute">time-to-live-expression</span>=<span class="hl-value">"headers['channelTTL'] ?: 120000"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span></pre>
+<p>In the first case, the time to live for every header channel mapping will be 2 minutes; in the second case, the time to live is specified in the message header and uses an elvis operator to use 2 minutes if there is no header.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="payload-enricher" href="#payload-enricher"></a>7.2.3&nbsp;Payload Enricher</h3></div></div></div>
+
+<p>In certain situations the Header Enricher, as discussed above, may not be sufficient and payloads themselves may have to be enriched with additional information.
+For example, order messages that enter the Spring Integration messaging system have to look up the order&#8217;s customer based on the provided customer number and then enrich the original payload with that information.</p>
+<p>Since Spring Integration 2.1, the Payload Enricher is provided.
+A Payload Enricher defines an endpoint that passes a <code class="literal">Message</code> to the exposed request channel and then expects a reply message.
+The reply message then becomes the root object for evaluation of expressions to enrich the target payload.</p>
+<p>The Payload Enricher provides full XML namespace support via the <code class="literal">enricher</code> element.
+In order to send request messages, the payload enricher has a <code class="literal">request-channel</code> attribute that allows you to dispatch messages to a request channel.</p>
+<p>Basically by defining the request channel, the Payload Enricher acts as a Gateway, waiting for the message that were sent to the request channel to return, and the Enricher then augments the message&#8217;s payload with the data provided by the reply message.</p>
+<p>When sending messages to the request channel you also have the option to only send a subset of the original payload using the <code class="literal">request-payload-expression</code> attribute.</p>
+<p>The enriching of payloads is configured through SpEL expressions, providing users with a maximum degree of flexibility.
+Therefore, users are not only able to enrich payloads with direct values from the reply channel&#8217;s <code class="literal">Message</code>, but they can use SpEL expressions to extract a subset from that Message, only, or to apply addtional inline transformations, allowing them to further manipulate the data.</p>
+<p>If you only need to enrich payloads with static values, you don&#8217;t have to provide the <code class="literal">request-channel</code> attribute.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Enrichers are a variant of Transformers and in many cases you could use a Payload Enricher or a generic Transformer implementation to add additional data to your messages payloads.
+Thus, familiarize yourself with all transformation-capable components that are provided by Spring Integration and carefully select the implementation that semantically fits your business case best.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="payload-enricher-configuration" href="#payload-enricher-configuration"></a>Configuration</h4></div></div></div>
+
+<p>Below, please find an overview of all available configuration options that are available for the payload enricher:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:enricher</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">""</span>                           <a name="CO8-1" href="#CO8-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+              auto-startup="true"                          <a name="CO8-2" href="#CO8-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+              id=""                                        <a name="CO8-3" href="#CO8-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+              order=""                                     <a name="CO8-4" href="#CO8-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+              output-channel=""                            <a name="CO8-5" href="#CO8-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+              request-payload-expression=""                <a name="CO8-6" href="#CO8-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+              reply-channel=""                             <a name="CO8-7" href="#CO8-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+              error-channel=""                             <a name="CO8-8" href="#CO8-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+              send-timeout=""                              <a name="CO8-9" href="#CO8-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+              should-clone-payload="false"&gt;                <a name="CO8-10" href="#CO8-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+    <span class="hl-tag">&lt;int:poller&gt;</span><span class="hl-tag">&lt;/int:poller&gt;</span>                              <a name="CO8-11" href="#CO8-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">expression</span>=<span class="hl-value">""</span> <span class="hl-attribute">null-result-expression</span>=<span class="hl-value">"'Could not determine the name'"</span><span class="hl-tag">/&gt;</span>   <a name="CO8-12" href="#CO8-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">value</span>=<span class="hl-value">"23"</span> <span class="hl-attribute">type</span>=<span class="hl-value">"java.lang.Integer"</span> <span class="hl-attribute">null-result-expression</span>=<span class="hl-value">"'0'"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">expression</span>=<span class="hl-value">""</span> <span class="hl-attribute">null-result-expression</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>   <a name="CO8-13" href="#CO8-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span> <span class="hl-attribute">overwrite</span>=<span class="hl-value">""</span> <span class="hl-attribute">type</span>=<span class="hl-value">""</span> <span class="hl-attribute">null-result-expression</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:enricher&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Channel to which a Message will be sent to get the data to use for enrichment.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Lifecycle attribute signaling if this component should be started during Application Context startup.
+Defaults to true.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Id of the underlying bean definition, which is either an <code class="literal">EventDrivenConsumer</code> or a <code class="literal">PollingConsumer</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specifies the order for invocation when this endpoint is connected as a subscriber to a channel.
+This is particularly relevant when that channel is using a "failover" dispatching strategy.
+It has no effect when this endpoint itself is a Polling Consumer for a channel with a queue.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Identifies the Message channel where a Message will be sent after it is being processed by this endpoint.<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>By default the original message&#8217;s payload will be used as payload that will be send to the <code class="literal">request-channel</code>.
+By specifying a SpEL expression as value for the <code class="literal">request-payload-expression</code> attribute, a subset of the original payload, a header value or any other resolvable SpEL expression can be used as the basis for the payload, that will be sent to the request-channel.
+For the Expression evaluation the full message is available as the <span class="emphasis"><em>root object</em></span>.
+For instance the following SpEL expressions (among others) are possible:
+<code class="literal">payload.foo</code>,
+<code class="literal">headers.foobar</code>,
+<code class="literal">new java.util.Date()</code>,
+<code class="literal">'foo' + 'bar'</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Channel where a reply Message is expected.
+This is optional; typically the auto-generated temporary reply channel is sufficient.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Channel to which an <code class="literal">ErrorMessage</code> will be sent if an <code class="literal">Exception</code> occurs downstream of the <code class="literal">request-channel</code>.
+This enables you to return an alternative object to use for enrichment.
+This is optional; if it is not set then <code class="literal">Exception</code> is thrown to the caller.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Maximum amount of time in milliseconds to wait when sending a message to the channel, if such channel may block.
+For example, a Queue Channel can block until space is available, if its maximum capacity has been reached.
+Internally the send timeout is set on the <code class="literal">MessagingTemplate</code> and ultimately applied when invoking the send operation on the <code class="literal">MessageChannel</code>.
+By default the send timeout is set to <span class="emphasis"><em>-1</em></span>, which may cause the send operation on the <code class="literal">MessageChannel</code>, depending on the implementation, to block indefinitely.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Boolean value indicating whether any payload that implements <code class="literal">Cloneable</code> should be cloned prior to sending the Message to the request chanenl for acquiring the enriching data.
+The cloned version would be used as the target payload for the ultimate reply.
+Default is <code class="literal">false</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Allows you to configure a Message Poller if this endpoint is a Polling Consumer.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Each <code class="literal">property</code> sub-element provides the name of a property (via the mandatory <code class="literal">name</code> attribute).
+That property should be settable on the target payload instance.
+Exactly one of the <code class="literal">value</code> or <code class="literal">expression</code> attributes must be provided as well.
+The former for a literal value to set, and the latter for a SpEL expression to be evaluated.
+The root object of the evaluation context is the Message that was returned from the flow initiated by this enricher, the input Message if there is no request channel, or the application context (using the <span class="emphasis"><em>@&lt;beanName&gt;.&lt;beanProperty&gt;</em></span> SpEL syntax).
+Starting with <span class="emphasis"><em>4.0</em></span>, when specifying a <code class="literal">value</code> attribute, you can also specify an optional <code class="literal">type</code> attribute.
+When the destination is a typed setter method, the framework will coerce the value appropriately (as long as a <code class="literal">PropertyEditor</code>) exists to handle the conversion.
+If however, the target payload is a <code class="literal">Map</code> the entry will be populated with the value without conversion.
+The <code class="literal">type</code> attribute allows you to, say, convert a String containing a number to an <code class="literal">Integer</code> value in the target payload.
+Starting with <span class="emphasis"><em>4.1</em></span>, you can also specify an optional <code class="literal">null-result-expression</code> attribute.
+When the <code class="literal">enricher</code> returns null, it will be evaluated and the output of the evaluation will be returned instead.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Each <code class="literal">header</code> sub-element provides the name of a Message header (via the mandatory <code class="literal">name</code> attribute).
+Exactly one of the <code class="literal">value</code> or <code class="literal">expression</code> attributes must be provided as well.
+The former for a literal value to set, and the latter for a SpEL expression to be evaluated.
+The root object of the evaluation context is the Message that was returned from the flow initiated by this enricher, the input Message if there is no request channel, or the application context (using the <span class="emphasis"><em>@&lt;beanName&gt;.&lt;beanProperty&gt;</em></span> SpEL syntax).
+Note, similar to the <code class="literal">&lt;header-enricher&gt;</code>, the <code class="literal">&lt;enricher&gt;</code>'s <code class="literal">header</code> element has <code class="literal">type</code> and <code class="literal">overwrite</code> attributes.
+However, a difference is that, with the <code class="literal">&lt;enricher&gt;</code>, the <code class="literal">overwrite</code> attribute is <code class="literal">true</code> by default, to be consistent with <code class="literal">&lt;enricher&gt;</code>'s <code class="literal">&lt;property&gt;</code> sub-element.
+Starting with <span class="emphasis"><em>4.1</em></span>, you can also specify an optional <code class="literal">null-result-expression</code> attribute.
+When the <code class="literal">enricher</code> returns null, it will be evaluated and the output of the evaluation will be returned instead.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="payload-enricher-examples" href="#payload-enricher-examples"></a>Examples</h4></div></div></div>
+
+<p>Below, please find several examples of using a Payload Enricher in various situations.</p>
+<p>In the following example, a <code class="literal">User</code> object is passed as the payload of the <code class="literal">Message</code>.
+The <code class="literal">User</code> has several properties but only the <code class="literal">username</code> is set initially.
+The Enricher&#8217;s <code class="literal">request-channel</code> attribute below is configured to pass the <code class="literal">User</code> on to the <code class="literal">findUserServiceChannel</code>.</p>
+<p>Through the implicitly set <code class="literal">reply-channel</code> a <code class="literal">User</code> object is returned and using the <code class="literal">property</code> sub-element, properties from the reply are extracted and used to enrich the original payload.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:enricher</span> <span class="hl-attribute">id</span>=<span class="hl-value">"findUserEnricher"</span>
+              <span class="hl-attribute">input-channel</span>=<span class="hl-value">"findUserEnricherChannel"</span>
+              <span class="hl-attribute">request-channel</span>=<span class="hl-value">"findUserServiceChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"email"</span>    <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.email"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"password"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.password"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:enricher&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The code samples shown here, are part of the <span class="emphasis"><em>Spring
+              Integration Samples</em></span> project.
+Please feel free to check it out at:null</p>
+</td></tr></table></div>
+<p><span class="emphasis"><em>How do I pass only a subset of data to the request channel?</em></span></p>
+<p>Using a <code class="literal">request-payload-expression</code> attribute a single property of the payload can be passed on to the request channel instead of the full message.
+In the example below on the username property is passed on to the request channel.
+Keep in mind, that although only the username is passed on, the resulting message send to the request channel will contain the full set of <code class="literal">MessageHeaders</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:enricher</span> <span class="hl-attribute">id</span>=<span class="hl-value">"findUserByUsernameEnricher"</span>
+              <span class="hl-attribute">input-channel</span>=<span class="hl-value">"findUserByUsernameEnricherChannel"</span>
+              <span class="hl-attribute">request-channel</span>=<span class="hl-value">"findUserByUsernameServiceChannel"</span>
+              <span class="hl-attribute">request-payload-expression</span>=<span class="hl-value">"payload.username"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"email"</span>    <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.email"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"password"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.password"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:enricher&gt;</span></pre>
+<p><span class="emphasis"><em>How can I enrich payloads that consist of Collection data?</em></span></p>
+<p>In the following example, instead of a <code class="literal">User</code> object, a <code class="literal">Map</code> is passed in.
+The <code class="literal">Map</code> contains the username under the map key <code class="literal">username</code>.
+Only the <code class="literal">username</code> is passed on to the request channel.
+The reply contains a full <code class="literal">User</code> object, which is ultimately added to the <code class="literal">Map</code> under the <code class="literal">user</code> key.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:enricher</span> <span class="hl-attribute">id</span>=<span class="hl-value">"findUserWithMapEnricher"</span>
+              <span class="hl-attribute">input-channel</span>=<span class="hl-value">"findUserWithMapEnricherChannel"</span>
+              <span class="hl-attribute">request-channel</span>=<span class="hl-value">"findUserByUsernameServiceChannel"</span>
+              <span class="hl-attribute">request-payload-expression</span>=<span class="hl-value">"payload.username"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"user"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:enricher&gt;</span></pre>
+<p><span class="emphasis"><em>How can I enrich payloads with static information without using a request channel?</em></span></p>
+<p>Here is an example that does not use a request channel at all, but solely enriches the message&#8217;s payload with static values.
+But please be aware that the word <span class="emphasis"><em>static</em></span> is used loosely here.
+You can still use SpEL expressions for setting those values.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:enricher</span> <span class="hl-attribute">id</span>=<span class="hl-value">"userEnricher"</span>
+              <span class="hl-attribute">input-channel</span>=<span class="hl-value">"input"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"user.updateDate"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"new java.util.Date()"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"user.firstName"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"foo"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"user.lastName"</span>  <span class="hl-attribute">value</span>=<span class="hl-value">"bar"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"user.age"</span>       <span class="hl-attribute">value</span>=<span class="hl-value">"42"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:enricher&gt;</span></pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="claim-check" href="#claim-check"></a>7.3&nbsp;Claim Check</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="claim-check-introduction" href="#claim-check-introduction"></a>7.3.1&nbsp;Introduction</h3></div></div></div>
+
+<p>In the earlier sections we&#8217;ve covered several Content Enricher type components that help you deal with situations where a message is missing a piece of data.
+We also discussed Content Filtering which lets you remove data items from a message.
+However there are times when we want to hide data temporarily.
+For example, in a distributed system we may receive a Message with a very large payload.
+Some intermittent message processing steps may not need access to this payload and some may only need to access certain headers, so carrying the large Message payload through each processing step may cause performance degradation, may produce a security risk, and may make debugging more difficult.</p>
+<p>The <a class="ulink" href="http://www.eaipatterns.com/StoreInLibrary.html" target="_top">Claim Check</a> pattern describes a mechanism that allows you to store data in a well known place while only maintaining a pointer (Claim Check) to where that data is located.
+You can pass that pointer around as a payload of a new Message thereby allowing any component within the message flow to get the actual data as soon as it needs it.
+This approach is very similar to the Certified Mail process where you&#8217;ll get a Claim Check in your mailbox and would have to go to the Post Office to claim your actual package.
+Of course it&#8217;s also the same idea as baggage-claim on a flight or in a hotel.</p>
+<p>Spring Integration provides two types of Claim Check transformers:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>Incoming Claim Check Transformer</em></span>
+</li><li class="listitem">
+<span class="emphasis"><em>Outgoing Claim Check Transformer</em></span>
+</li></ul></div>
+<p>Convenient namespace-based mechanisms are available to configure them.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="claim-check-in" href="#claim-check-in"></a>7.3.2&nbsp;Incoming Claim Check Transformer</h3></div></div></div>
+
+<p>An <span class="emphasis"><em>Incoming Claim Check Transformer</em></span> will transform an incoming Message by storing it in the Message Store identified by its <code class="literal">message-store</code> attribute.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:claim-check-in</span> <span class="hl-attribute">id</span>=<span class="hl-value">"checkin"</span>
+        <span class="hl-attribute">input-channel</span>=<span class="hl-value">"checkinChannel"</span>
+        <span class="hl-attribute">message-store</span>=<span class="hl-value">"testMessageStore"</span>
+        <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span></pre>
+<p>In the above configuration the Message that is received on the <code class="literal">input-channel</code> will be persisted to the Message Store identified with the <code class="literal">message-store</code> attribute and indexed with generated ID.
+That ID is the Claim Check for that Message.
+The Claim Check will also become the payload of the new (transformed) Message that will be sent to the <code class="literal">output-channel</code>.</p>
+<p>Now, lets assume that at some point you do need access to the actual Message.
+You can of course access the Message Store manually and get the contents of the Message, or you can use the same approach as before except now you will be transforming the Claim Check to the actual Message by using an <span class="emphasis"><em>Outgoing Claim Check Transformer</em></span>.</p>
+<p>Here is an overview of all available parameters of an Incoming Claim Check Transformer:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:claim-check-in</span> <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"true"</span>  <a name="CO9-1" href="#CO9-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                    id=""                           <a name="CO9-2" href="#CO9-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                    input-channel=""                <a name="CO9-3" href="#CO9-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                    message-store="messageStore"    <a name="CO9-4" href="#CO9-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                    order=""                        <a name="CO9-5" href="#CO9-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                    output-channel=""               <a name="CO9-6" href="#CO9-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                    send-timeout=""&gt;                <a name="CO9-7" href="#CO9-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+    <span class="hl-tag">&lt;int:poller&gt;</span><span class="hl-tag">&lt;/int:poller&gt;</span>                       <a name="CO9-8" href="#CO9-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+<span class="hl-tag">&lt;/int:claim-check-in&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO9-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Lifecycle attribute signaling if this component should be started during Application Context startup.
+Defaults to true.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO9-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Id identifying the underlying bean definition (<code class="literal">MessageTransformingHandler</code>).
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO9-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The receiving Message channel of this endpoint.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO9-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Reference to the MessageStore to be used by this Claim Check transformer.
+If not specified, the default reference will be to a bean named <span class="emphasis"><em>messageStore</em></span>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO9-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specifies the order for invocation when this endpoint is connected as a subscriber to a channel.
+This is particularly relevant when that channel is using a <span class="emphasis"><em>failover</em></span> dispatching strategy.
+It has no effect when this endpoint itself is a Polling Consumer for a channel with a queue.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO9-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Identifies the Message channel where Message will be sent after its being processed by this endpoint.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO9-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify the maximum amount of time in milliseconds to wait when sending a reply Message to the output channel.
+Defaults to <code class="literal">-1</code> - blocking indefinitely.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO9-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Defines a poller.
+Element is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="claim-check-out" href="#claim-check-out"></a>7.3.3&nbsp;Outgoing Claim Check Transformer</h3></div></div></div>
+
+<p>An <span class="emphasis"><em>Outgoing Claim Check Transformer</em></span> allows you to transform a Message with a Claim Check payload into a Message with the original content as its payload.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:claim-check-out</span> <span class="hl-attribute">id</span>=<span class="hl-value">"checkout"</span>
+        <span class="hl-attribute">input-channel</span>=<span class="hl-value">"checkoutChannel"</span>
+        <span class="hl-attribute">message-store</span>=<span class="hl-value">"testMessageStore"</span>
+        <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span></pre>
+<p>In the above configuration, the Message that is received on the <code class="literal">input-channel</code> should have a Claim Check as its payload and the <span class="emphasis"><em>Outgoing Claim Check Transformer</em></span> will transform it into a Message with the original payload by simply querying the Message store for a Message identified by the provided Claim Check.
+It then sends the newly checked-out Message to the <code class="literal">output-channel</code>.</p>
+<p>Here is an overview of all available parameters of an Outgoing Claim Check Transformer:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:claim-check-out</span> <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"true"</span>  <a name="CO10-1" href="#CO10-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                     id=""                           <a name="CO10-2" href="#CO10-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                     input-channel=""                <a name="CO10-3" href="#CO10-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                     message-store="messageStore"    <a name="CO10-4" href="#CO10-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                     order=""                        <a name="CO10-5" href="#CO10-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                     output-channel=""               <a name="CO10-6" href="#CO10-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                     remove-message="false"          <a name="CO10-7" href="#CO10-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                     send-timeout=""&gt;                <a name="CO10-8" href="#CO10-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+    <span class="hl-tag">&lt;int:poller&gt;</span><span class="hl-tag">&lt;/int:poller&gt;</span>                        <a name="CO10-9" href="#CO10-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+<span class="hl-tag">&lt;/int:claim-check-out&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Lifecycle attribute signaling if this component should be started during Application Context startup.
+Defaults to true.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Id identifying the underlying bean definition (<code class="literal">MessageTransformingHandler</code>).
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The receiving Message channel of this endpoint.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Reference to the MessageStore to be used by this Claim Check transformer.
+If not specified, the default reference will be to a bean named <span class="emphasis"><em>messageStore</em></span>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specifies the order for invocation when this endpoint is connected as a subscriber to a channel.
+This is particularly relevant when that channel is using a <span class="emphasis"><em>failover</em></span> dispatching strategy.
+It has no effect when this endpoint itself is a Polling Consumer for a channel with a queue.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Identifies the Message channel where Message will be sent after its being processed by this endpoint.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>If set to <code class="literal">true</code> the Message will be removed from the MessageStore by this transformer.
+Useful when Message can be "claimed" only once.
+Defaults to <code class="literal">false</code>.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify the maximum amount of time in milliseconds to wait when sending a reply Message to the output channel.
+Defaults to <code class="literal">-1</code> - blocking indefinitely.
+Attribute is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Defines a poller.
+Element is not available inside a <code class="literal">Chain</code> element.
+<span class="emphasis"><em>Optional</em></span>.</p>
+</td></tr></table></div>
+<p><span class="emphasis"><em>Claim Once</em></span></p>
+<p>There are scenarios when a particular message must be claimed only once.
+As an analogy, consider the airplane luggage check-in/out process.
+Checking-in your luggage on departure and and then claiming it on arrival is a classic example of such a scenario.
+Once the luggage has been claimed, it can not be claimed again without first checking it back in.
+To accommodate such cases, we introduced a <code class="literal">remove-message</code> boolean attribute on the <code class="literal">claim-check-out</code> transformer.
+This attribute is set to <code class="literal">false</code> by default.
+However, if set to <code class="literal">true</code>, the claimed Message will be removed from the MessageStore, so that it can no longer be claimed again.</p>
+<p>This is also something to consider in terms of storage space, especially in the case of the in-memory Map-based <code class="literal">SimpleMessageStore</code>, where failing to remove the Messages could ultimately lead to an <code class="literal">OutOfMemoryException</code>.
+Therefore, if you don&#8217;t expect multiple claims to be made, it&#8217;s recommended that you set the <code class="literal">remove-message</code> attribute&#8217;s value to <code class="literal">true</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:claim-check-out</span> <span class="hl-attribute">id</span>=<span class="hl-value">"checkout"</span>
+        <span class="hl-attribute">input-channel</span>=<span class="hl-value">"checkoutChannel"</span>
+        <span class="hl-attribute">message-store</span>=<span class="hl-value">"testMessageStore"</span>
+        <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span>
+        <span class="hl-attribute">remove-message</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_a_word_on_message_store" href="#_a_word_on_message_store"></a>7.3.4&nbsp;A word on Message Store</h3></div></div></div>
+
+<p>Although we rarely care about the details of the claim checks as long as they work, it is still worth knowing that the current implementation of the actual Claim Check (the pointer) in Spring Integration is a UUID to ensure uniqueness.</p>
+<p><code class="literal">org.springframework.integration.store.MessageStore</code> is a strategy interface for storing and retrieving messages.
+Spring Integration provides two convenient implementations of it.
+<code class="literal">SimpleMessageStore</code>: an in-memory, Map-based implementation (the default, good for testing) and <code class="literal">JdbcMessageStore</code>: an implementation that uses a relational database via JDBC.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="codec" href="#codec"></a>7.4&nbsp;Codec</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_introduction_2" href="#_introduction_2"></a>7.4.1&nbsp;Introduction</h3></div></div></div>
+
+<p>Spring Integration <span class="emphasis"><em>version 4.2</em></span> introduces the <code class="literal">Codec</code> abstraction.
+Codecs are used to encode/decode objects to/from <code class="literal">byte[]</code>.
+They are an alternative to Java Serialization.
+One advantage is, typically, objects do not have to implement <code class="literal">Serializable</code>.
+One implementation, using <a class="ulink" href="https://github.com/EsotericSoftware/kryo" target="_top">Kryo</a> for serialization, is provided but you
+can provide your own implementation for use in any of these components:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">EncodingPayloadTransformer</code>
+</li><li class="listitem">
+<code class="literal">DecodingTransformer</code>
+</li><li class="listitem">
+<code class="literal">CodecMessageConverter</code>
+</li></ul></div>
+<p>See their JavaDocs for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_encodingpayloadtransformer" href="#_encodingpayloadtransformer"></a>7.4.2&nbsp;EncodingPayloadTransformer</h3></div></div></div>
+
+<p>This transformer encodes the payload to a <code class="literal">byte[]</code> using the codec.
+It does not affect message headers.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_decodingtransformer" href="#_decodingtransformer"></a>7.4.3&nbsp;DecodingTransformer</h3></div></div></div>
+
+<p>This transformer decodes a <code class="literal">byte[]</code> using the codec; it needs to be configured with the Class to which the object
+should be decoded (or an expression that resolves to a Class).
+If the resulting object is a <code class="literal">Message&lt;?&gt;</code>, inbound headers will not be retained.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_codecmessageconverter" href="#_codecmessageconverter"></a>7.4.4&nbsp;CodecMessageConverter</h3></div></div></div>
+
+<p>Certain endpoints (e.g. TCP, Redis) have no concept of message headers; they support the use of a
+<code class="literal">MessageConverter</code> and the <code class="literal">CodecMessageConverter</code> can be used to convert a message to/from a <code class="literal">byte[]</code> for
+transmission.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_kryo" href="#_kryo"></a>7.4.5&nbsp;Kryo</h3></div></div></div>
+
+<p>Currently, this is the only implementation of <code class="literal">Codec</code>.
+There are two <code class="literal">Codec</code> s - <code class="literal">PojoCodec</code> which can be used in the transformers and <code class="literal">MessageCodec</code> which can be used
+in the <code class="literal">CodecMessageConverter</code>.</p>
+<p>Several custom serializers are provided by the framework:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">FileSerializer</code>
+</li><li class="listitem">
+<code class="literal">MessageHeadersSerializer</code>
+</li><li class="listitem">
+<code class="literal">MutableMessageHeadersSerializer</code>
+</li></ul></div>
+<p>The first can be used with the <code class="literal">PojoCodec</code>, by initializing it with the <code class="literal">FileKryoRegistrar</code>.
+The second and third are used with the <code class="literal">MessageCodec</code>, which is initialized with the <code class="literal">MessageKryoRegistrar</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_customizing_kryo" href="#_customizing_kryo"></a>Customizing Kryo</h4></div></div></div>
+
+<p>By default, Kryo delegates unknown Java types to its <code class="literal">FieldSerializer</code>.
+Kryo also registers default serializers for each primitive type along with <code class="literal">String</code>, <code class="literal">Collection</code> and <code class="literal">Map</code> serializers.
+<code class="literal">FieldSerializer</code> uses reflection to navigate the object graph. A more efficient approach is to implement a custom
+serializer that is aware of the object&#8217;s structure and can directly serialize selected primitive fields:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AddressSerializer <span class="hl-keyword">extends</span> Serializer&lt;Address&gt; {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> write(Kryo kryo, Output output, Address address) {
+        output.writeString(address.getStreet());
+        output.writeString(address.getCity());
+        output.writeString(address.getCountry());
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> Address read(Kryo kryo, Input input, Class&lt;Address&gt; type) {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> Address(input.readString(), input.readString(), input.readString());
+    }
+}</pre>
+<p>The <code class="literal">Serializer</code> interface exposes <code class="literal">Kryo</code>, <code class="literal">Input</code>, and <code class="literal">Output</code> which provide
+complete control over which fields are included and other internal settings as
+described in the <a class="ulink" href="https://github.com/EsotericSoftware/kryo" target="_top">documentation</a>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When registering your custom serializer, you need a registration ID.
+The registration IDs are arbitrary but in our case must be explicitly defined because each Kryo instance across the
+distributed application must use the same IDs.
+Kryo recommends small positive integers, and reserves a few ids (value &lt; 10).
+Spring Integration currently defaults to using 40, 41 and 42 (for the file and message header serializers mentioned
+above); we recommend you start at, say 60, to allow for expansion in the framework.
+These framework defaults can be overridden by configuring the registrars mentioned above.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="_using_a_custom_kryo_serializer" href="#_using_a_custom_kryo_serializer"></a>Using a Custom Kryo Serializer</h5></div></div></div>
+
+<p>If custom serialization is indicated, please consult the <a class="ulink" href="https://github.com/EsotericSoftware/kryo" target="_top">Kryo</a> documentation
+since you will be using the native API.
+For an example, see the <code class="literal">MessageCodec</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="_implementing_kryoserializable" href="#_implementing_kryoserializable"></a>Implementing KryoSerializable</h5></div></div></div>
+
+<p>If you have write access to the domain object source code it may implement <code class="literal">KryoSerializable</code> as described
+<a class="ulink" href="https://github.com/EsotericSoftware/kryo#kryoserializable" target="_top">here</a>.
+In this case
+the class provides the serialization methods itself and no further configuration
+is required. This has the advantage of being much simpler to use
+with XD, however benchmarks have shown this is not quite as efficient as
+registering a custom serializer explicitly:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Address <span class="hl-keyword">implements</span> KryoSerializable {
+    ...
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> write(Kryo kryo, Output output) {
+        output.writeString(<span class="hl-keyword">this</span>.street);
+        output.writeString(<span class="hl-keyword">this</span>.city);
+        output.writeString(<span class="hl-keyword">this</span>.country);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> read(Kryo kryo, Input input) {
+        <span class="hl-keyword">this</span>.street = input.readString();
+        <span class="hl-keyword">this</span>.city = input.readString();
+        <span class="hl-keyword">this</span>.country = input.readString();
+    }
+}</pre>
+<p>Note that this technique can also be used to wrap a serialization library other than Kryo.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="_using_defaultserializer_annotation" href="#_using_defaultserializer_annotation"></a>Using DefaultSerializer Annotation</h5></div></div></div>
+
+<p>Kryo also provides an annotation as described <a class="ulink" href="https://github.com/EsotericSoftware/kryo#default-serializers" target="_top">here</a>.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@DefaultSerializer(SomeClassSerializer.class)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SomeClass {
+       <span class="hl-comment">// ...</span>
+}</pre>
+<p>If you have write access to the domain object this may be a simpler alternative to specify a custom serializer.
+Note this does not register the class with an ID, so your mileage may vary.</p>
+</div>
+</div>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="messaging-routing-chapter.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-core-messaging.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="messaging-endpoints-chapter.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">6.&nbsp;Message Routing&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;8.&nbsp;Messaging Endpoints</td></tr></table></div></body></html>

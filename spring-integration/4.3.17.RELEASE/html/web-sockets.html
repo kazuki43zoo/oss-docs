@@ -1,0 +1,360 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>33.&nbsp;WebSockets Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="twitter.html" title="32.&nbsp;Twitter Support"><link rel="next" href="ws.html" title="34.&nbsp;Web Services Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">33.&nbsp;WebSockets Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="twitter.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ws.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="web-sockets" href="#web-sockets"></a>33.&nbsp;WebSockets Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="web-socket-introduction" href="#web-socket-introduction"></a>33.1&nbsp;Introduction</h2></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.1</em></span> Spring Integration has introduced <span class="emphasis"><em>WebSocket</em></span> support.
+It is based on architecture, infrastructure and API from the Spring Framework&#8217;s <span class="emphasis"><em>web-socket</em></span> module.
+Therefore, many of Spring WebSocket&#8217;s components (e.g.
+<code class="literal">SubProtocolHandler</code> or <code class="literal">WebSocketClient</code>) and configuration options (e.g.
+<code class="literal">@EnableWebSocketMessageBroker</code>) can be reused within Spring Integration.
+For more information, please, refer to the <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/#websocket" target="_top">Spring Framework WebSocket Support</a> chapter in the Spring Framework reference manual.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Since the Spring Framework WebSocket infrastructure is based on the <span class="emphasis"><em>Spring Messaging</em></span> foundation and provides a basic Messaging framework based on the same <code class="literal">MessageChannel</code> s, <code class="literal">MessageHandler</code> s that Spring Integration uses, and some POJO-method annotation mappings, Spring Integration can be directly involved in a WebSocket flow, even without WebSocket adapters.
+For this purpose you can simply configure a Spring Integration <code class="literal">@MessagingGateway</code> with appropriate annotations:</p>
+</td></tr></table></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@MessagingGateway</span></em>
+<em><span class="hl-annotation" style="color: gray">@Controller</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> WebSocketGateway {
+
+    <em><span class="hl-annotation" style="color: gray">@MessageMapping("/greeting")</span></em>
+    <em><span class="hl-annotation" style="color: gray">@SendToUser("/queue/answer")</span></em>
+    <em><span class="hl-annotation" style="color: gray">@Gateway(requestChannel = "greetingChannel")</span></em>
+    String greeting(String payload);
+
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="web-socket-overview" href="#web-socket-overview"></a>33.2&nbsp;Overview</h2></div></div></div>
+
+<p>Since the WebSocket protocol is <span class="emphasis"><em>streaming</em></span> by definition and we can <span class="emphasis"><em>send</em></span> and <span class="emphasis"><em>receive</em></span> messages to/from a WebSocket at the same time, we can simply deal with an appropriate <code class="literal">WebSocketSession</code>, regardless of being on the client or server side.
+To encapsulate the connection management and <code class="literal">WebSocketSession</code> registry, the <code class="literal">IntegrationWebSocketContainer</code> is provided with <code class="literal">ClientWebSocketContainer</code> and <code class="literal">ServerWebSocketContainer</code> implementations.
+Thanks to the <a class="ulink" href="https://www.jcp.org/en/jsr/detail?id=356" target="_top">WebSocket API</a> and its implementation in the Spring Framework, with many extensions, the same classes are used on the server side as well as the client side (from a Java perspective, of course).
+Hence most connection and <code class="literal">WebSocketSession</code> registry options are the same on both sides.
+That allows us to reuse many configuration items and infrastructure hooks to build WebSocket applications on the server side as well as on the client side:</p>
+<pre class="programlisting"><span class="hl-comment">//Client side</span>
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> WebSocketClient webSocketClient() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> SockJsClient(Collections.singletonList(<span class="hl-keyword">new</span> WebSocketTransport(<span class="hl-keyword">new</span> JettyWebSocketClient())));
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationWebSocketContainer clientWebSocketContainer() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> ClientWebSocketContainer(webSocketClient(), <span class="hl-string">"ws://my.server.com/endpoint"</span>);
+}
+
+<span class="hl-comment">//Server side</span>
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationWebSocketContainer serverWebSocketContainer() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> ServerWebSocketContainer(<span class="hl-string">"/endpoint"</span>).withSockJs();
+}</pre>
+<p>The <code class="literal">IntegrationWebSocketContainer</code> is designed to achieve <span class="emphasis"><em>bidirectional</em></span> messaging and can be shared between Inbound and Outbound Channel Adapters (see below), can be referenced only from one of them (when using one-way - sending or receiving - WebSocket messaging).
+It can be used without any Channel Adapter, but in this case, <code class="literal">IntegrationWebSocketContainer</code> only plays a role as the <code class="literal">WebSocketSession</code> registry.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">ServerWebSocketContainer</code> implements <code class="literal">WebSocketConfigurer</code> to register an internal <code class="literal">IntegrationWebSocketContainer.IntegrationWebSocketHandler</code> as an <code class="literal">Endpoint</code> under the provided <code class="literal">paths</code> and other server WebSocket options (such as <code class="literal">HandshakeHandler</code> or <code class="literal">SockJS fallback</code>) within the <code class="literal">ServletWebSocketHandlerRegistry</code> for the target vendor WebSocket Container.
+This registration is achieved with an infrastructural <code class="literal">WebSocketIntegrationConfigurationInitializer</code> component, which does the same as the <code class="literal">@EnableWebSocket</code> annotation.
+This means that using just <code class="literal">@EnableIntegration</code> (or any Spring Integration Namespace in the application context) you can omit the <code class="literal">@EnableWebSocket</code> declaration, because all WebSocket Endpoints are detected by the Spring Integration infrastructure.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="web-socket-inbound-adapter" href="#web-socket-inbound-adapter"></a>33.3&nbsp;WebSocket Inbound Channel Adapter</h2></div></div></div>
+
+<p>The <code class="literal">WebSocketInboundChannelAdapter</code> implements the receiving part of <code class="literal">WebSocketSession</code> interaction.
+It must be supplied with a <code class="literal">IntegrationWebSocketContainer</code>, and the adapter registers itself as a <code class="literal">WebSocketListener</code> to handle incoming messages and <code class="literal">WebSocketSession</code> events.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Only one <code class="literal">WebSocketListener</code> can be registered in the <code class="literal">IntegrationWebSocketContainer</code>.</p>
+</td></tr></table></div>
+<p>For WebSocket _sub-protocol_s, the <code class="literal">WebSocketInboundChannelAdapter</code> can be configured with <code class="literal">SubProtocolHandlerRegistry</code> as the second constructor argument.
+The adapter delegates to the <code class="literal">SubProtocolHandlerRegistry</code> to determine the appropriate <code class="literal">SubProtocolHandler</code> for the accepted <code class="literal">WebSocketSession</code> and to convert <code class="literal">WebSocketMessage</code> to a <code class="literal">Message</code> according to the sub-protocol implementation.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>By default, the <code class="literal">WebSocketInboundChannelAdapter</code> relies just only on the raw <code class="literal">PassThruSubProtocolHandler</code> implementation, which simply converts the <code class="literal">WebSocketMessage</code> to a <code class="literal">Message</code>.</p>
+</td></tr></table></div>
+<p>The <code class="literal">WebSocketInboundChannelAdapter</code> accepts and sends to the underlying integration flow only <code class="literal">Message</code> s with <code class="literal">SimpMessageType.MESSAGE</code> or an empty <code class="literal">simpMessageType</code> header.
+All other <code class="literal">Message</code> types are handled through the <code class="literal">ApplicationEvent</code> s emitted from a <code class="literal">SubProtocolHandler</code> implementation (e.g.
+<code class="literal">StompSubProtocolHandler</code>).</p>
+<p>On the server side <code class="literal">WebSocketInboundChannelAdapter</code> can be configured with the <code class="literal">useBroker = true</code> option, if the <code class="literal">@EnableWebSocketMessageBroker</code> configuration is present.
+In this case all <code class="literal">non-MESSAGE</code> <code class="literal">Message</code> types are delegated to the provided <code class="literal">AbstractBrokerMessageHandler</code>.
+In addition, if the Broker Relay is configured with destination prefixes, those Messages, which match to the Broker destinations, are routed to the <code class="literal">AbstractBrokerMessageHandler</code>, instead of to the <code class="literal">outputChannel</code> of the <code class="literal">WebSocketInboundChannelAdapter</code>.</p>
+<p>If <code class="literal">useBroker = false</code> and received message is of <code class="literal">SimpMessageType.CONNECT</code> type, the <code class="literal">WebSocketInboundChannelAdapter</code> sends <code class="literal">SimpMessageType.CONNECT_ACK</code> message to the <code class="literal">WebSocketSession</code> immediately without sending it to the channel.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Spring&#8217;s WebSocket Support allows the configuration of only one Broker Relay, hence we don&#8217;t require an <code class="literal">AbstractBrokerMessageHandler</code> reference, it is detected in the Application Context.</p>
+</td></tr></table></div>
+<p>For more configuration options see <a class="xref" href="web-sockets.html#web-sockets-namespace" title="33.5&nbsp;WebSockets Namespace Support">Section&nbsp;33.5, &#8220;WebSockets Namespace Support&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="web-socket-outbound-adapter" href="#web-socket-outbound-adapter"></a>33.4&nbsp;WebSocket Outbound Channel Adapter</h2></div></div></div>
+
+<p>The <code class="literal">WebSocketOutboundChannelAdapter</code> accepts Spring Integration messages from its <code class="literal">MessageChannel</code>, determines the <code class="literal">WebSocketSession</code> <code class="literal">id</code> from the <code class="literal">MessageHeaders</code>, retrieves the <code class="literal">WebSocketSession</code> from the provided <code class="literal">IntegrationWebSocketContainer</code> and delegates the conversion and sending <code class="literal">WebSocketMessage</code> work to the appropriate <code class="literal">SubProtocolHandler</code> from the provided <code class="literal">SubProtocolHandlerRegistry</code>.</p>
+<p>On the client side, the <code class="literal">WebSocketSession</code> <code class="literal">id</code> message header isn&#8217;t required, because <code class="literal">ClientWebSocketContainer</code> deals only with a single connection and its <code class="literal">WebSocketSession</code> respectively.</p>
+<p>To use the STOMP sub-protocol, this adapter should be configured with a <code class="literal">StompSubProtocolHandler</code>.
+Then you can send any STOMP message type to this adapter, using <code class="literal">StompHeaderAccessor.create(StompCommand...)</code> and a <code class="literal">MessageBuilder</code>, or just using a <code class="literal">HeaderEnricher</code> (see <a class="xref" href="messaging-transformation-chapter.html#header-enricher" title="7.2.2&nbsp;Header Enricher">Section&nbsp;7.2.2, &#8220;Header Enricher&#8221;</a>).</p>
+<p>For more configuration options see below.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="web-sockets-namespace" href="#web-sockets-namespace"></a>33.5&nbsp;WebSockets Namespace Support</h2></div></div></div>
+
+<p>Spring Integration <span class="emphasis"><em>WebSocket</em></span> namespace includes several components described below.
+To include it in your configuration, simply provide the following namespace declaration in your application context configuration file:</p>
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;beans</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://www.springframework.org/schema/beans"</span>
+  <span class="hl-attribute">xmlns:xsi</span>=<span class="hl-value">"http://www.w3.org/2001/XMLSchema-instance"</span>
+  <span class="hl-attribute">xmlns:int</span>=<span class="hl-value">"http://www.springframework.org/schema/integration"</span>
+  <span class="hl-attribute">xmlns:int-websocket</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/websocket"</span>
+  <span class="hl-attribute">xsi:schemaLocation</span>=<span class="hl-value">"
+    http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/integration
+    http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/websocket
+    http://www.springframework.org/schema/integration/websocket/spring-integration-websocket.xsd"</span><span class="hl-tag">&gt;</span>
+    ...
+<span class="hl-tag">&lt;/beans&gt;</span></pre>
+<p><span class="strong"><strong>&lt;int-websocket:client-container&gt;</strong></span></p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-websocket:client-container</span>
+                	<span class="hl-attribute">id</span>=<span class="hl-value">""</span>  <a name="CO51-1" href="#CO51-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                	client=""  <a name="CO51-2" href="#CO51-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                	uri=""  <a name="CO51-3" href="#CO51-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                	uri-variables=""  <a name="CO51-4" href="#CO51-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                	origin=""  <a name="CO51-5" href="#CO51-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                	send-time-limit=""  <a name="CO51-6" href="#CO51-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                	send-buffer-size-limit=""  <a name="CO51-7" href="#CO51-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                	auto-startup=""  <a name="CO51-8" href="#CO51-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                	phase=""&gt;  <a name="CO51-9" href="#CO51-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+                <span class="hl-tag">&lt;int-websocket:http-headers&gt;</span>
+                	<span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">""</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+                <span class="hl-tag">&lt;/int-websocket:http-headers&gt;</span>  <a name="CO51-10" href="#CO51-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+<span class="hl-tag">&lt;/int-websocket:client-container&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The component bean name.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">WebSocketClient</code> bean reference.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">uri</code> or <code class="literal">uriTemplate</code> to the target WebSocket service.
+If it is used as a <code class="literal">uriTemplate</code> with URI variable placeholders, the <code class="literal">uri-variables</code> attribute is required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Comma-separated values for the URI variable placeholders within the <code class="literal">uri</code> attribute value.
+The values are replaced into the placeholders according to the order in the <code class="literal">uri</code>.
+See <code class="literal">UriComponents.expand(Object...
+uriVariableValues)</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">Origin</code> Handshake HTTP header value.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The WebSocket session <span class="emphasis"><em>send</em></span> timeout limit.
+Defaults to <code class="literal">10000</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The WebSocket session <span class="emphasis"><em>send</em></span> message size limit.
+Defaults to <code class="literal">524288</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Boolean value indicating whether this endpoint should start automatically.
+Defaults to <code class="literal">false</code>, assuming that this container will be started from the <a class="xref" href="web-sockets.html#web-socket-inbound-adapter" title="33.3&nbsp;WebSocket Inbound Channel Adapter">Section&nbsp;33.3, &#8220;WebSocket Inbound Channel Adapter&#8221;</a>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The lifecycle phase within which this endpoint should start and stop.
+The lower the value the earlier this endpoint will start and the later it will stop.
+The default is <code class="literal">Integer.MAX_VALUE</code>.
+Values can be negative.
+See <code class="literal">SmartLifeCycle</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO51-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A <code class="literal">Map</code> of <code class="literal">HttpHeaders</code> to be used with the Handshake request.</p>
+</td></tr></table></div>
+<p><span class="strong"><strong>&lt;int-websocket:server-container&gt;</strong></span></p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-websocket:server-container</span>
+					<span class="hl-attribute">id</span>=<span class="hl-value">""</span>  <a name="CO52-1" href="#CO52-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+					path=""  <a name="CO52-2" href="#CO52-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+					handshake-handler=""  <a name="CO52-3" href="#CO52-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+					handshake-interceptors=""  <a name="CO52-4" href="#CO52-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+					decorator-factories=""  <a name="CO52-5" href="#CO52-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+					send-time-limit=""  <a name="CO52-6" href="#CO52-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+					send-buffer-size-limit=""  <a name="CO52-7" href="#CO52-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+					allowed-origins=""&gt;  <a name="CO52-8" href="#CO52-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+				  <span class="hl-tag">&lt;int-websocket:sockjs</span>
+						<span class="hl-attribute">client-library-url</span>=<span class="hl-value">""</span>   <a name="CO52-9" href="#CO52-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+						stream-bytes-limit=""   <a name="CO52-10" href="#CO52-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+						session-cookie-needed=""   <a name="CO52-11" href="#CO52-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+						heartbeat-time=""   <a name="CO52-12" href="#CO52-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+						disconnect-delay=""   <a name="CO52-13" href="#CO52-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+						message-cache-size=""   <a name="CO52-14" href="#CO52-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span>
+						websocket-enabled=""   <a name="CO52-15" href="#CO52-15"></a><span><img src="images/callouts/15.png" alt="15" border="0"></span>
+						scheduler=""   <a name="CO52-16" href="#CO52-16"></a>(16)
+						message-codec=""   <a name="CO52-17" href="#CO52-17"></a>(17)
+						transport-handlers=""  <a name="CO52-18" href="#CO52-18"></a>(18)
+						suppress-cors="true"="" /&gt;  <a name="CO52-19" href="#CO52-19"></a>(19)
+<span class="hl-tag">&lt;/int-websocket:server-container&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The component bean name.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A path (or comma-separated paths) that maps a particular request to a <code class="literal">WebSocketHandler</code>.
+Exact path mapping URIs (such as <code class="literal">"/myPath"</code>) are supported as well as ant-style path patterns (such as <code class="literal">/myPath/**</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">HandshakeHandler</code> bean reference.
+Default to <code class="literal">DefaultHandshakeHandler</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>List of <code class="literal">HandshakeInterceptor</code> bean references.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Configure one or more factories (<code class="literal">WebSocketHandlerDecoratorFactory</code>) to decorate the handler
+used to process WebSocket messages.
+This may be useful for some advanced use cases, for example to allow Spring Security to forcibly close
+the WebSocket session when the corresponding HTTP session expires.
+See <a class="ulink" href="http://docs.spring.io/spring-session/docs/current/reference/html5/#websocket" target="_top">Spring Session Project</a>
+for more information.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>See the same option on the <code class="literal">&lt;int-websocket:client-container&gt;</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>See the same option on the <code class="literal">&lt;int-websocket:client-container&gt;</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Configure allowed Origin header values. Multiple origins may be specified as a comma-separated list.
+This check is mostly designed for browser clients.
+There is noting preventing other types of client to modify the Origin header value.
+When SockJS is enabled and allowed origins are restricted, transport types that do not use Origin headers for cross origin requests (jsonp-polling, iframe-xhr-polling, iframe-eventsource and iframe-htmlfile) are disabled.
+As a consequence, IE6/IE7 are not supported and IE8/IE9 will only be supported without cookies.
+By default, all origins are allowed.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Transports with no native cross-domain communication (e.g.
+"eventsource", "htmlfile") must get a simple page from the "foreign" domain in an invisible iframe so that code in the iframe can run from a domain local to the SockJS server.
+Since the iframe needs to load the SockJS javascript client library, this property allows specifying where to load it from.
+By default this is set to point to <code class="literal">https://d1fxtkz8shb9d2.cloudfront.net/sockjs-0.3.4.min.js</code>.
+However it can also be set to point to a URL served by the application.
+Note that it&#8217;s possible to specify a relative URL in which case the URL must be relative to the iframe URL.
+For example assuming a SockJS endpoint mapped to "/sockjs", and resulting iframe URL "/sockjs/iframe.html", then the The relative URL must start with "../../" to traverse up to the location above the SockJS mapping.
+In case of a prefix-based Servlet mapping one more traversal may be needed.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Minimum number of bytes that can be send over a single HTTP streaming request before it will be closed.
+Defaults to <code class="literal">128K</code> (i.e.
+128*1024 bytes).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The "cookie_needed" value in the response from the SockJs <code class="literal">"/info"</code> endpoint.
+This property indicates whether the use of a JSESSIONID cookie is required for the application to function correctly, e.g.
+for load balancing or in Java Servlet containers for the use of an HTTP session.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The amount of time in milliseconds when the server has not sent any messages and after which the server should
+send a heartbeat frame to the client in order to keep the connection from breaking.
+The default value is <code class="literal">25,000</code> (25 seconds).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The amount of time in milliseconds before a client is considered disconnected after not having a receiving
+connection, i.e.
+an active connection over which the server can send data to the client.
+The default value is <code class="literal">5000</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The number of server-to-client messages that a session can cache while waiting for the next HTTP polling request
+ from the client.
+The default size is <code class="literal">100</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-15"><span><img src="images/callouts/15.png" alt="15" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Some load balancers don&#8217;t support websockets.
+Set this option to <code class="literal">false</code> to disable the WebSocket transport on the server side.
+The default value is <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-16">(16)</a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">TaskScheduler</code> bean reference; a new <code class="literal">ThreadPoolTaskScheduler</code> instance will be created if no value is
+provided.
+This scheduler instance will be used for scheduling heart-beat messages.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-17">(17)</a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">SockJsMessageCodec</code> bean reference to use for encoding and decoding SockJS messages.
+By default <code class="literal">Jackson2SockJsMessageCodec</code> is used requiring the Jackson library to be present on the classpath.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-18">(18)</a> </p></td><td valign="top" align="left">
+<p>List of <code class="literal">TransportHandler</code> bean references.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO52-19">(19)</a> </p></td><td valign="top" align="left">
+<p>The option to disable automatic addition of CORS headers for SockJS requests.
+The default value is <code class="literal">false</code>.</p>
+</td></tr></table></div>
+<p><span class="strong"><strong>&lt;int-websocket:outbound-channel-adapter&gt;</strong></span></p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-websocket:outbound-channel-adapter</span>
+                          <span class="hl-attribute">id</span>=<span class="hl-value">""</span>  <a name="CO53-1" href="#CO53-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                          channel=""  <a name="CO53-2" href="#CO53-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                          container=""  <a name="CO53-3" href="#CO53-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                          default-protocol-handler=""  <a name="CO53-4" href="#CO53-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                          protocol-handlers=""  <a name="CO53-5" href="#CO53-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                          message-converters=""  <a name="CO53-6" href="#CO53-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                          merge-with-default-converters=""  <a name="CO53-7" href="#CO53-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                          auto-startup=""  <a name="CO53-8" href="#CO53-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                          phase=""/&gt;  <a name="CO53-9" href="#CO53-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO53-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The component bean name.
+If the <code class="literal">channel</code> attribute isn&#8217;t provided, a <code class="literal">DirectChannel</code> is created and registered with the application context
+with this <code class="literal">id</code> attribute as the bean name.
+In this case, the endpoint is registered with the bean name <code class="literal">id + '.adapter'</code>.
+And the <code class="literal">MessageHandler</code> is registered with the bean alias <code class="literal">id + '.handler'</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO53-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Identifies the channel attached to this adapter.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO53-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The reference to the <code class="literal">IntegrationWebSocketContainer</code> bean, which encapsulates the low-level connection and WebSocketSession handling operations.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO53-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Optional reference to a <code class="literal">SubProtocolHandler</code> instance.
+It is used when the client did not request a sub-protocol or it is a single protocol-handler.
+If this reference or <code class="literal">protocol-handlers</code> list aren&#8217;t provided the <code class="literal">PassThruSubProtocolHandler</code> is used by default.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO53-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>List of <code class="literal">SubProtocolHandler</code> bean references for this Channel Adapter.
+If only a single bean reference is provided and a <code class="literal">default-protocol-handler</code> isn&#8217;t provided, that single <code class="literal">SubProtocolHandler</code> will be used as the <code class="literal">default-protocol-handler</code>.
+If this attribute or <code class="literal">default-protocol-handler</code> aren&#8217;t provided, the <code class="literal">PassThruSubProtocolHandler</code> is used by default.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO53-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>List of <code class="literal">MessageConverter</code> bean references for this Channel Adapter.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO53-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Flag to indicate if the default converters should be registered after any custom converters.
+This flag is used only if <code class="literal">message-converters</code> are provided, otherwise all default converters will be registered.
+Defaults to <code class="literal">false</code>.
+The default converters are (in the order): <code class="literal">StringMessageConverter</code>, <code class="literal">ByteArrayMessageConverter</code> and <code class="literal">MappingJackson2MessageConverter</code> if the Jackson library is present on the classpath.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO53-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Boolean value indicating whether this endpoint should start automatically.
+Default to <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO53-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The lifecycle phase within which this endpoint should start and stop.
+The lower the value the earlier this endpoint will start and the later it will stop.
+The default is <code class="literal">Integer.MIN_VALUE</code>.
+Values can be negative.
+See <code class="literal">SmartLifeCycle</code>.</p>
+</td></tr></table></div>
+<p><span class="strong"><strong>&lt;int-websocket:inbound-channel-adapter&gt;</strong></span></p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-websocket:inbound-channel-adapter</span>
+                            <span class="hl-attribute">id</span>=<span class="hl-value">""</span>  <a name="CO54-1" href="#CO54-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                            channel=""  <a name="CO54-2" href="#CO54-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                            error-channel=""  <a name="CO54-3" href="#CO54-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                            container=""  <a name="CO54-4" href="#CO54-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                            default-protocol-handler=""  <a name="CO54-5" href="#CO54-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                            protocol-handlers=""  <a name="CO54-6" href="#CO54-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                            message-converters=""  <a name="CO54-7" href="#CO54-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                            merge-with-default-converters=""  <a name="CO54-8" href="#CO54-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                            send-timeout=""  <a name="CO54-9" href="#CO54-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+                            payload-type=""  <a name="CO54-10" href="#CO54-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+                            use-broker=""  <a name="CO54-11" href="#CO54-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+                            auto-startup=""  <a name="CO54-12" href="#CO54-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+                            phase=""/&gt;  <a name="CO54-13" href="#CO54-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The component bean name.
+If the <code class="literal">channel</code> attribute isn&#8217;t provided, a <code class="literal">DirectChannel</code> is created and registered with the application context with this <code class="literal">id</code> attribute as the bean name.
+In this case, the endpoint is registered with the bean name <code class="literal">id + '.adapter'</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Identifies the channel attached to this adapter.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> bean reference to which the <code class="literal">ErrorMessages</code> should be sent.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>See the same option on the <code class="literal">&lt;int-websocket:outbound-channel-adapter&gt;</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>See the same option on the <code class="literal">&lt;int-websocket:outbound-channel-adapter&gt;</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>See the same option on the <code class="literal">&lt;int-websocket:outbound-channel-adapter&gt;</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>See the same option on the <code class="literal">&lt;int-websocket:outbound-channel-adapter&gt;</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>See the same option on the <code class="literal">&lt;int-websocket:outbound-channel-adapter&gt;</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Maximum amount of time in milliseconds to wait when sending a message to the channel if the channel may block.
+For example, a <code class="literal">QueueChannel</code> can block until space is available if its maximum capacity has been reached.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Fully qualified name of the java type for the target <code class="literal">payload</code> to convert from the incoming <code class="literal">WebSocketMessage</code>.
+Default to <code class="literal">String</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Flag to indicate if this adapter will send <code class="literal">non-MESSAGE</code> <code class="literal">WebSocketMessage</code> s and messages with broker destinations to the <code class="literal">AbstractBrokerMessageHandler</code> from the application context.
+The <code class="literal">Broker Relay</code> configuration is required when this attribute is <code class="literal">true</code>.
+This attribute is used only on the server side.
+On the client side, it is ignored.
+Defaults to <code class="literal">false</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>See the same option on the <code class="literal">&lt;int-websocket:outbound-channel-adapter&gt;</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO54-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>See the same option on the <code class="literal">&lt;int-websocket:outbound-channel-adapter&gt;</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="client-stomp-encoder" href="#client-stomp-encoder"></a>33.6&nbsp;ClientStompEncoder</h2></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.3.13</em></span>, the <code class="literal">ClientStompEncoder</code> is provided as an extension of standard <code class="literal">StompEncoder</code> for using on client side of the WebSocket Channel Adapters.
+An instance of the <code class="literal">ClientStompEncoder</code> must be injected into the <code class="literal">StompSubProtocolHandler</code> for proper client side message preparation.
+One of the problem of the default <code class="literal">StompSubProtocolHandler</code> that it was designed for the server side, so it updates the <code class="literal">SEND</code> <code class="literal">stompCommand</code> header into <code class="literal">MESSAGE</code> as it must be by the STOMP protocol from server side.
+If client doesn&#8217;t send its messages in the proper <code class="literal">SEND</code> web socket frame, some STOMP brokers won&#8217;t accept them.
+The purpose of the <code class="literal">ClientStompEncoder</code>, in this case, is to override <code class="literal">stompCommand</code> header to the <code class="literal">SEND</code> value before encoding the message to the <code class="literal">byte[]</code>.</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="twitter.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ws.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">32.&nbsp;Twitter Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;34.&nbsp;Web Services Support</td></tr></table></div></body></html>

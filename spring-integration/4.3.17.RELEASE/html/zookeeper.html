@@ -1,0 +1,68 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>37.&nbsp;Zookeeper Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="xmpp.html" title="36.&nbsp;XMPP Support"><link rel="next" href="spring-integration-appendices.html" title="Part&nbsp;VI.&nbsp;Appendices"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">37.&nbsp;Zookeeper Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="xmpp.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="spring-integration-appendices.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="zookeeper" href="#zookeeper"></a>37.&nbsp;Zookeeper Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="_introduction_5" href="#_introduction_5"></a>37.1&nbsp;Introduction</h2></div></div></div>
+
+<p><a class="ulink" href="https://zookeeper.apache.org/" target="_top">Zookeeper</a> support was added to the framework in <span class="emphasis"><em>version 4.2</em></span>, comprised of:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+MetadataStore
+</li><li class="listitem">
+LockRegistry
+</li><li class="listitem">
+Leadership Event Handling
+</li></ul></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="zk-metadata-store" href="#zk-metadata-store"></a>37.2&nbsp;Zookeeper Metadata Store</h2></div></div></div>
+
+<p>The <code class="literal">ZookeeperMetadataStore</code> can be used where any <code class="literal">MetadataStore</code> is needed, such as peristent file list filters,
+etc.
+See <a class="xref" href="system-management-chapter.html#metadata-store" title="9.5&nbsp;Metadata Store">Section&nbsp;9.5, &#8220;Metadata Store&#8221;</a> for more information.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"client"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.zookeeper.config.CuratorFrameworkFactoryBean"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${connect.string}"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"meta"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.zookeeper.metadata.ZookeeperMetadataStore"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"client"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MetadataStore zkStore(CuratorFramework client) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> ZookeeperMetadataStore(client);
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="zk-lock-registry" href="#zk-lock-registry"></a>37.3&nbsp;Zookeeper Lock Registry</h2></div></div></div>
+
+<p>The <code class="literal">ZookeeperLockRegistry</code> can be used where any <code class="literal">LockRegistry</code> is needed, such as when using an <code class="literal">Aggregator</code> in a
+clustered environment, with a shared <code class="literal">MessageStore</code>.</p>
+<p>A <code class="literal">LocRegistry</code> is used to "look up" a lock based on a key (the aggregator uses the <code class="literal">correlationId</code>).
+By default, locks in the <code class="literal">ZookeeperLockRegistry</code> are maintained in zookeeper under the path
+<code class="literal">/SpringIntegration-LockRegistry/</code>.
+You can customize the path by providing an implementation of <code class="literal">ZookeeperLockRegistry.KeyToPathStrategy</code>.</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> KeyToPathStrategy {
+
+    String pathFor(String key);
+
+    <span class="hl-keyword">boolean</span> bounded();
+
+}</pre>
+<p>If the strategy returns <code class="literal">true</code> from <code class="literal">isBounded</code>, unused locks do not need to be harvested.
+For unbounded strategies (such as the default) you will need to invoke <code class="literal">expireUnusedOlderThan(long age)</code> from time
+to time, to remove old unused locks from memory.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="zk-leadership" href="#zk-leadership"></a>37.4&nbsp;Zookeeper Leadership Event Handling</h2></div></div></div>
+
+<p>To configure an application for leader election using Zookeeper in XML:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-zk:leader-listener</span> <span class="hl-attribute">client</span>=<span class="hl-value">"client"</span> <span class="hl-attribute">path</span>=<span class="hl-value">"/siNamespace"</span> <span class="hl-attribute">role</span>=<span class="hl-value">"cluster"</span><span class="hl-tag"> /&gt;</span></pre>
+<p><code class="literal">client</code> is a reference to a <code class="literal">CuratorFramework</code> bean; a <code class="literal">CuratorFrameworkFactoryBean</code> is available.
+When a leader is elected, an <code class="literal">OnGrantedEvent</code> will be published for the role <code class="literal">cluster</code>; any endpoints in that role
+will be started.
+When leadership is revoked, an <code class="literal">OnRevokedEvent</code> will be published for the role <code class="literal">cluster</code>; any endpoints in that role
+will be stopped.
+See <a class="xref" href="messaging-endpoints-chapter.html#endpoint-roles" title="8.2&nbsp;Endpoint Roles">Section&nbsp;8.2, &#8220;Endpoint Roles&#8221;</a> for more information.</p>
+<p>In Java configuration you can create an instance of the leader initiator like this:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> LeaderInitiatorFactoryBean leaderInitiator(CuratorFramework client) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> LeaderInitiatorFactoryBean(client, <span class="hl-string">"/siTest/"</span>, <span class="hl-string">"cluster"</span>);
+}</pre>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="xmpp.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="spring-integration-appendices.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">36.&nbsp;XMPP Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Part&nbsp;VI.&nbsp;Appendices</td></tr></table></div></body></html>
