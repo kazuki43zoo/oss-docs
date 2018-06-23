@@ -1,0 +1,92 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>26.&nbsp;RMI Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="resource.html" title="25.&nbsp;Resource Support"><link rel="next" href="sftp.html" title="27.&nbsp;SFTP Adapters"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">26.&nbsp;RMI Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="resource.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="sftp.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="rmi" href="#rmi"></a>26.&nbsp;RMI Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="rmi-intro" href="#rmi-intro"></a>26.1&nbsp;Introduction</h2></div></div></div>
+
+<p>This Chapter explains how to use RMI specific channel adapters to distribute a system over multiple JVMs.
+The first section will deal with sending messages over RMI.
+The second section shows how to receive messages over RMI.
+The last section shows how to define rmi channel adapters through the namespace support.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="rmi-outbound" href="#rmi-outbound"></a>26.2&nbsp;Outbound RMI</h2></div></div></div>
+
+<p>To send messages from a channel over RMI, simply define an <code class="literal">RmiOutboundGateway</code>.
+This gateway will use Spring&#8217;s RmiProxyFactoryBean internally to create a proxy for a remote gateway.
+Note that to invoke a remote interface that doesn&#8217;t use Spring Integration you should use a service activator in combination with Spring&#8217;s RmiProxyFactoryBean.</p>
+<p>To configure the outbound gateway write a bean definition like this:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"rmiOutGateway"</span> <span class="hl-attribute">class</span>=<span class="hl-value">org.spf.integration.rmi.RmiOutboundGateway</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"rmi://host"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"replyChannel"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"replies"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="rmi-inbound" href="#rmi-inbound"></a>26.3&nbsp;Inbound RMI</h2></div></div></div>
+
+<p>To receive messages over RMI you need to use a <code class="literal">RmiInboundGateway</code>.
+This gateway can be configured like this</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"rmiOutGateway"</span> <span class="hl-attribute">class</span>=<span class="hl-value">org.spf.integration.rmi.RmiInboundGateway</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"requestChannel"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"requests"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If you use an <code class="literal">errorChannel</code> on an inbound gateway, it would be normal for the error flow to return a result (or throw an exception).
+This is because it is likely that there is a corresponding outbound gateway waiting for a response of some kind.
+Consuming a message on the error flow, and not replying, will result in no reply at the inbound gateway.
+Exceptions (on the main flow when there is no errorChannel, or on the error flow) will be propagated to the corresponding inbound gateway.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="rmi-namespace" href="#rmi-namespace"></a>26.4&nbsp;RMI namespace support</h2></div></div></div>
+
+<p>To configure the inbound gateway you can choose to use the namespace support for it.
+The following code snippet shows the different configuration options that are supported.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-rmi:inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gatewayWithDefaults"</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"testChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-rmi:inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gatewayWithCustomProperties"</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"testChannel"</span>
+    <span class="hl-attribute">expect-reply</span>=<span class="hl-value">"false"</span> <span class="hl-attribute">request-timeout</span>=<span class="hl-value">"123"</span> <span class="hl-attribute">reply-timeout</span>=<span class="hl-value">"456"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-rmi:inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gatewayWithHost"</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"testChannel"</span>
+    <span class="hl-attribute">registry-host</span>=<span class="hl-value">"localhost"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-rmi:inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gatewayWithPort"</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"testChannel"</span>
+    <span class="hl-attribute">registry-port</span>=<span class="hl-value">"1234"</span> <span class="hl-attribute">error-channel</span>=<span class="hl-value">"rmiErrorChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-rmi:inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gatewayWithExecutorRef"</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"testChannel"</span>
+    <span class="hl-attribute">remote-invocation-executor</span>=<span class="hl-value">"invocationExecutor"</span><span class="hl-tag">/&gt;</span></pre>
+<p>To configure the outbound gateway you can use the namespace support as well.
+The following code snippet shows the different configuration for an outbound rmi gateway.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-rmi:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gateway"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"localChannel"</span>
+    <span class="hl-attribute">remote-channel</span>=<span class="hl-value">"testChannel"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"localhost"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="_configuring_with_java_configuration_16" href="#_configuring_with_java_configuration_16"></a>26.5&nbsp;Configuring with Java Configuration</h2></div></div></div>
+
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> RmiInboundGateway inbound() {
+    RmiInboundGateway gateway = <span class="hl-keyword">new</span> RmiInboundGateway();
+    gateway.setRequestChannel(requestChannel());
+    gateway.setRegistryHost(<span class="hl-string">"host"</span>);
+    gateway.setRegistryPort(port);
+    <span class="hl-keyword">return</span> gateway;
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel="inChannel")</span></em>
+<span class="hl-keyword">public</span> RmiOutboundGateway outbound() {
+    RmiOutboundGateway gateway = <span class="hl-keyword">new</span> RmiOutboundGateway(<span class="hl-string">"rmi://host:port/"</span>
+        + RmiInboundGateway.SERVICE_NAME_PREFIX + <span class="hl-string">"remoteChannelName"</span>);
+    <span class="hl-keyword">return</span> gateway;
+}</pre>
+<p>Starting with <span class="emphasis"><em>version 4.3</em></span>, the outbound gateway has a second constructor that takes a RmiProxyFactoryBeanConfigurer instance along with the service url argument.
+This allows further configuration before the proxy is created; for example, to inject a Spring Security <code class="literal">ContextPropagatingRemoteInvocationFactory</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel="inChannel")</span></em>
+<span class="hl-keyword">public</span> RmiOutboundGateway outbound() {
+    RmiOutboundGateway gateway = <span class="hl-keyword">new</span> RmiOutboundGateway(<span class="hl-string">"rmi://host:port/"</span>
+                + RmiInboundGateway.SERVICE_NAME_PREFIX + <span class="hl-string">"remoteChannelName"</span>,
+        pfb -&gt; {
+            pfb.setRemoteInvocationFactory(<span class="hl-keyword">new</span> ContextPropagatingRemoteInvocationFactory());
+        });
+    <span class="hl-keyword">return</span> gateway;
+}</pre>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="resource.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="sftp.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">25.&nbsp;Resource Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;27.&nbsp;SFTP Adapters</td></tr></table></div></body></html>

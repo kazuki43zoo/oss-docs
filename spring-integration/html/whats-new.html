@@ -1,0 +1,332 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>2.&nbsp;What&#8217;s new in Spring Integration 4.3?</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="whats-new-part.html" title="Part&nbsp;II.&nbsp;What&#8217;s new?"><link rel="prev" href="whats-new-part.html" title="Part&nbsp;II.&nbsp;What&#8217;s new?"><link rel="next" href="spring-integration-introduction.html" title="Part&nbsp;III.&nbsp;Overview of Spring Integration Framework"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">2.&nbsp;What&#8217;s new in Spring Integration 4.3?</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="whats-new-part.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;II.&nbsp;What&#8217;s new?</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="spring-integration-introduction.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="whats-new" href="#whats-new"></a>2.&nbsp;What&#8217;s new in Spring Integration 4.3?</h2></div></div></div>
+
+<p>This chapter provides an overview of the new features and improvements that have been introduced with Spring
+Integration 4.3.
+If you are interested in more details, please see the Issue Tracker tickets that were resolved as part of the 4.3
+development process.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="x4.3-new-components" href="#x4.3-new-components"></a>2.1&nbsp;New Components</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_amqp_async_outbound_gateway" href="#_amqp_async_outbound_gateway"></a>2.1.1&nbsp;AMQP Async Outbound Gateway</h3></div></div></div>
+
+<p>See <a class="xref" href="amqp.html#amqp-async-outbound-gateway" title="11.7&nbsp;Async Outbound Gateway">Section&nbsp;11.7, &#8220;Async Outbound Gateway&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_messagegroupfactory" href="#_messagegroupfactory"></a>2.1.2&nbsp;MessageGroupFactory</h3></div></div></div>
+
+<p>The new <code class="literal">MessageGroupFactory</code> strategy has been introduced to allow a control over <code class="literal">MessageGroup</code> instances
+in <code class="literal">MessageGroupStore</code> logic.
+The <code class="literal">SimpleMessageGroupFactory</code> is provided for the <code class="literal">SimpleMessageGroup</code> with the <code class="literal">GroupType.HASH_SET</code> as the default
+factory for the standard <code class="literal">MessageGroupStore</code> implementations.
+See <a class="xref" href="system-management-chapter.html#message-store" title="9.4&nbsp;Message Store">Section&nbsp;9.4, &#8220;Message Store&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_persistentmessagegroup" href="#_persistentmessagegroup"></a>2.1.3&nbsp;PersistentMessageGroup</h3></div></div></div>
+
+<p>The <code class="literal">PersistentMessageGroup</code>, - lazy-load proxy, - implementation is provided for persistent <code class="literal">MessageGroupStore</code> s,
+which return this instance for the <code class="literal">getMessageGroup()</code> when their <code class="literal">lazyLoadMessageGroups</code> is <code class="literal">true</code> (defaults).
+See <a class="xref" href="system-management-chapter.html#message-store" title="9.4&nbsp;Message Store">Section&nbsp;9.4, &#8220;Message Store&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_ftp_sftp_streaming_inbound_channel_adapters" href="#_ftp_sftp_streaming_inbound_channel_adapters"></a>2.1.4&nbsp;FTP/SFTP Streaming Inbound Channel Adapters</h3></div></div></div>
+
+<p>New inbound channel adapters are provided that return an <code class="literal">InputStream</code> for each file allowing you to retrieve remote
+files without writing them to the local file system
+See <a class="xref" href="ftp.html#ftp-streaming" title="15.5&nbsp;FTP Streaming Inbound Channel Adapter">Section&nbsp;15.5, &#8220;FTP Streaming Inbound Channel Adapter&#8221;</a> and <a class="xref" href="sftp.html#sftp-streaming" title="27.8&nbsp;SFTP Streaming Inbound Channel Adapter">Section&nbsp;27.8, &#8220;SFTP Streaming Inbound Channel Adapter&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_stream_transformer" href="#_stream_transformer"></a>2.1.5&nbsp;Stream Transformer</h3></div></div></div>
+
+<p>A new <code class="literal">StreamTransformer</code> is provided to transform an <code class="literal">InputStream</code> payload to either a <code class="literal">byte[]</code> or <code class="literal">String</code>.
+See <a class="xref" href="messaging-transformation-chapter.html#stream-transformer" title="Stream Transformer">the section called &#8220;Stream Transformer&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_integration_graph" href="#_integration_graph"></a>2.1.6&nbsp;Integration Graph</h3></div></div></div>
+
+<p>A new <code class="literal">IntegrationGraphServer</code> together with the <code class="literal">IntegrationGraphController</code> REST service are provided to expose the runtime model of a Spring Integration application as a graph.
+See <a class="xref" href="system-management-chapter.html#integration-graph" title="9.8&nbsp;Integration Graph">Section&nbsp;9.8, &#8220;Integration Graph&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_jdbc_lock_registry" href="#_jdbc_lock_registry"></a>2.1.7&nbsp;JDBC Lock Registry</h3></div></div></div>
+
+<p>A new <code class="literal">JdbcLockRegistry</code> is provided for distributed locks shared through the data base table.
+See <a class="xref" href="jdbc.html#jdbc-lock-registry" title="18.6&nbsp;JDBC Lock Registry">Section&nbsp;18.6, &#8220;JDBC Lock Registry&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_leader_initiator_for_lock_registry" href="#_leader_initiator_for_lock_registry"></a>2.1.8&nbsp;Leader Initiator for Lock Registry</h3></div></div></div>
+
+<p>A new <code class="literal">LeaderInitiator</code> implementation is provided based on the <code class="literal">LockRegistry</code> strategy.
+See <a class="xref" href="messaging-endpoints-chapter.html#leadership-event-handling" title="8.3&nbsp;Leadership Event Handling">Section&nbsp;8.3, &#8220;Leadership Event Handling&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="x4.3-general" href="#x4.3-general"></a>2.2&nbsp;General Changes</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_core_changes" href="#_core_changes"></a>2.2.1&nbsp;Core Changes</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_outbound_gateway_within_chain" href="#_outbound_gateway_within_chain"></a>Outbound Gateway within Chain</h4></div></div></div>
+
+<p>Previously, it was possible to specify a <code class="literal">reply-channel</code> on an outbound gateway within a chain.
+It was completely ignored; the gateway&#8217;s reply goes to the next chain element, or to the chain&#8217;s output channel
+if the gateway is the last element.
+This condition is now detected and disallowed.
+If you have such configuration, simply remove the <code class="literal">reply-channel</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_async_service_activator" href="#_async_service_activator"></a>Async Service Activator</h4></div></div></div>
+
+<p>An option to make the Service Asynchronous has been added.
+See <a class="xref" href="messaging-endpoints-chapter.html#async-service-activator" title="8.5.3&nbsp;Asynchronous Service Activator">Section&nbsp;8.5.3, &#8220;Asynchronous Service Activator&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_messaging_annotation_support_changes" href="#_messaging_annotation_support_changes"></a>Messaging Annotation Support changes</h4></div></div></div>
+
+<p>The Messaging Annotation Support doesn&#8217;t require any more <code class="literal">@MessageEndpoint</code> (or any other <code class="literal">@Component</code>) annotation
+declaration on the class level.
+To restore the previous behaviour specify the <code class="literal">spring.integration.messagingAnnotations.require.componentAnnotation</code> of
+<code class="literal">spring.integration.properties</code> as <code class="literal">true</code>.
+See <a class="xref" href="configuration.html#global-properties" title="F.5&nbsp;Global Properties">Section&nbsp;F.5, &#8220;Global Properties&#8221;</a> and <a class="xref" href="configuration.html#annotations" title="F.6&nbsp;Annotation Support">Section&nbsp;F.6, &#8220;Annotation Support&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_lifecycle_role_controller" href="#_lifecycle_role_controller"></a>Lifecycle Role Controller</h4></div></div></div>
+
+<p>The <code class="literal">SmartLifecycleRoleController</code> now provides methods to obtain status of endpoints in roles.
+See <a class="xref" href="messaging-endpoints-chapter.html#endpoint-roles" title="8.2&nbsp;Endpoint Roles">Section&nbsp;8.2, &#8220;Endpoint Roles&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_mail_changes" href="#_mail_changes"></a>2.2.2&nbsp;Mail Changes</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_customizable_user_flag" href="#_customizable_user_flag"></a>Customizable User Flag</h4></div></div></div>
+
+<p>The customizable <code class="literal">userFlag</code> added in 4.2.2 to provide customization of the flag used to denote that the mail has been
+seen is now available using the XML namespace.
+See <a class="xref" href="mail.html#imap-seen" title="21.5&nbsp;Marking IMAP Messages When \Recent is Not Supported">Section&nbsp;21.5, &#8220;Marking IMAP Messages When \Recent is Not Supported&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_mail_message_mapping" href="#_mail_message_mapping"></a>Mail Message Mapping</h4></div></div></div>
+
+<p>There is now an option to map inbound mail messages with the <code class="literal">MessageHeaders</code> containing the mail headers and the
+payload containing the email content.
+Previously, the payload was always the raw <code class="literal">MimeMessage</code>.
+See <a class="xref" href="mail.html#mail-mapping" title="21.3&nbsp;Inbound Mail Message Mapping">Section&nbsp;21.3, &#8220;Inbound Mail Message Mapping&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_jms_changes" href="#_jms_changes"></a>2.2.3&nbsp;JMS Changes</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_header_mapper" href="#_header_mapper"></a>Header Mapper</h4></div></div></div>
+
+<p>The <code class="literal">DefaultJmsHeaderMapper</code> now maps the standard <code class="literal">correlationId</code> header as a message property by invoking its
+<code class="literal">toString()</code> method.
+See <a class="xref" href="jms.html#jms-header-mapping" title="20.6&nbsp;Mapping Message Headers to/from JMS Message">Section&nbsp;20.6, &#8220;Mapping Message Headers to/from JMS Message&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_async_gateway" href="#_async_gateway"></a>Async Gateway</h4></div></div></div>
+
+<p>The JMS Outbound gateway now has an <code class="literal">async</code> property.
+See <a class="xref" href="jms.html#jms-async-gateway" title="20.5.2&nbsp;Async Gateway">Section&nbsp;20.5.2, &#8220;Async Gateway&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_aggregator_changes" href="#_aggregator_changes"></a>2.2.4&nbsp;Aggregator Changes</h3></div></div></div>
+
+<p>There is a change in behavior when a POJO aggregator releases a collection of <code class="literal">Message&lt;?&gt;</code> objects; this is rare but if
+your application does that, you will need to make a small change to your POJO. See this <a class="xref" href="messaging-routing-chapter.html#agg-message-collection" title="Important">Important</a> note
+for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_tcp_udp_changes" href="#_tcp_udp_changes"></a>2.2.5&nbsp;TCP/UDP Changes</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_events" href="#_events"></a>Events</h4></div></div></div>
+
+<p>A new <code class="literal">TcpConnectionServerListeningEvent</code> is emitted when a server connection factory is started.
+See <a class="xref" href="ip.html#tcp-events" title="31.5&nbsp;TCP Connection Events">Section&nbsp;31.5, &#8220;TCP Connection Events&#8221;</a> for more information.</p>
+<p>The <code class="literal">destination-expression</code> and <code class="literal">socket-expression</code> are now available for the <code class="literal">&lt;int-ip:udp-outbound-channel-adapter&gt;</code>.
+See <a class="xref" href="ip.html#udp-adapters" title="31.2&nbsp;UDP Adapters">Section&nbsp;31.2, &#8220;UDP Adapters&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_stream_deserializers" href="#_stream_deserializers"></a>Stream Deserializers</h4></div></div></div>
+
+<p>The various deserializers that can&#8217;t allocate the final buffer until the whole message has been assembled now support
+pooling of the raw buffer into which the data is received, rather than creating and discarding a buffer for each
+message.
+See <a class="xref" href="ip.html#connection-factories" title="31.3&nbsp;TCP Connection Factories">Section&nbsp;31.3, &#8220;TCP Connection Factories&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_tcp_message_mapper" href="#_tcp_message_mapper"></a>TCP Message Mapper</h4></div></div></div>
+
+<p>The message mapper now, optionally, sets a configured content type header.
+See <a class="xref" href="ip.html#ip-msg-headers" title="31.13&nbsp;IP Message Headers">Section&nbsp;31.13, &#8220;IP Message Headers&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_file_changes" href="#_file_changes"></a>2.2.6&nbsp;File Changes</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_destination_directory_creation" href="#_destination_directory_creation"></a>Destination Directory Creation</h4></div></div></div>
+
+<p>The generated file name for the <code class="literal">FileWritingMessageHandler</code> can represent <span class="emphasis"><em>sub-path</em></span> to save the desired directory
+structure for file in the target directory.
+See <a class="xref" href="files.html#file-writing-file-names" title="14.3.1&nbsp;Generating File Names">Section&nbsp;14.3.1, &#8220;Generating File Names&#8221;</a> for more information.</p>
+<p>The <code class="literal">FileReadingMessageSource</code> now hides the <code class="literal">WatchService</code> directory scanning logic in the inner class.
+The <code class="literal">use-watch-service</code> and <code class="literal">watch-events</code> options are provided to enable such a behaviour.
+The top level <code class="literal">WatchServiceDirectoryScanner</code> has been deprecated because of inconsistency around API.
+See <a class="xref" href="files.html#watch-service-directory-scanner" title="14.2.2&nbsp;WatchServiceDirectoryScanner">Section&nbsp;14.2.2, &#8220;WatchServiceDirectoryScanner&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_buffer_size" href="#_buffer_size"></a>Buffer Size</h4></div></div></div>
+
+<p>When writing files, you can now specify the buffer size to use.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_appending_and_flushing" href="#_appending_and_flushing"></a>Appending and Flushing</h4></div></div></div>
+
+<p>You can now avoid flushing files when appending and use a number of strategies to flush the data during idle periods.
+See <a class="xref" href="files.html#file-flushing" title="14.3.4&nbsp;Flushing Files When using APPEND_NO_FLUSH">Section&nbsp;14.3.4, &#8220;Flushing Files When using APPEND_NO_FLUSH&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_preserving_timestamps" href="#_preserving_timestamps"></a>Preserving Timestamps</h4></div></div></div>
+
+<p>The outbound channel adapter can now be configured to set the destination file&#8217;s <code class="literal">lastmodified</code> timestamp.
+See <a class="xref" href="files.html#file-timestamps" title="14.3.5&nbsp;File Timestamps">Section&nbsp;14.3.5, &#8220;File Timestamps&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_splitter_changes" href="#_splitter_changes"></a>Splitter Changes</h4></div></div></div>
+
+<p>The <code class="literal">FileSplitter</code> will now automatically close an (S)FTP session when the file is completely read.
+This applies when the outbound gateway returns an <code class="literal">InputStream</code> or the new (S)FTP streaming channel adapters are being used.
+Also a new <code class="literal">markers-json</code> options has been introduced to convert <code class="literal">FileSplitter.FileMarker</code> to JSON <code class="literal">String</code> for relaxed downstream network interaction.
+See <a class="xref" href="files.html#file-splitter" title="14.5&nbsp;File Splitter">Section&nbsp;14.5, &#8220;File Splitter&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_file_filters" href="#_file_filters"></a>File Filters</h4></div></div></div>
+
+<p>A new <code class="literal">ChainFileListFilter</code> is provided as an alternative to <code class="literal">CompositeFileListFilter</code>.
+See <a class="xref" href="files.html#file-reading" title="14.2&nbsp;Reading Files">Section&nbsp;14.2, &#8220;Reading Files&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_amqp_changes" href="#_amqp_changes"></a>2.2.7&nbsp;AMQP Changes</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_content_type_message_converter" href="#_content_type_message_converter"></a>Content Type Message Converter</h4></div></div></div>
+
+<p>The outbound endpoints now support a <code class="literal">RabbitTemplate</code> configured with a <code class="literal">ContentTypeDelegatingMessageConverter</code> such
+that the converter can be chosen based on the message content type.
+See <a class="xref" href="amqp.html#content-type-conversion-outbound" title="11.8&nbsp;Outbound Message Conversion">Section&nbsp;11.8, &#8220;Outbound Message Conversion&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_headers_for_delayed_message_handling" href="#_headers_for_delayed_message_handling"></a>Headers for Delayed Message Handling</h4></div></div></div>
+
+<p>Spring AMQP 1.6 adds support for
+<a class="ulink" href="https://www.rabbitmq.com/blog/2015/04/16/scheduling-messages-with-rabbitmq/" target="_top">Delayed Message Exchanges</a>.
+Header mapping now supports the headers (<code class="literal">amqp_delay</code> and <code class="literal">amqp_receivedDelay</code>) used by this feature.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_amqp_backed_channels" href="#_amqp_backed_channels"></a>AMQP-Backed Channels</h4></div></div></div>
+
+<p>AMQP-backed channels now support message mapping.
+See <a class="xref" href="amqp.html#amqp-channels" title="11.11&nbsp;AMQP Backed Message Channels">Section&nbsp;11.11, &#8220;AMQP Backed Message Channels&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_redis_changes" href="#_redis_changes"></a>2.2.8&nbsp;Redis Changes</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_list_push_pop_direction" href="#_list_push_pop_direction"></a>List Push/Pop Direction</h4></div></div></div>
+
+<p>Previously, the queue channel adapters always used the Redis List in a fixed direction,
+pushing to the left end and reading from the right end.
+It is now possible to configure the reading and writing direction using <code class="literal">rightPop</code> and <code class="literal">leftPush</code> options for the
+<code class="literal">RedisQueueMessageDrivenEndpoint</code> and <code class="literal">RedisQueueOutboundChannelAdapter</code> respectively.
+See <a class="xref" href="redis.html#redis-queue-inbound-channel-adapter" title="24.3.4&nbsp;Redis Queue Inbound Channel Adapter">Section&nbsp;24.3.4, &#8220;Redis Queue Inbound Channel Adapter&#8221;</a> and <a class="xref" href="redis.html#redis-queue-outbound-channel-adapter" title="24.3.5&nbsp;Redis Queue Outbound Channel Adapter">Section&nbsp;24.3.5, &#8220;Redis Queue Outbound Channel Adapter&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_queue_inbound_gateway_default_serializer" href="#_queue_inbound_gateway_default_serializer"></a>Queue Inbound Gateway Default Serializer</h4></div></div></div>
+
+<p>The default serializer in the inbound gateway has been changed to a <code class="literal">JdkSerializationRedisSerializer</code> for compatibility
+with the outbound gateway.
+See <a class="xref" href="redis.html#redis-queue-inbound-gateway" title="24.10&nbsp;Redis Queue Inbound Gateway">Section&nbsp;24.10, &#8220;Redis Queue Inbound Gateway&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_http_changes" href="#_http_changes"></a>2.2.9&nbsp;HTTP Changes</h3></div></div></div>
+
+<p>Previously, with requests that had a body (such as <code class="literal">POST</code>) that had no <code class="literal">content-type</code> header, the body was ignored.
+With this release, the content type of such requests is considered to be <code class="literal">application/octet-stream</code> as recommended
+by RFC 2616.
+See <a class="xref" href="http.html#http-inbound" title="17.2&nbsp;Http Inbound Components">Section&nbsp;17.2, &#8220;Http Inbound Components&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_sftp_changes" href="#_sftp_changes"></a>2.2.10&nbsp;SFTP Changes</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_factory_bean" href="#_factory_bean"></a>Factory Bean</h4></div></div></div>
+
+<p>A new factory bean is provided to simplify the configuration of Jsch proxies for SFTP.
+See <a class="xref" href="sftp.html#sftp-proxy-factory-bean" title="27.3&nbsp;Proxy Factory Bean">Section&nbsp;27.3, &#8220;Proxy Factory Bean&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_inbound_channel_adapter" href="#_inbound_channel_adapter"></a>Inbound Channel Adapter</h4></div></div></div>
+
+<p>The inbound channel adapter is now configured with a <code class="literal">FileSystemPersistentAcceptOnceFileListFilter</code> in the <code class="literal">local-filter</code> by default.
+See <a class="xref" href="sftp.html#sftp-inbound" title="27.7&nbsp;SFTP Inbound Channel Adapter">Section&nbsp;27.7, &#8220;SFTP Inbound Channel Adapter&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_chmod" href="#_chmod"></a>chmod</h4></div></div></div>
+
+<p>The SFTP outbound gateway (for <code class="literal">put</code> and <code class="literal">mput</code> commands) and the SFTP outbound channel adapter now support the
+<code class="literal">chmod</code> attribute to change the remote file permissions after uploading.
+See <a class="xref" href="sftp.html#sftp-outbound" title="27.9&nbsp;SFTP Outbound Channel Adapter">Section&nbsp;27.9, &#8220;SFTP Outbound Channel Adapter&#8221;</a> and <a class="xref" href="sftp.html#sftp-outbound-gateway" title="27.10&nbsp;SFTP Outbound Gateway">Section&nbsp;27.10, &#8220;SFTP Outbound Gateway&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_ftp_changes" href="#_ftp_changes"></a>2.2.11&nbsp;FTP Changes</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_session_changes" href="#_session_changes"></a>Session Changes</h4></div></div></div>
+
+<p>The <code class="literal">FtpSession</code> now supports <code class="literal">null</code> for the <code class="literal">list()</code> and <code class="literal">listNames()</code> method, since it is possible by the
+underlying FTP Client.
+With that the <code class="literal">FtpOutboundGateway</code> can now be configured without <code class="literal">remoteDirectory</code> expression.
+And the <code class="literal">&lt;int-ftp:inbound-channel-adapter&gt;</code> can be configured without <code class="literal">remote-directory</code>/<code class="literal">remote-directory-expression</code>.
+See <a class="xref" href="ftp.html" title="15.&nbsp;FTP/FTPS Adapters">Chapter&nbsp;15, <i>FTP/FTPS Adapters</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_inbound_channel_adapter_2" href="#_inbound_channel_adapter_2"></a>Inbound Channel Adapter</h4></div></div></div>
+
+<p>The inbound channel adapter is now configured with a <code class="literal">FileSystemPersistentAcceptOnceFileListFilter</code> in the <code class="literal">local-filter</code> by default.
+See <a class="xref" href="ftp.html#ftp-inbound" title="15.4&nbsp;FTP Inbound Channel Adapter">Section&nbsp;15.4, &#8220;FTP Inbound Channel Adapter&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_router_changes" href="#_router_changes"></a>2.2.12&nbsp;Router Changes</h3></div></div></div>
+
+<p>The <code class="literal">ErrorMessageExceptionTypeRouter</code> supports now the <code class="literal">Exception</code> superclass mappings to avoid duplication
+for the same channel in case of several inheritors.
+For this purpose the <code class="literal">ErrorMessageExceptionTypeRouter</code> loads mapping classes during initialization to fail-fast
+for a <code class="literal">ClassNotFoundException</code>.</p>
+<p>See <a class="xref" href="messaging-routing-chapter.html#router" title="6.1&nbsp;Routers">Section&nbsp;6.1, &#8220;Routers&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_header_mapping" href="#_header_mapping"></a>2.2.13&nbsp;Header Mapping</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_general" href="#_general"></a>General</h4></div></div></div>
+
+<p>AMQP, WS and XMPP header mappings (e.g. <code class="literal">request-header-mapping</code>, <code class="literal">reply-header-mapping</code>) now support negated
+patterns.
+See <a class="xref" href="amqp.html#amqp-message-headers" title="11.12&nbsp;AMQP Message Headers">Section&nbsp;11.12, &#8220;AMQP Message Headers&#8221;</a>, <a class="xref" href="ws.html#ws-message-headers" title="34.5&nbsp;WS Message Headers">Section&nbsp;34.5, &#8220;WS Message Headers&#8221;</a>, and <a class="xref" href="xmpp.html#xmpp-message-headers" title="36.6&nbsp;XMPP Message Headers">Section&nbsp;36.6, &#8220;XMPP Message Headers&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_amqp_header_mapping" href="#_amqp_header_mapping"></a>AMQP Header Mapping</h4></div></div></div>
+
+<p>Previously, only standard AMQP headers were mapped by default; users had to explicitly enable mapping of user-defined
+headers.
+With this release all headers are mapped by default.
+In addition, the inbound <code class="literal">amqp_deliveryMode</code> header is no longer mapped by default.
+See <a class="xref" href="amqp.html#amqp-message-headers" title="11.12&nbsp;AMQP Message Headers">Section&nbsp;11.12, &#8220;AMQP Message Headers&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_groovy_scripts" href="#_groovy_scripts"></a>2.2.14&nbsp;Groovy Scripts</h3></div></div></div>
+
+<p>Groovy scripts can now be configured with the <code class="literal">compile-static</code> hint or any other <code class="literal">CompilerConfiguration</code> options.
+See <a class="xref" href="messaging-endpoints-chapter.html#groovy-config" title="8.8.1&nbsp;Groovy configuration">Section&nbsp;8.8.1, &#8220;Groovy configuration&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="__inboundchanneladapter" href="#__inboundchanneladapter"></a>2.2.15&nbsp;@InboundChannelAdapter</h3></div></div></div>
+
+<p>The <code class="literal">@InboundChannelAdapter</code> has now an alias <code class="literal">channel</code> attribute for regular <code class="literal">value</code>.
+In addition the target <code class="literal">SourcePollingChannelAdapter</code> components can now resolve the target <code class="literal">outputChannel</code> bean
+from its provided name (<code class="literal">outputChannelName</code> options) in late-binding manner.
+See <a class="xref" href="configuration.html#annotations" title="F.6&nbsp;Annotation Support">Section&nbsp;F.6, &#8220;Annotation Support&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_xmpp_changes" href="#_xmpp_changes"></a>2.2.16&nbsp;XMPP changes</h3></div></div></div>
+
+<p>The XMPP Extensions (XEP) are now supported by the XMPP channel adapters.
+See <a class="xref" href="xmpp.html#xmpp-extensions" title="36.7&nbsp;XMPP Extensions">Section&nbsp;36.7, &#8220;XMPP Extensions&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_wiretap_late_binding" href="#_wiretap_late_binding"></a>2.2.17&nbsp;WireTap Late Binding</h3></div></div></div>
+
+<p>The <code class="literal">WireTap</code> <code class="literal">ChannelInterceptor</code> now can accept a <code class="literal">channelName</code> which is resolved to the target <code class="literal">MessageChannel</code>
+later, during the first active interceptor operation.
+See <a class="xref" href="messaging-channels-section.html#channel-wiretap" title="Wire Tap">the section called &#8220;Wire Tap&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_channelmessagestorequeryprovider" href="#_channelmessagestorequeryprovider"></a>2.2.18&nbsp;ChannelMessageStoreQueryProvider</h3></div></div></div>
+
+<p>The <code class="literal">ChannelMessageStoreQueryProvider</code> now supports H2 database.
+See <a class="xref" href="jdbc.html#jdbc-message-store-channels" title="18.4.2&nbsp;Backing Message Channels">Section&nbsp;18.4.2, &#8220;Backing Message Channels&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_websocket_changes" href="#_websocket_changes"></a>2.2.19&nbsp;WebSocket Changes</h3></div></div></div>
+
+<p>The <code class="literal">ServerWebSocketContainer</code> now exposes <code class="literal">allowedOrigins</code> option and <code class="literal">SockJsServiceOptions</code> a <code class="literal">suppressCors</code> option.
+See <a class="xref" href="web-sockets.html" title="33.&nbsp;WebSockets Support">Chapter&nbsp;33, <i>WebSockets Support</i></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_barrier_changes" href="#_barrier_changes"></a>2.2.20&nbsp;Barrier Changes</h3></div></div></div>
+
+<p>The <code class="literal">BarrierMessageHandler</code> now supports a discard channel to which late-arriving trigger messages are sent.
+See <a class="xref" href="messaging-routing-chapter.html#barrier" title="6.8&nbsp;Thread Barrier">Section&nbsp;6.8, &#8220;Thread Barrier&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_amqp_changes_2" href="#_amqp_changes_2"></a>2.2.21&nbsp;AMQP Changes</h3></div></div></div>
+
+<p>The AMQP outbound endpoints now support setting a delay expression for when using the RabbitMQ Delayed Message Exchange plugin.
+See <a class="xref" href="amqp.html#amqp-delay" title="11.10&nbsp;Delayed Message Exchange">Section&nbsp;11.10, &#8220;Delayed Message Exchange&#8221;</a> for more information.</p>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="whats-new-part.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="whats-new-part.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="spring-integration-introduction.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Part&nbsp;II.&nbsp;What&#8217;s new?&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Part&nbsp;III.&nbsp;Overview of Spring Integration Framework</td></tr></table></div></body></html>

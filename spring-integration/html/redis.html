@@ -1,0 +1,602 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>24.&nbsp;Redis Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="mqtt.html" title="23.&nbsp;MQTT Support"><link rel="next" href="resource.html" title="25.&nbsp;Resource Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">24.&nbsp;Redis Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="mqtt.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="resource.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="redis" href="#redis"></a>24.&nbsp;Redis Support</h2></div></div></div>
+
+<p>Since version 2.1 Spring Integration introduces support for <a class="ulink" href="http://redis.io/" target="_top">Redis</a>: _"an open source advanced key-value store".
+_ This support comes in the form of a Redis-based MessageStore as well as Publish-Subscribe Messaging adapters that are supported by Redis via its <a class="ulink" href="http://redis.io/topics/pubsub" target="_top">PUBLISH, SUBSCRIBE and UNSUBSCRIBE</a> commands.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-intro" href="#redis-intro"></a>24.1&nbsp;Introduction</h2></div></div></div>
+
+<p>To download, install and run Redis please refer to the <a class="ulink" href="http://redis.io/download" target="_top">Redis documentation</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-connection" href="#redis-connection"></a>24.2&nbsp;Connecting to Redis</h2></div></div></div>
+
+<p>To begin interacting with Redis you first need to connect to it.
+Spring Integration uses support provided by another Spring project, <a class="ulink" href="https://github.com/SpringSource/spring-data-redis" target="_top">Spring Data Redis</a>, which provides typical Spring constructs: <code class="literal">ConnectionFactory</code> and <code class="literal">Template</code>.
+Those abstractions simplify integration with several Redis-client Java APIs.
+Currently Spring-Data-Redis supportshttps://github.com/xetorthio/jedis[jedis], <a class="ulink" href="http://code.google.com/p/jredis/" target="_top">jredis</a> and <a class="ulink" href="https://github.com/e-mzungu/rjc" target="_top">rjc</a></p>
+<p><span class="emphasis"><em>RedisConnectionFactory</em></span></p>
+<p>To connect to Redis you would use one of the implementations of the <code class="literal">RedisConnectionFactory</code> interface:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> RedisConnectionFactory <span class="hl-keyword">extends</span> PersistenceExceptionTranslator {
+
+    <strong class="hl-tag" style="color: blue">/**
+     * Provides a suitable connection for interacting with Redis.
+     *
+     * @return connection for interacting with Redis.
+     */</strong>
+    RedisConnection getConnection();
+}</pre>
+<p>The example below shows how to create a <code class="literal">JedisConnectionFactory</code>.</p>
+<p>In Java:</p>
+<pre class="programlisting">JedisConnectionFactory jcf = <span class="hl-keyword">new</span> JedisConnectionFactory();
+jcf.afterPropertiesSet();</pre>
+<p>Or in Spring&#8217;s XML configuration:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisConnectionFactory"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.data.redis.connection.jedis.JedisConnectionFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"port"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"7379"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The implementations of RedisConnectionFactory provide a set of properties such as port and host that can be set if needed.
+Once an instance of RedisConnectionFactory is created, you can create an instance of RedisTemplate and inject it with the RedisConnectionFactory.</p>
+<p><span class="emphasis"><em>RedisTemplate</em></span></p>
+<p>As with other template classes in Spring (e.g., <code class="literal">JdbcTemplate</code>, <code class="literal">JmsTemplate</code>) <code class="literal">RedisTemplate</code> is a helper class that simplifies Redis data access code.
+For more information about <code class="literal">RedisTemplate</code> and its variations (e.g., <code class="literal">StringRedisTemplate</code>) please refer to the <a class="ulink" href="http://static.springsource.org/spring-data/data-redis/docs/current/reference/" target="_top">Spring-Data-Redis documentation</a></p>
+<p>The code below shows how to create an instance of <code class="literal">RedisTemplate</code>:</p>
+<p>In Java:</p>
+<pre class="programlisting">RedisTemplate rt = <span class="hl-keyword">new</span> RedisTemplate&lt;String, Object&gt;();
+rt.setConnectionFactory(redisConnectionFactory);</pre>
+<div class="variablelist"><dl class="variablelist"><dt><span class="term">Or in Spring&#8217;s XML configuration</span></dt><dd>
+</dd></dl></div>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisTemplate"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.data.redis.core.RedisTemplate"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"connectionFactory"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"redisConnectionFactory"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-messages" href="#redis-messages"></a>24.3&nbsp;Messaging with Redis</h2></div></div></div>
+
+<p>As mentioned in the introduction Redis provides support for Publish-Subscribe messaging via its PUBLISH, SUBSCRIBE and UNSUBSCRIBE commands.
+As with JMS and AMQP, Spring Integration provides Message Channels and adapters for sending and receiving messages via Redis.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="redis-pub-sub-channel" href="#redis-pub-sub-channel"></a>24.3.1&nbsp;Redis Publish/Subscribe channel</h3></div></div></div>
+
+<p>Similar to the JMS there are cases where both the producer and consumer are intended to be part of the same application, running within the same process.
+This could be accomplished by using a pair of inbound and outbound Channel Adapters, however just like with Spring Integration&#8217;s JMS support, there is a simpler approach to address this use case.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:publish-subscribe-channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisChannel"</span> <span class="hl-attribute">topic-name</span>=<span class="hl-value">"si.test.topic"</span><span class="hl-tag">/&gt;</span></pre>
+<p>The publish-subscribe-channel (above) will behave much like a normal <code class="literal">&lt;publish-subscribe-channel/&gt;</code> element from the main Spring Integration namespace.
+It can be referenced by both <code class="literal">input-channel</code> and <code class="literal">output-channel</code> attributes of any endpoint.
+The difference is that this channel is backed by a Redis topic name - a String value specified by the <code class="literal">topic-name</code> attribute.
+However unlike JMS this topic doesn&#8217;t have to be created in advance or even auto-created by Redis.
+In Redis topics are simple String values that play the role of an address, and all the producer and consumer need to do to communicate is use the same String value as their topic name.
+A simple subscription to this channel means that asynchronous pub-sub messaging is possible between the producing and consuming endpoints, but unlike the asynchronous Message Channels created by adding a <code class="literal">&lt;queue/&gt;</code> sub-element within a simple Spring Integration <code class="literal">&lt;channel/&gt;</code> element, the Messages are not just stored in an in-memory queue.
+Instead those Messages are passed through Redis allowing you to rely on its support for persistence and clustering as well as its interoperability with other non-java platforms.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="redis-inbound-channel-adapter" href="#redis-inbound-channel-adapter"></a>24.3.2&nbsp;Redis Inbound Channel Adapter</h3></div></div></div>
+
+<p>The Redis-based Inbound Channel Adapter adapts incoming Redis messages into Spring Integration Messages in the same way as other inbound adapters.
+It receives platform-specific messages (Redis in this case) and converts them to Spring Integration Messages using a <code class="literal">MessageConverter</code> strategy.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisAdapter"</span>
+       <span class="hl-attribute">topics</span>=<span class="hl-value">"foo, bar"</span>
+       <span class="hl-attribute">channel</span>=<span class="hl-value">"receiveChannel"</span>
+       <span class="hl-attribute">error-channel</span>=<span class="hl-value">"testErrorChannel"</span>
+       <span class="hl-attribute">message-converter</span>=<span class="hl-value">"testConverter"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisConnectionFactory"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.data.redis.connection.jedis.JedisConnectionFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"port"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"7379"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"testConverter"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"foo.bar.SampleMessageConverter"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>Above is a simple but complete configuration of a Redis Inbound Channel Adapter.
+Note that the above configuration relies on the familiar Spring paradigm of auto-discovering certain beans.
+In this case the <code class="literal">redisConnectionFactory</code> is implicitly injected into the adapter.
+You can of course specify it explicitly using the <code class="literal">connection-factory</code> attribute instead.</p>
+<p>Also, note that the above configuration injects the adapter with a custom <code class="literal">MessageConverter</code>.
+The approach is similar to JMS where <code class="literal">MessageConverters</code> are used to convert between Redis Messages and the Spring Integration Message payloads.
+The default is a <code class="literal">SimpleMessageConverter</code>.</p>
+<p>Inbound adapters can subscribe to multiple topic names hence the comma-delimited set of values in the <code class="literal">topics</code> attribute.</p>
+<p>Since <span class="emphasis"><em>Spring Integration 3.0</em></span>, the Inbound Adapter, in addition to the existing <code class="literal">topics</code> attribute, now has the <code class="literal">topic-patterns</code> attribute.
+This attribute contains a comma-delimited set of Redis topic patterns.
+For more information regarding Redis publish/subscribe, see <a class="ulink" href="http://redis.io/topics/pubsub" target="_top">Redis Pub/Sub</a>.</p>
+<p>Inbound adapters can use a <code class="literal">RedisSerializer</code> to deserialize the body of Redis Messages.
+The <code class="literal">serializer</code> attribute of the <code class="literal">&lt;int-redis:inbound-channel-adapter&gt;</code> can be set to an empty string, which results in a <code class="literal">null</code> value for the <code class="literal">RedisSerializer</code> property.
+In this case the raw <code class="literal">byte[]</code> bodies of Redis Messages are provided as the message payloads.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="redis-outbound-channel-adapter" href="#redis-outbound-channel-adapter"></a>24.3.3&nbsp;Redis Outbound Channel Adapter</h3></div></div></div>
+
+<p>The Redis-based Outbound Channel Adapter adapts outgoing Spring Integration messages into Redis messages in the same way as other outbound adapters.
+It receives Spring Integration messages and converts them to platform-specific messages (Redis in this case) using a <code class="literal">MessageConverter</code> strategy.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outboundAdapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"sendChannel"</span>
+    <span class="hl-attribute">topic</span>=<span class="hl-value">"foo"</span>
+    <span class="hl-attribute">message-converter</span>=<span class="hl-value">"testConverter"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisConnectionFactory"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.data.redis.connection.jedis.JedisConnectionFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"port"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"7379"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"testConverter"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"foo.bar.SampleMessageConverter"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>As you can see the configuration is similar to the Redis Inbound Channel Adapter.
+The adapter is implicitly injected with a <code class="literal">RedisConnectionFactory</code> which was defined with <span class="emphasis"><em><code class="literal">redisConnectionFactory</code></em></span> as its bean name.
+This example also includes the optional, custom <code class="literal">MessageConverter</code> (the <span class="emphasis"><em><code class="literal">testConverter</code></em></span> bean).</p>
+<p>Since <span class="emphasis"><em>Spring Integration 3.0</em></span>, the <code class="literal">&lt;int-redis:outbound-channel-adapter&gt;</code>, as an alternative to the <code class="literal">topic</code> attribute, has the <code class="literal">topic-expression</code> attribute to determine the Redis topic against the Message at runtime.
+These attributes are mutually exclusive.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="redis-queue-inbound-channel-adapter" href="#redis-queue-inbound-channel-adapter"></a>24.3.4&nbsp;Redis Queue Inbound Channel Adapter</h3></div></div></div>
+
+<p>Since <span class="emphasis"><em>Spring Integration 3.0</em></span>, a Queue Inbound Channel Adapter is available to <span class="emphasis"><em>pop</em></span> messages from a Redis List. By default it uses <span class="emphasis"><em>right pop</em></span>, but
+it can be configured to use <span class="emphasis"><em>left pop</em></span> instead.
+The adapter is message-driven using an internal listener thread and does not use a poller.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:queue-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">""</span>  <a name="CO41-1" href="#CO41-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                    channel=""  <a name="CO41-2" href="#CO41-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                    auto-startup=""  <a name="CO41-3" href="#CO41-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                    phase=""  <a name="CO41-4" href="#CO41-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                    connection-factory=""  <a name="CO41-5" href="#CO41-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                    queue=""  <a name="CO41-6" href="#CO41-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                    error-channel=""  <a name="CO41-7" href="#CO41-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                    serializer=""  <a name="CO41-8" href="#CO41-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                    receive-timeout=""  <a name="CO41-9" href="#CO41-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+                    recovery-interval=""  <a name="CO41-10" href="#CO41-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+                    expect-message=""  <a name="CO41-11" href="#CO41-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+                    task-executor=""  <a name="CO41-12" href="#CO41-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+                    right-pop=""/&gt;  <a name="CO41-13" href="#CO41-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The component bean name.
+If the <code class="literal">channel</code> attribute isn&#8217;t provided a <code class="literal">DirectChannel</code> is created and registered with application context with this <code class="literal">id</code> attribute as the bean name.
+In this case, the endpoint itself is registered with the bean name <code class="literal">id + '.adapter'</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> to which to send <code class="literal">Message</code> s from this Endpoint.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A <code class="literal">SmartLifecycle</code> attribute to specify whether this Endpoint should start automatically after the application context start or not.
+Default is <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A <code class="literal">SmartLifecycle</code> attribute to specify the <span class="emphasis"><em>phase</em></span> in which this Endpoint will be started.
+Default is <code class="literal">0</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">RedisConnectionFactory</code> bean.
+Defaults to <code class="literal">redisConnectionFactory</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of the Redis List on which the queue-based <span class="emphasis"><em>pop</em></span> operation is performed to get Redis messages.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> to which to send <code class="literal">ErrorMessage</code> s with <code class="literal">Exception</code> s from the listening task of the Endpoint.
+By default the underlying <code class="literal">MessagePublishingErrorHandler</code> uses the default <code class="literal">errorChannel</code> from the application context.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">RedisSerializer</code> bean reference.
+Can be an empty string, which means <span class="emphasis"><em>no serializer</em></span>.
+In this case the raw <code class="literal">byte[]</code> from the inbound Redis message is sent to the <code class="literal">channel</code> as the <code class="literal">Message</code> payload.
+By default it is a <code class="literal">JdkSerializationRedisSerializer</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The timeout in milliseconds for <span class="emphasis"><em>pop</em></span> operation to wait for a Redis message from the queue.
+Default is 1 second.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The time in milliseconds for which the listener task should sleep after exceptions on the <span class="emphasis"><em>pop</em></span> operation, before restarting the listener task.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify if this Endpoint expects data from the Redis queue to contain entire <code class="literal">Message</code> s.
+If this attribute is set to <code class="literal">true</code>, the <code class="literal">serializer</code> can&#8217;t be an empty string because messages require some form of deserialization (JDK serialization by default).
+Default is <code class="literal">false</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a Spring <code class="literal">TaskExecutor</code> (or standard JDK 1.5+ <code class="literal">Executor</code>) bean.
+It is used for the underlying listening task.
+By default a <code class="literal">SimpleAsyncTaskExecutor</code> is used.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO41-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify whether this Endpoint should use <span class="emphasis"><em>right pop</em></span> (when <code class="literal">true</code>) or <span class="emphasis"><em>left pop</em></span> (when <code class="literal">false</code>) to read messages from the Redis List.
+If <code class="literal">true</code>, the Redis List acts as a <code class="literal">FIFO</code> queue when used with a default <span class="emphasis"><em>Redis Queue Outbound Channel Adapter</em></span>. Set to <code class="literal">false</code> to use with software
+that writes to the list with <span class="emphasis"><em>right push</em></span>, or to achieve a stack-like message order.
+Default is <code class="literal">true</code>.
+Since <span class="emphasis"><em>version 4.3</em></span>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="redis-queue-outbound-channel-adapter" href="#redis-queue-outbound-channel-adapter"></a>24.3.5&nbsp;Redis Queue Outbound Channel Adapter</h3></div></div></div>
+
+<p>Since <span class="emphasis"><em>Spring Integration 3.0</em></span>, a Queue Outbound Channel Adapter is available to <span class="emphasis"><em>push</em></span> to a Redis List from Spring Integration messages. By default,
+it uses <span class="emphasis"><em>left push</em></span>, but it can be configured to use <span class="emphasis"><em>right push</em></span> instead.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:queue-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">""</span>  <a name="CO42-1" href="#CO42-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                    channel=""  <a name="CO42-2" href="#CO42-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                    connection-factory=""  <a name="CO42-3" href="#CO42-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                    queue=""  <a name="CO42-4" href="#CO42-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                    queue-expression=""  <a name="CO42-5" href="#CO42-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                    serializer=""  <a name="CO42-6" href="#CO42-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                    extract-payload=""  <a name="CO42-7" href="#CO42-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                    left-push=""/&gt;  <a name="CO42-8" href="#CO42-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO42-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The component bean name.
+If the <code class="literal">channel</code> attribute isn&#8217;t provided, a <code class="literal">DirectChannel</code> is created and registered with the application context with this <code class="literal">id</code> attribute as the bean name.
+In this case, the endpoint is registered with the bean name <code class="literal">id + '.adapter'</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO42-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> from which this Endpoint receives <code class="literal">Message</code> s.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO42-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">RedisConnectionFactory</code> bean.
+Defaults to <code class="literal">redisConnectionFactory</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO42-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of the Redis List on which the queue-based <span class="emphasis"><em>push</em></span> operation is performed to send Redis messages.
+This attribute is mutually exclusive with <code class="literal">queue-expression</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO42-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A SpEL <code class="literal">Expression</code> to determine the name of the Redis List using the incoming <code class="literal">Message</code> at runtime as the <code class="literal">#root</code> variable.
+This attribute is mutually exclusive with <code class="literal">queue</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO42-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A <code class="literal">RedisSerializer</code> bean reference.
+By default it is a <code class="literal">JdkSerializationRedisSerializer</code>.
+However, for <code class="literal">String</code> payloads, a <code class="literal">StringRedisSerializer</code> is used, if a <code class="literal">serializer</code> reference isn&#8217;t provided.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO42-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify if this Endpoint should send just the <span class="emphasis"><em>payload</em></span> to the Redis queue, or the entire <code class="literal">Message</code>.
+Default is <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO42-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify whether this Endpoint should use <span class="emphasis"><em>left push</em></span> (when <code class="literal">true</code>) or <span class="emphasis"><em>right push</em></span> (when <code class="literal">false</code>) to write messages to the Redis List.
+If <code class="literal">true</code>, the Redis List acts as a <code class="literal">FIFO</code> queue when used with a default <span class="emphasis"><em>Redis Queue Inbound Channel Adapter</em></span>. Set to <code class="literal">false</code> to use with software
+that reads from the list with <span class="emphasis"><em>left pop</em></span>, or to achieve a stack-like message order.
+Default is <code class="literal">true</code>.
+Since <span class="emphasis"><em>version 4.3</em></span>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="redis-application-events" href="#redis-application-events"></a>24.3.6&nbsp;Redis Application Events</h3></div></div></div>
+
+<p>Since <span class="emphasis"><em>Spring Integration 3.0</em></span>, the Redis module provides an implementation of <code class="literal">IntegrationEvent</code> - which, in turn, is a <code class="literal">org.springframework.context.ApplicationEvent</code>.
+The <code class="literal">RedisExceptionEvent</code> encapsulates an <code class="literal">Exception</code> s from Redis operations (with the Endpoint being the <code class="literal">source</code> of the event).
+For example, the <code class="literal">&lt;int-redis:queue-inbound-channel-adapter/&gt;</code> emits those events after catching <code class="literal">Exception</code> s from the <code class="literal">BoundListOperations.rightPop</code> operation.
+The exception may be any generic <code class="literal">org.springframework.data.redis.RedisSystemException</code> or a <code class="literal">org.springframework.data.redis.RedisConnectionFailureException</code>.
+Handling these events using an <code class="literal">&lt;int-event:inbound-channel-adapter/&gt;</code> can be useful to determine problems with background Redis tasks and to take administrative actions.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-message-store" href="#redis-message-store"></a>24.4&nbsp;Redis Message Store</h2></div></div></div>
+
+<p>As described in EIP, a <a class="ulink" href="http://www.eaipatterns.com/MessageStore.html" target="_top">Message Store</a> allows you to persist Messages.
+This can be very useful when dealing with components that have a capability to buffer messages (<span class="emphasis"><em>Aggregator, Resequencer</em></span>, etc.) if reliability is a concern.
+In Spring Integration, the MessageStore strategy also provides the foundation for the <a class="ulink" href="http://www.eaipatterns.com/StoreInLibrary.html" target="_top">ClaimCheck</a> pattern, which is described in EIP as well.</p>
+<p>Spring Integration&#8217;s Redis module provides the <code class="literal">RedisMessageStore</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisMessageStore"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.redis.store.RedisMessageStore"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"redisConnectionFactory"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;int:aggregator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputChannel"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputChannel"</span>
+         <span class="hl-attribute">message-store</span>=<span class="hl-value">"redisMessageStore"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Above is a sample <code class="literal">RedisMessageStore</code> configuration that shows its usage by an <span class="emphasis"><em>Aggregator</em></span>.
+As you can see it is a simple bean configuration, and it expects a <code class="literal">RedisConnectionFactory</code> as a constructor argument.</p>
+<p>By default the <code class="literal">RedisMessageStore</code> will use Java serialization to serialize the Message.
+However if you want to use a different serialization technique (e.g., JSON), you can provide your own serializer via the <code class="literal">valueSerializer</code> property of the <code class="literal">RedisMessageStore</code>.</p>
+<p>Starting with <span class="emphasis"><em>version 4.3.10</em></span>, the Framework provides Jackson Serializer and Deserializer implementations for <code class="literal">Message`s and `MessageHeaders</code> - <code class="literal">MessageHeadersJacksonSerializer</code> and <code class="literal">MessageJacksonDeserializer</code>, respectively.
+They have to be configured via the <code class="literal">SimpleModule</code> options for the <code class="literal">ObjectMapper</code>.
+In addition, <code class="literal">enableDefaultTyping</code> should be configured on the <code class="literal">ObjectMapper</code> to add type information for each serialized complex object.
+That type information is then used during deserialization.
+The Framework provides a utility method <code class="literal">JacksonJsonUtils.messagingAwareMapper()</code>, which is already supplied with all the above-mentioned properties and serializers.
+To manage JSON serialization in the <code class="literal">RedisMessageStore</code>, it must be configured like so:</p>
+<pre class="programlisting">RedisMessageStore store = <span class="hl-keyword">new</span> RedisMessageStore(jedisConnectionFactory);
+ObjectMapper mapper = JacksonJsonUtils.messagingAwareMapper();
+RedisSerializer&lt;Object&gt; serializer = <span class="hl-keyword">new</span> GenericJackson2JsonRedisSerializer(mapper);
+store.setValueSerializer(serializer);</pre>
+<p>Starting with version <span class="emphasis"><em>4.3.12</em></span>, the <code class="literal">RedisMessageStore</code> supports the key <code class="literal">prefix</code> option to allow distinguishing between instances of the store on the same Redis server.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="redis-cms" href="#redis-cms"></a>24.4.1&nbsp;Redis Channel Message Stores</h3></div></div></div>
+
+<p>The <code class="literal">RedisMessageStore</code> above maintains each group as a value under a single key (the group id).
+While this can be used to back a <code class="literal">QueueChannel</code> for persistence, a specialized <code class="literal">RedisChannelMessageStore</code> is provided for that purpose (since <span class="emphasis"><em>version 4.0</em></span>).
+This store uses a <code class="literal">LIST</code> for each channel and <code class="literal">LPUSH</code> when sending and <code class="literal">RPOP</code> when receiving messages.
+This store also uses JDK serialization by default, but the value serializer can be modified as described above.</p>
+<p>It is recommended that this store is used for backing channels, instead of the general <code class="literal">RedisMessageStore</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisMessageStore"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.redis.store.RedisChannelMessageStore"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"redisConnectionFactory"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"somePersistentQueueChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:queue</span> <span class="hl-attribute">message-store</span>=<span class="hl-value">"redisMessageStore"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int:channel&gt;</span></pre>
+<p>The keys that are used to store the data have the form <code class="literal">&lt;storeBeanName&gt;:&lt;channelId&gt;</code> (in the above example, <code class="literal">redisMessageStore:somePersistentQueueChannel</code>).</p>
+<p>In addition, a subclass <code class="literal">RedisChannelPriorityMessageStore</code> is also provided.
+When this is used with a <code class="literal">QueueChannel</code>, the messages are received in (FIFO within) priority order.
+It uses the standard <code class="literal">IntegrationMessageHeaderAccessor.PRIORITY</code> header and supports priority values <code class="literal">0 - 9</code>; messages with other priorities (and messages with no priority) are retrieved in FIFO order after any messages with priority.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>These stores implement only <code class="literal">BasicMessageGroupStore</code> and do not implement <code class="literal">MessageGroupStore</code>; they can only be used for situations such as backing a <code class="literal">QueueChannel</code>.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-metadata-store" href="#redis-metadata-store"></a>24.5&nbsp;Redis Metadata Store</h2></div></div></div>
+
+<p>As of <span class="emphasis"><em>Spring Integration 3.0</em></span> a new Redis-based <a class="ulink" href="http://docs.spring.io/spring-integration/docs/latest-ga/api/org/springframework/integration/metadata/MetadataStore.html" target="_top">MetadataStore</a> (<a class="xref" href="system-management-chapter.html#metadata-store" title="9.5&nbsp;Metadata Store">Section&nbsp;9.5, &#8220;Metadata Store&#8221;</a>) implementation is available.
+The <code class="literal">RedisMetadataStore</code> can be used to maintain state of a <code class="literal">MetadataStore</code> across application restarts.
+This new <code class="literal">MetadataStore</code> implementation can be used with adapters such as:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="xref" href="twitter.html#twitter-inbound" title="32.4&nbsp;Twitter Inbound Adapters">Section&nbsp;32.4, &#8220;Twitter Inbound Adapters&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="feed.html#feed-inbound-channel-adapter" title="13.2&nbsp;Feed Inbound Channel Adapter">Section&nbsp;13.2, &#8220;Feed Inbound Channel Adapter&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="files.html#file-reading" title="14.2&nbsp;Reading Files">Section&nbsp;14.2, &#8220;Reading Files&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="ftp.html#ftp-inbound" title="15.4&nbsp;FTP Inbound Channel Adapter">Section&nbsp;15.4, &#8220;FTP Inbound Channel Adapter&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="sftp.html#sftp-inbound" title="27.7&nbsp;SFTP Inbound Channel Adapter">Section&nbsp;27.7, &#8220;SFTP Inbound Channel Adapter&#8221;</a>
+</li></ul></div>
+<p>In order to instruct these adapters to use the new <code class="literal">RedisMetadataStore</code> simply declare a Spring bean using the bean name <span class="strong"><strong>metadataStore</strong></span>.
+The <span class="emphasis"><em>Twitter Inbound Channel Adapter</em></span> and the <span class="emphasis"><em>Feed Inbound Channel Adapter</em></span> will both automatically pick up and use the declared <code class="literal">RedisMetadataStore</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">name</span>=<span class="hl-value">"metadataStore"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.redis.store.metadata.RedisMetadataStore"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">name</span>=<span class="hl-value">"connectionFactory"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"redisConnectionFactory"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The <code class="literal">RedisMetadataStore</code> is backed by <a class="ulink" href="http://docs.spring.io/spring-data/data-redis/docs/current/api/org/springframework/data/redis/support/collections/RedisProperties.html" target="_top"><code class="literal">RedisProperties</code></a> and interaction with it uses <a class="ulink" href="http://docs.spring.io/spring-data/data-redis/docs/current/api/org/springframework/data/redis/core/BoundHashOperations.html" target="_top"><code class="literal">BoundHashOperations</code></a>, which, in turn, requires a <code class="literal">key</code> for the entire <code class="literal">Properties</code> store.
+In the case of the <code class="literal">MetadataStore</code>, this <code class="literal">key</code> plays the role of a <span class="emphasis"><em>region</em></span>, which is useful in distributed environment, when several applications use the same Redis server.
+By default this <code class="literal">key</code> has the value <code class="literal">MetaData</code>.</p>
+<p>Starting with <span class="emphasis"><em>version 4.0</em></span>, this store now implements <code class="literal">ConcurrentMetadataStore</code>, allowing it to be reliably shared across multiple application instances where only one instance will be allowed to store or modify a key&#8217;s value.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-store-inbound-channel-adapter" href="#redis-store-inbound-channel-adapter"></a>24.6&nbsp;RedisStore Inbound Channel Adapter</h2></div></div></div>
+
+<p>The <span class="emphasis"><em>RedisStore Inbound Channel Adapter</em></span> is a polling consumer that reads data from a Redis collection and sends it as a Message payload.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:store-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"listAdapter"</span>
+    <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"redisConnectionFactory"</span>
+    <span class="hl-attribute">key</span>=<span class="hl-value">"myCollection"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"redisChannel"</span>
+    <span class="hl-attribute">collection-type</span>=<span class="hl-value">"LIST"</span><span class="hl-tag"> &gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"2000"</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"10"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-redis:store-inbound-channel-adapter&gt;</span></pre>
+<p>As you can see from the configuration above you configure a <span class="emphasis"><em>Redis Store Inbound Channel Adapter</em></span> using the <code class="literal">store-inbound-channel-adapter</code> element, providing values for various attributes such as:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">key</code> or <code class="literal">key-expression</code> - The name of the key for the collection being used.
+</li><li class="listitem">
+<code class="literal">collection-type</code> - enumeration of the Collection types supported by this adapter.
+Supported Collections are: LIST, SET, ZSET, PROPERTIES, MAP
+</li><li class="listitem">
+<code class="literal">connection-factory</code> - reference to an instance of <code class="literal">o.s.data.redis.connection.RedisConnectionFactory</code>
+</li><li class="listitem">
+<code class="literal">redis-template</code> - reference to an instance of <code class="literal">o.s.data.redis.core.RedisTemplate</code>
+</li></ul></div>
+<p>and other attributes that are common across all other inbound adapters (e.g., <span class="emphasis"><em>channel</em></span>).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>You cannot set both <code class="literal">redis-template</code> and <code class="literal">connection-factory</code>.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>By default, the adapter uses a <code class="literal">StringRedisTemplate</code>; this uses <code class="literal">StringRedisSerializer</code> s for keys, values, hash keys and hash values.
+If your Redis store contains objects that are serialized with other techniques, you must supply a <code class="literal">RedisTemplate</code> configured with appropriate serializers.
+For example, if the store is written to using a RedisStore Outbound Adapter that has its <code class="literal">extract-payload-elements</code> set to false, you must provide a <code class="literal">RedisTemplate</code> configured thus:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisTemplate"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.data.redis.core.RedisTemplate"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"connectionFactory"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"redisConnectionFactory"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"keySerializer"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.data.redis.serializer.StringRedisSerializer"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"hashKeySerializer"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.data.redis.serializer.StringRedisSerializer"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>This uses String serializers for keys and hash keys and the default JDK Serialization serializers for values and hash values.</p>
+</td></tr></table></div>
+<p>The example above is relatively simple and static since it has a literal value for the <code class="literal">key</code>.
+Sometimes, you may need to change the value of the key at runtime based on some condition.
+To do that, simply use <code class="literal">key-expression</code> instead, where the provided expression can be any valid SpEL expression.</p>
+<p>Also, you may wish to perform some post-processing to the successfully processed data that was read from the Redis collection.
+For example; you may want to move or remove the value after its been processed.
+You can do this using the Transaction Synchronization feature that was added with Spring Integration 2.2.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:store-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"zsetAdapterWithSingleScoreAndSynchronization"</span>
+        <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"redisConnectionFactory"</span>
+        <span class="hl-attribute">key-expression</span>=<span class="hl-value">"'presidents'"</span>
+        <span class="hl-attribute">channel</span>=<span class="hl-value">"otherRedisChannel"</span>
+        <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span>
+        <span class="hl-attribute">collection-type</span>=<span class="hl-value">"ZSET"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"2"</span><span class="hl-tag">&gt;</span>
+                <span class="hl-tag">&lt;int:transactional</span> <span class="hl-attribute">synchronization-factory</span>=<span class="hl-value">"syncFactory"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;/int:poller&gt;</span>
+<span class="hl-tag">&lt;/int-redis:store-inbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;int:transaction-synchronization-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"syncFactory"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;int:after-commit</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.removeByScore(18, 18)"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:transaction-synchronization-factory&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"transactionManager"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.transaction.PseudoTransactionManager"</span><span class="hl-tag">/&gt;</span></pre>
+<p>As you can see from the above all, you need to do is declare your poller to be transactional with a <code class="literal">transactional</code> element.
+This element can reference a real transaction manager (for example if some other part of your flow invokes JDBC).
+If you don&#8217;t have a <span class="emphasis"><em>real</em></span> transaction, you can use a <code class="literal">o.s.i.transaction.PseudoTransactionManager</code> which is an implementation of Spring&#8217;s <code class="literal">PlatformTransactionManager</code> and enables the use of the transaction synchronization features of the redis adapter when there is no actual transaction.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>This does NOT make the Redis activities themselves transactional, it simply allows the synchronization of actions to be taken before/after success (commit) or after failure (rollback).</p>
+</td></tr></table></div>
+<p>Once your poller is transactional all you need to do is set an instance of the <code class="literal">o.s.i.transaction.TransactionSynchronizationFactory</code> on the <code class="literal">transactional</code> element.
+<code class="literal">TransactionSynchronizationFactory</code> will create an instance of the <code class="literal">TransactionSynchronization</code>.
+For your convenience we&#8217;ve exposed a default SpEL-based <code class="literal">TransactionSynchronizationFactory</code> which allows you to configure SpEL expressions, with their execution being coordinated (synchronized) with a transaction.
+Expressions for before-commit, after-commit, and after-rollback are supported, together with a channel for each where the evaluation result (if any) will be sent.
+For each sub-element you can specify <code class="literal">expression</code> and/or <code class="literal">channel</code> attributes.
+If only the <code class="literal">channel</code> attribute is present the received Message will be sent there as part of the particular synchronization scenario.
+If only the <code class="literal">expression</code> attribute is present and the result of an expression is a non-Null value, a Message with the result as the payload will be generated and sent to a default channel (NullChannel) and will appear in the logs (DEBUG).
+If you want the evaluation result to go to a specific channel add a <code class="literal">channel</code> attribute.
+If the result of an expression is null or void, no Message will be generated.</p>
+<p>For more information about transaction synchronization, see <a class="xref" href="transactions.html#transaction-synchronization" title="C.3&nbsp;Transaction Synchronization">Section&nbsp;C.3, &#8220;Transaction Synchronization&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-store-outbound-channel-adapter" href="#redis-store-outbound-channel-adapter"></a>24.7&nbsp;RedisStore Outbound Channel Adapter</h2></div></div></div>
+
+<p>The <span class="emphasis"><em>RedisStore Outbound Channel Adapter</em></span> allows you to write a Message payload to a Redis collection</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:store-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"redisListAdapter"</span>
+          <span class="hl-attribute">collection-type</span>=<span class="hl-value">"LIST"</span>
+          <span class="hl-attribute">channel</span>=<span class="hl-value">"requestChannel"</span>
+          <span class="hl-attribute">key</span>=<span class="hl-value">"myCollection"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>As you can see from the configuration above, you configure a <span class="emphasis"><em>Redis Store Outbound Channel Adapter</em></span> using the <code class="literal">store-inbound-channel-adapter</code> element, providing values for various attributes such as:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">key</code> or <code class="literal">key-expression</code> - The name of the key for the collection being used.
+</li><li class="listitem">
+<code class="literal">extract-payload-elements</code> - If set to <code class="literal">true</code> (Default) and the payload is an instance of a "multi- value" object (i.e., Collection or Map) it will be stored using addAll/ putAll semantics.
+Otherwise, if set to <code class="literal">false</code> the payload will be stored as a single entry regardless of its type.
+If the payload is not an instance of a "multi-value" object, the value of this attribute is ignored and the payload will always be stored as a single entry.
+</li><li class="listitem">
+<code class="literal">collection-type</code> - enumeration of the Collection types supported by this adapter.
+Supported Collections are: LIST, SET, ZSET, PROPERTIES, MAP
+</li><li class="listitem">
+<code class="literal">map-key-expression</code> - SpEL expression that returns the name of the key for entry being stored.
+Only applies if the <code class="literal">collection-type</code> is MAP or PROPERTIES and <span class="emphasis"><em>extract-payload-elements</em></span> is false.
+</li><li class="listitem">
+<code class="literal">connection-factory</code> - reference to an instance of <code class="literal">o.s.data.redis.connection.RedisConnectionFactory</code>
+</li><li class="listitem">
+<code class="literal">redis-template</code> - reference to an instance of <code class="literal">o.s.data.redis.core.RedisTemplate</code>
+</li></ul></div>
+<p>and other attributes that are common across all other inbound adapters (e.g., <span class="emphasis"><em>channel</em></span>).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>You cannot set both <code class="literal">redis-template</code> and <code class="literal">connection-factory</code>.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>By default, the adapter uses a <code class="literal">StringRedisTemplate</code>; this uses <code class="literal">StringRedisSerializer</code> s for keys, values, hash keys and hash values.
+However, if <code class="literal">extract-payload-elements</code> is set to false, a <code class="literal">RedisTemplate</code> using <code class="literal">StringRedisSerializer</code> s for keys and hash keys, and <code class="literal">JdkSerializationRedisSerializer</code> s for values and hash values will be used.
+With the JDK serializer, it is important to understand that java serialization is used for all values, regardless of whether the value is actually a collection or not.
+If you need more control over the serialization of values, you may want to consider providing your own <code class="literal">RedisTemplate</code> rather than relying upon these defaults.</p>
+</td></tr></table></div>
+<p>The example above is relatively simple and static since it has a literal values for the <code class="literal">key</code> and other attributes.
+Sometimes you may need to change the values dynamically at runtime based on some condition.
+To do that simply use their <code class="literal">-expression</code> equivalents (<code class="literal">key-expression</code>, <code class="literal">map-key-expression</code> etc.) where the provided expression can be any valid SpEL expression.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-outbound-gateway" href="#redis-outbound-gateway"></a>24.8&nbsp;Redis Outbound Command Gateway</h2></div></div></div>
+
+<p>Since <span class="emphasis"><em>Spring Integration 4.0</em></span>, the Redis Command Gateway is available to perform any standard Redis command using generic <code class="literal">RedisConnection#execute</code> method:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:outbound-gateway</span>
+        <span class="hl-attribute">request-channel</span>=<span class="hl-value">""</span>  <a name="CO43-1" href="#CO43-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+        reply-channel=""  <a name="CO43-2" href="#CO43-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+        requires-reply=""  <a name="CO43-3" href="#CO43-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+        reply-timeout=""  <a name="CO43-4" href="#CO43-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+        connection-factory=""  <a name="CO43-5" href="#CO43-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+        redis-template=""  <a name="CO43-6" href="#CO43-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+        arguments-serializer=""  <a name="CO43-7" href="#CO43-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+        command-expression=""  <a name="CO43-8" href="#CO43-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+        argument-expressions=""  <a name="CO43-9" href="#CO43-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+        use-command-variable=""  <a name="CO43-10" href="#CO43-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+        arguments-strategy="" /&gt; <a name="CO43-11" href="#CO43-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> from which this Endpoint receives <code class="literal">Message</code> s.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> where this Endpoint sends reply <code class="literal">Message</code> s.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify whether this outbound gateway must return a non-null value.
+This value is <code class="literal">true</code> by default.
+A ReplyRequiredException will be thrown when the Redis returns a <code class="literal">null</code> value.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The timeout in milliseconds to wait until the reply message will be sent or not.
+Typically is applied for queue-based limited reply-channels.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">RedisConnectionFactory</code> bean.
+Defaults to <code class="literal">redisConnectionFactory</code>.
+Mutually exclusive with <span class="emphasis"><em>redis-template</em></span> attribute.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">RedisTemplate</code> bean.
+Mutually exclusive with <span class="emphasis"><em>connection-factory</em></span> attribute.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Reference to an instance of <code class="literal">org.springframework.data.redis.serializer.RedisSerializer</code>.
+Used to serialize each command argument to byte[] if necessary.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The SpEL expression that returns the command key.
+Default is the <code class="literal">redis_command</code> message header.
+Must not evaluate to <code class="literal">null</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Comma-separate SpEL expressions that will be evaluated as command arguments.
+Mutually exclusive with the <code class="literal">arguments-strategy</code> attribute.
+If neither of them is provided the <code class="literal">payload</code> is used as the command argument(s).
+Argument expressions may evaluate to <span class="emphasis"><em>null</em></span>, to support a variable number of arguments.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A <code class="literal">boolean</code> flag to specify if the evaluated Redis command string will be made available as the <code class="literal">#cmd</code> variable in the expression evaluation context in the <code class="literal">o.s.i.redis.outbound.ExpressionArgumentsStrategy</code> when <code class="literal">argument-expressions</code> is configured, otherwise this attribute is ignored.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO43-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Reference to an instance of <code class="literal">o.s.i.redis.outbound.ArgumentsStrategy</code>.
+Mutually exclusive with <code class="literal">argument-expressions</code> attribute.
+If neither of them is provided the <code class="literal">payload</code> is used as the command argument(s).</p>
+</td></tr></table></div>
+<p>The <code class="literal">&lt;int-redis:outbound-gateway&gt;</code> can be used as a common component to perform any desired Redis operation.
+For example to get incremented value from Redis Atomic Number:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requestChannel"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"replyChannel"</span>
+    <span class="hl-attribute">command-expression</span>=<span class="hl-value">"'INCR'"</span><span class="hl-tag">/&gt;</span></pre>
+<p>where the Message <code class="literal">payload</code> should be a name of <code class="literal">redisCounter</code>, which may be provided by <code class="literal">org.springframework.data.redis.support.atomic.RedisAtomicInteger</code> bean definition.</p>
+<p>The <code class="literal">RedisConnection#execute</code> has a generic <code class="literal">Object</code> as return type and real result depends on command type, for example <code class="literal">MGET</code> returns a <code class="literal">List&lt;byte[]&gt;</code>.
+For more information about commands, their arguments and result type seehttp://redis.io/commands[Redis Specification].</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-queue-outbound-gateway" href="#redis-queue-outbound-gateway"></a>24.9&nbsp;Redis Queue Outbound Gateway</h2></div></div></div>
+
+<p>Since <span class="emphasis"><em>Spring Integration 4.1</em></span>, the Redis Queue Outbound Gateway is available to perform request and reply scenarios.
+It pushes a <span class="emphasis"><em>conversation</em></span>`UUID` to the provided <code class="literal">queue</code>, then pushes the value to a Redis List with that <code class="literal">UUID</code> as its key and waits for the reply from a Redis List with a key of <code class="literal">UUID + '.reply'</code>.
+A different UUID is used for each interaction.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:queue-outbound-gateway</span>
+        <span class="hl-attribute">request-channel</span>=<span class="hl-value">""</span>  <a name="CO44-1" href="#CO44-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+        reply-channel=""  <a name="CO44-2" href="#CO44-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+        requires-reply=""  <a name="CO44-3" href="#CO44-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+        reply-timeout=""  <a name="CO44-4" href="#CO44-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+        connection-factory=""  <a name="CO44-5" href="#CO44-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+        queue=""  <a name="CO44-6" href="#CO44-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+        order=""  <a name="CO44-7" href="#CO44-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+        serializer=""  <a name="CO44-8" href="#CO44-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+        extract-payload=""/&gt;  <a name="CO44-9" href="#CO44-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO44-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> from which this Endpoint receives <code class="literal">Message</code> s.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO44-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> where this Endpoint sends reply <code class="literal">Message</code> s.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO44-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify whether this outbound gateway must return a non-null value.
+This value is <code class="literal">false</code> by default, otherwise a ReplyRequiredException will be thrown when the Redis returns a <code class="literal">null</code> value.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO44-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The timeout in milliseconds to wait until the reply message will be sent or not.
+Typically is applied for queue-based limited reply-channels.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO44-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">RedisConnectionFactory</code> bean.
+Defaults to <code class="literal">redisConnectionFactory</code>.
+Mutually exclusive with <span class="emphasis"><em>redis-template</em></span> attribute.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO44-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of the Redis List to which outbound gateway will send a <span class="emphasis"><em>conversation</em></span>`UUID`.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO44-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The order for this outbound gateway when multiple gateway are registered thereby</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO44-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">RedisSerializer</code> bean reference.
+Can be an empty string, which means <span class="emphasis"><em>no serializer</em></span>.
+In this case the raw <code class="literal">byte[]</code> from the inbound Redis message is sent to the <code class="literal">channel</code> as the <code class="literal">Message</code> payload.
+By default it is a <code class="literal">JdkSerializationRedisSerializer</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO44-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify if this Endpoint expects data from the Redis queue to contain entire <code class="literal">Message</code> s.
+If this attribute is set to <code class="literal">true</code>, the <code class="literal">serializer</code> can&#8217;t be an empty string because messages require some form of deserialization (JDK serialization by default).</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-queue-inbound-gateway" href="#redis-queue-inbound-gateway"></a>24.10&nbsp;Redis Queue Inbound Gateway</h2></div></div></div>
+
+<p>Since <span class="emphasis"><em>Spring Integration 4.1</em></span>, the Redis Queue Inbound Gateway is available to perform request and reply scenarios.
+It pops a <span class="emphasis"><em>conversation</em></span> <code class="literal">UUID</code> from the provided <code class="literal">queue</code>, then pops the value from the Redis List with that <code class="literal">UUID</code> as its key and pushes the reply to the Redis List with a key of <code class="literal">UUID + '.reply'</code>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-redis:queue-inbound-gateway</span>
+        <span class="hl-attribute">request-channel</span>=<span class="hl-value">""</span>  <a name="CO45-1" href="#CO45-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+        reply-channel=""  <a name="CO45-2" href="#CO45-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+        executor=""  <a name="CO45-3" href="#CO45-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+        reply-timeout=""  <a name="CO45-4" href="#CO45-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+        connection-factory=""  <a name="CO45-5" href="#CO45-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+        queue=""  <a name="CO45-6" href="#CO45-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+        order=""  <a name="CO45-7" href="#CO45-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+        serializer=""  <a name="CO45-8" href="#CO45-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+        receive-timeout=""  <a name="CO45-9" href="#CO45-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+        expect-message=""  <a name="CO45-10" href="#CO45-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+        recovery-interval=""/&gt;  <a name="CO45-11" href="#CO45-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> from which this Endpoint receives <code class="literal">Message</code> s.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageChannel</code> where this Endpoint sends reply <code class="literal">Message</code> s.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a Spring <code class="literal">TaskExecutor</code> (or standard JDK 1.5+ <code class="literal">Executor</code>) bean.
+It is used for the underlying listening task.
+By default a <code class="literal">SimpleAsyncTaskExecutor</code> is used.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The timeout in milliseconds to wait until the reply message will be sent or not.
+Typically is applied for queue-based limited reply-channels.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">RedisConnectionFactory</code> bean.
+Defaults to <code class="literal">redisConnectionFactory</code>.
+Mutually exclusive with <span class="emphasis"><em>redis-template</em></span> attribute.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of the Redis List for the <span class="emphasis"><em>conversation</em></span> <code class="literal">UUID</code> s.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The order for this inbound gateway when multiple gateway are registered thereby</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">RedisSerializer</code> bean reference.
+Can be an empty string, which means <span class="emphasis"><em>no serializer</em></span>.
+In this case the raw <code class="literal">byte[]</code> from the inbound Redis message is sent to the <code class="literal">channel</code> as the <code class="literal">Message</code> payload.
+By default it is a <code class="literal">JdkSerializationRedisSerializer</code>. (Note that in releases before <span class="emphasis"><em>version 4.3</em></span>, it was a
+<code class="literal">StringRedisSerializer</code> by default; to restore that behavior provide a reference to a <code class="literal">StringRedisSerializer</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The timeout in milliseconds to wait until the receive message will be get or not.
+Typically is applied for queue-based limited request-channels.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify if this Endpoint expects data from the Redis queue to contain entire <code class="literal">Message</code> s.
+If this attribute is set to <code class="literal">true</code>, the <code class="literal">serializer</code> can&#8217;t be an empty string because messages require some form of deserialization (JDK serialization by default).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO45-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The time in milliseconds for which the listener task should sleep after exceptions on the <span class="emphasis"><em>right pop</em></span> operation,
+before restarting the listener task.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="redis-lock-registry" href="#redis-lock-registry"></a>24.11&nbsp;Redis Lock Registry</h2></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.0</em></span>, the <code class="literal">RedisLockRegistry</code> is available.
+Certain components (for example aggregator and resequencer) use a lock obtained from a <code class="literal">LockRegistry</code> instance to ensure that only one thread is manipulating a group at a time.
+The <code class="literal">DefaultLockRegistry</code> performs this function within a single component; you can now configure an external lock registry on these components.
+When used with a shared <code class="literal">MessageGroupStore</code>, the <code class="literal">RedisLockRegistry</code> can be use to provide this functionality across multiple application instances, such that only one instance can manipulate the group at a time.</p>
+<p>When a lock is released by a local thread, another local thread will generally be able to acquire the lock immediately.
+If a lock is released by a thread using a different registry instance, it can take up to 100ms to acquire the lock.</p>
+<p>To avoid "hung" locks (when a server fails), the locks in this registry are expired after a default 60 seconds, but this can be configured on the registry.
+Locks are normally held for a much smaller time.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Because the keys can expire, an attempt to unlock an expired lock will result in an exception being thrown.
+However, be aware that the resources protected by such a lock may have been compromised so such exceptions should be considered severe.
+The expiry should be set at a large enough value to prevent this condition, while small enough that the lock can be recovered after a server failure in a reasonable amount of time.</p>
+</td></tr></table></div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="mqtt.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="resource.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">23.&nbsp;MQTT Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;25.&nbsp;Resource Support</td></tr></table></div></body></html>

@@ -1,0 +1,248 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>32.&nbsp;Twitter Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="ip.html" title="31.&nbsp;TCP and UDP Support"><link rel="next" href="web-sockets.html" title="33.&nbsp;WebSockets Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">32.&nbsp;Twitter Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ip.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="web-sockets.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="twitter" href="#twitter"></a>32.&nbsp;Twitter Support</h2></div></div></div>
+
+<p>Spring Integration provides support for interacting with Twitter.
+With the Twitter adapters you can both receive and send Twitter messages.
+You can also perform a Twitter search based on a schedule and publish the search results within Messages.
+Since <span class="emphasis"><em>version 4.0</em></span>, a search outbound gateway is provided to perform dynamic searches.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="twitter-intro" href="#twitter-intro"></a>32.1&nbsp;Introduction</h2></div></div></div>
+
+<p>Twitter is a social networking and micro-blogging service that enables its users to send and read messages known as tweets.
+Tweets are text-based posts of up to 140 characters displayed on the author&#8217;s profile page and delivered to the author&#8217;s subscribers who are known as followers.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Versions of Spring Integration prior to 2.1 were dependent upon the <a class="ulink" href="http://twitter4j.org" target="_top">Twitter4J API</a>, but with the release of <a class="ulink" href="http://projects.spring.io/spring-social" target="_top">Spring Social 1.0 GA</a>, Spring Integration, as of version 2.1, now builds directly upon Spring Social&#8217;s Twitter support, instead of Twitter4J.
+All Twitter endpoints require the configuration of a <code class="literal">TwitterTemplate</code> because even search operations require an authenticated template.</p>
+</td></tr></table></div>
+<p>Spring Integration provides a convenient namespace configuration to define Twitter artifacts.
+You can enable it by adding the following within your XML header.</p>
+<pre class="programlisting">xmlns:int-twitter="http://www.springframework.org/schema/integration/twitter"
+xsi:schemaLocation="http://www.springframework.org/schema/integration/twitter
+http://www.springframework.org/schema/integration/twitter/spring-integration-twitter.xsd"</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="twitter-oauth" href="#twitter-oauth"></a>32.2&nbsp;Twitter OAuth Configuration</h2></div></div></div>
+
+<p>For authenticated operations, Twitter uses OAuth - an authentication protocol that allows users to approve an application to act on their behalf without sharing their password.
+More information can be found at <a class="ulink" href="http://oauth.net" target="_top">http://oauth.net</a> or in this article <a class="ulink" href="http://hueniverse.com/oauth" target="_top">http://hueniverse.com/oauth</a> from Hueniverse.
+Please also see <a class="ulink" href="http://dev.twitter.com/pages/oauth_faq" target="_top">OAuth FAQ</a> for more information about OAuth and Twitter.</p>
+<p>In order to use OAuth authentication/authorization with Twitter you must create a new Application on the Twitter Developers site.
+Follow the directions below to create a new application and obtain consumer keys and an access token:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Go to <a class="ulink" href="http://dev.twitter.com" target="_top">http://dev.twitter.com</a>
+</li><li class="listitem">
+Click on the <code class="literal">Register an app</code> link and fill out all required fields on the form provided; set <code class="literal">Application Type</code> to <code class="literal">Client</code> and depending on the nature of your application select <code class="literal">Default Access Type</code> as <span class="emphasis"><em>Read &amp; Write</em></span> or <span class="emphasis"><em>Read-only</em></span> and Submit the form.
+If everything is successful you&#8217;ll be presented with the <code class="literal">Consumer Key</code> and <code class="literal">Consumer Secret</code>.
+Copy both values in a safe place.
+</li><li class="listitem">
+On the same page you should see a <code class="literal">My Access Token</code> button on the side bar (right).
+Click on it and you&#8217;ll be presented with two more values: <code class="literal">Access Token</code> and <code class="literal">Access Token Secret</code>.
+Copy these values in a safe place as well.
+</li></ul></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="_twitter_template" href="#_twitter_template"></a>32.3&nbsp;Twitter Template</h2></div></div></div>
+
+<p>As mentioned above, Spring Integration relies upon Spring Social, and that library provides an implementation of the template pattern, <code class="literal">o.s.social.twitter.api.impl.TwitterTemplate</code> to interact with Twitter.
+For anonymous operations (e.g., search), you don&#8217;t have to define an instance of <code class="literal">TwitterTemplate</code> explicitly, since a default instance will be created and injected into the endpoint.
+However, for authenticated operations (update status, send direct message, etc.), you must configure a <code class="literal">TwitterTemplate</code> as a bean and inject it explicitly into the endpoint, because the authentication configuration is required.
+Below is a sample configuration of TwitterTemplate:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"twitterTemplate"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.social.twitter.api.impl.TwitterTemplate"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"4XzBPacJQxyBzzzH"</span><span class="hl-tag">/&gt;</span>
+	<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"AbRxUAvyCtqQtvxFK8w5ZMtMj20KFhB6o"</span><span class="hl-tag">/&gt;</span>
+	<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"21691649-4YZY5iJEOfz2A9qCFd9SjBRGb3HLmIm4HNE"</span><span class="hl-tag">/&gt;</span>
+	<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"AbRxUAvyNCtqQtxFK8w5ZMtMj20KFhB6o"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The values above are not real.</p>
+</td></tr></table></div>
+<pre class="literallayout"> As you can see from the configuration above, all we need to do is to provide OAuth `attributes` as constructor arguments.
+The values would be those you obtained in the previous step.
+The order of constructor arguments is: 1) `consumerKey`, 2) `consumerSecret`, 3) `accessToken`, and 4) `accessTokenSecret`.</pre>
+<p>A more practical way to manage OAuth connection attributes would be via Spring&#8217;s property placeholder support by simply creating a property file (e.g., oauth.properties):</p>
+<pre class="programlisting">twitter.oauth.consumerKey=4XzBPacJQxyBzzzH
+twitter.oauth.consumerSecret=AbRxUAvyCtqQtvxFK8w5ZMtMj20KFhB6o
+twitter.oauth.accessToken=<span class="hl-number">21691649</span>-4YZY5iJEOfz2A9qCFd9SjBRGb3HLmIm4HNE
+twitter.oauth.accessTokenSecret=AbRxUAvyNCtqQtxFK8w5ZMtMj20KFhB6o</pre>
+<p>Then, you can configure a <code class="literal">property-placeholder</code> to point to the above property file:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;context:property-placeholder</span> <span class="hl-attribute">location</span>=<span class="hl-value">"classpath:oauth.properties"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"twitterTemplate"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.social.twitter.api.impl.TwitterTemplate"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${twitter.oauth.consumerKey}"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${twitter.oauth.consumerSecret}"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${twitter.oauth.accessToken}"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${twitter.oauth.accessTokenSecret}"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="twitter-inbound" href="#twitter-inbound"></a>32.4&nbsp;Twitter Inbound Adapters</h2></div></div></div>
+
+<p>Twitter inbound adapters allow you to receive Twitter Messages.
+There are several types of <a class="ulink" href="http://support.twitter.com/articles/119138-types-of-tweets-and-where-they-appear" target="_top">twitter messages, or tweets</a></p>
+<p><span class="emphasis"><em>Spring Integration version 2.0 and above</em></span> provides support for receiving tweets as <span class="emphasis"><em>Timeline Updates</em></span>, <span class="emphasis"><em>Direct Messages</em></span>, <span class="emphasis"><em>Mention Messages</em></span> as well as Search Results.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Every Inbound Twitter Channel Adapter is a <span class="emphasis"><em>Polling Consumer</em></span> which means you have to provide a poller configuration.
+Twitter defines a concept of Rate Limiting.
+You can read more about it here: <a class="ulink" href="https://dev.twitter.com/docs/rate-limiting/1.1" target="_top">Rate Limiting</a>.
+In a nutshell, Rate Limiting is a mechanism that Twitter uses to manage how often an application can poll for updates.
+You should consider this when setting your poller intervals so that the adapter polls in compliance with the Twitter policies.</p>
+<p>With Spring Integration prior to <span class="emphasis"><em>version 3.0</em></span>, a hard-coded limit within the adapters was used to ensure the polling interval could not be less than 15 seconds.
+This is no longer the case and the poller configuration is applied directly.</p>
+</td></tr></table></div>
+<p>Another issue that we need to worry about is handling duplicate Tweets.
+The same adapter (e.g., Search or Timeline Update) while polling on Twitter may receive the same values more than once.
+For example if you keep searching on Twitter with the same search criteria you&#8217;ll end up with the same set of tweets unless some other new tweet that matches your search criteria was posted in between your searches.
+In that situation you&#8217;ll get all the tweets you had before plus the new one.
+But what you really want is only the new tweet(s).
+Spring Integration provides an elegant mechanism for handling these situations.
+The latest Tweet id will be stored in an instance of the <code class="literal">org.springframework.integration.metadata.MetadataStore</code> strategy (e.g.
+last retrieved tweet in this case).
+For more information see <a class="xref" href="system-management-chapter.html#metadata-store" title="9.5&nbsp;Metadata Store">Section&nbsp;9.5, &#8220;Metadata Store&#8221;</a>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The key used to persist the latest <span class="emphasis"><em>twitter id</em></span> is the value of the (required) <code class="literal">id</code> attribute of the Twitter Inbound Channel Adapter component plus the <code class="literal">profileId</code> of the Twitter user.</p>
+</td></tr></table></div>
+<p>Prior to <span class="emphasis"><em>version 4.0</em></span>, the page size was hard-coded to 20.
+This is now configurable using the <code class="literal">page-size</code> attribute (defaults to 20).</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="inbound-twitter-update" href="#inbound-twitter-update"></a>32.4.1&nbsp;Inbound Message Channel Adapter</h3></div></div></div>
+
+<p>This adapter allows you to receive updates from everyone you follow.
+It&#8217;s essentially the "Timeline Update" adapter.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-twitter:inbound-channel-adapter</span>
+  		<span class="hl-attribute">twitter-template</span>=<span class="hl-value">"twitterTemplate"</span>
+  		<span class="hl-attribute">channel</span>=<span class="hl-value">"inChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"5000"</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"3"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-twitter:inbound-channel-adapter&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="inbound-twitter-direct" href="#inbound-twitter-direct"></a>32.4.2&nbsp;Direct Inbound Message Channel Adapter</h3></div></div></div>
+
+<p>This adapter allows you to receive Direct Messages that were sent to you from other Twitter users.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-twitter:dm-inbound-channel-adapter</span>
+  		<span class="hl-attribute">twitter-template</span>=<span class="hl-value">"twiterTemplate"</span>
+  		<span class="hl-attribute">channel</span>=<span class="hl-value">"inboundDmChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"5000"</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"3"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-twitter:dm-inbound-channel-adapter&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="inbound-twitter-mention" href="#inbound-twitter-mention"></a>32.4.3&nbsp;Mentions Inbound Message Channel Adapter</h3></div></div></div>
+
+<p>This adapter allows you to receive Twitter Messages that Mention you via @user syntax.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-twitter:mentions-inbound-channel-adapter</span>
+  		<span class="hl-attribute">twitter-template</span>=<span class="hl-value">"twiterTemplate"</span>
+		<span class="hl-attribute">channel</span>=<span class="hl-value">"inboundMentionsChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"5000"</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"3"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-twitter:mentions-inbound-channel-adapter&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="inbound-twitter-search" href="#inbound-twitter-search"></a>32.4.4&nbsp;Search Inbound Message Channel Adapter</h3></div></div></div>
+
+<p>This adapter allows you to perform searches.
+As you can see it is not necessary to define twitter-template since a search can be performed anonymously, however you must define a search query.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-twitter:search-inbound-channel-adapter</span>
+  		<span class="hl-attribute">query</span>=<span class="hl-value">"#springintegration"</span>
+		<span class="hl-attribute">channel</span>=<span class="hl-value">"inboundMentionsChannel"</span><span class="hl-tag">&gt;</span>
+     <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"5000"</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"3"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-twitter:search-inbound-channel-adapter&gt;</span></pre>
+<p>Refer to <a class="ulink" href="https://dev.twitter.com/docs/using-search" target="_top">https://dev.twitter.com/docs/using-search</a> to learn more about Twitter queries.</p>
+<p>As you can see the configuration of all of these adapters is very similar to other inbound adapters with one exception.
+Some may need to be injected with the <code class="literal">twitter-template</code>.
+Once received each Twitter Message would be encapsulated in a Spring Integration Message and sent to the channel specified by the <code class="literal">channel</code> attribute.
+Currently the Payload type of any Message is <code class="literal">org.springframework.integration.twitter.core.Tweet</code> which is very similar to the object with the same name in Spring Social.
+As we migrate to Spring Social we&#8217;ll be depending on their API and some of the artifacts that are currently in use will be obsolete, however we&#8217;ve already made sure that the impact of such migration is minimal by aligning our API with the current state (at the time of writing) of Spring Social.</p>
+<p>To get the text from the <code class="literal">org.springframework.social.twitter.api.Tweet</code> simply invoke the <code class="literal">getText()</code> method.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="twitter-outbound" href="#twitter-outbound"></a>32.5&nbsp;Twitter Outbound Adapter</h2></div></div></div>
+
+<p>Twitter outbound channel adapters allow you to send Twitter Messages, or tweets.</p>
+<p><span class="emphasis"><em>Spring Integration version 2.0 and above</em></span> supports sending <span class="emphasis"><em>Status Update Messages</em></span> and <span class="emphasis"><em>Direct Messages</em></span>.
+Twitter outbound channel adapters will take the Message payload and send it as a Twitter message.
+Currently the only supported payload type is`String`, so consider adding a <span class="emphasis"><em>transformer</em></span> if the payload of the incoming message is not a String.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="outbound-twitter-update" href="#outbound-twitter-update"></a>32.5.1&nbsp;Twitter Outbound Update Channel Adapter</h3></div></div></div>
+
+<p>This adapter allows you to send regular status updates by simply sending a Message to the channel identified by the <code class="literal">channel</code> attribute.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-twitter:outbound-channel-adapter</span>
+  		<span class="hl-attribute">twitter-template</span>=<span class="hl-value">"twitterTemplate"</span>
+  		<span class="hl-attribute">channel</span>=<span class="hl-value">"twitterChannel"</span><span class="hl-tag">/&gt;</span></pre>
+<pre class="literallayout">The only extra configuration that is required for this adapter is the `twitter-template` reference.</pre>
+<p>Starting with <span class="emphasis"><em>version 4.0</em></span> the <code class="literal">&lt;int-twitter:outbound-channel-adapter&gt;</code> supports a <code class="literal">tweet-data-expression</code> to populate the <code class="literal">TweetData</code> argument (<a class="ulink" href="http://projects.spring.io/spring-social-twitter/" target="_top">Spring Social Twitter</a>) using the message as the root object of the expression evaluation context.
+The result can be a <code class="literal">String</code>, which will be used for the <code class="literal">TweetData</code> message; a <code class="literal">Tweet</code> object, the <code class="literal">text</code> of which will be used for the <code class="literal">TweetData</code> message; or an entire <code class="literal">TweetData</code> object.
+For convenience, the <code class="literal">TweetData</code> can be built from the expression directly without needing a fully qualified class name:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-twitter:outbound-channel-adapter</span>
+    <span class="hl-attribute">twitter-template</span>=<span class="hl-value">"twitterTemplate"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"twitterChannel"</span>
+    <span class="hl-attribute">tweet-data-expression</span>=<span class="hl-value">"new TweetData(payload).withMedia(headers.media).displayCoordinates(true)/&gt;</span></pre>
+<p>This allows, for example, attaching an image to the tweet.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="outbound-twitter-direct" href="#outbound-twitter-direct"></a>32.5.2&nbsp;Twitter Outbound Direct Message Channel Adapter</h3></div></div></div>
+
+<p>This adapter allows you to send Direct Twitter Messages (i.e., @user) by simply sending a Message to the channel identified by the <code class="literal">channel</code> attribute.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-twitter:dm-outbound-channel-adapter</span>
+  		<span class="hl-attribute">twitter-template</span>=<span class="hl-value">"twitterTemplate"</span>
+  		<span class="hl-attribute">channel</span>=<span class="hl-value">"twitterChannel"</span><span class="hl-tag">/&gt;</span></pre>
+<pre class="literallayout">The only extra configuration that is required for this adapter is the `twitter-template` reference.</pre>
+<p>When it comes to Twitter Direct Messages, you must specify who you are sending the message to - the <span class="emphasis"><em>target userid</em></span>.
+The Twitter Outbound Direct Message Channel Adapter will look for a target userid in the Message headers under the name <code class="literal">twitter_dmTargetUserId</code> which is also identified by the following constant: <code class="literal">TwitterHeaders.DM_TARGET_USER_ID</code>.
+So when creating a Message all you need to do is add a value for that header.</p>
+<pre class="programlisting">Message message = MessageBuilder.withPayload(<span class="hl-string">"hello"</span>)
+        .setHeader(TwitterHeaders.DM_TARGET_USER_ID, <span class="hl-string">"z_oleg"</span>).build();</pre>
+<p>The above approach works well if you are creating the Message programmatically.
+However it&#8217;s more common to provide the header value within a messaging flow.
+The value can be provided by an upstream &lt;header-enricher&gt;.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-enricher</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"twitter_dmTargetUserId"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"z_oleg"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span></pre>
+<p>It&#8217;s quite common that the value must be determined dynamically.
+For those cases you can take advantage of SpEL support within the &lt;header-enricher&gt;.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:header-enricher</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"twitter_dmTargetUserId"</span>
+        <span class="hl-attribute">expression</span>=<span class="hl-value">"@twitterIdService.lookup(headers.username)"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:header-enricher&gt;</span></pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Twitter does not allow you to post duplicate Messages.
+This is a common problem during testing when the same code works the first time but does not work the second time.
+So, make sure to change the content of the Message each time.
+Another thing that works well for testing is to append a timestamp to the end of each message.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="twitter-sog" href="#twitter-sog"></a>32.6&nbsp;Twitter Search Outbound Gateway</h2></div></div></div>
+
+<p>In Spring Integration, an outbound gateway is used for two-way request/response communication with an external service.
+The Twitter Search Outbound Gateway allows you to issue dynamic twitter searches.
+The reply message payload is a collection of <code class="literal">Tweet</code> objects.
+If the search returns no results, the payload is an empty collection.
+You can limit the number of tweets and you can page through a larger set of tweets by making multiple calls.
+To facilitate this, search reply messages contain a header <code class="literal">twitter_searchMetadata</code> with its value being a <code class="literal">SearchMetadata</code> object.
+For more information on the <code class="literal">Tweet</code>, <code class="literal">SearchParameters</code> and <code class="literal">SearchMetadata</code> classes, refer to the <a class="ulink" href="http://projects.spring.io/spring-social-twitter/" target="_top">Spring Social Twitter</a> documentation.</p>
+<p><span class="strong"><strong>Configuring the Outbound Gateway</strong></span></p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-twitter:search-outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"twitter"</span>
+	<span class="hl-attribute">request-channel</span>=<span class="hl-value">"in"</span>  <a name="CO49-1" href="#CO49-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+	twitter-template="twitterTemplate"  <a name="CO49-2" href="#CO49-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+	search-args-expression="payload"  <a name="CO49-3" href="#CO49-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+	reply-channel="out"  <a name="CO49-4" href="#CO49-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+	reply-timeout="123"  <a name="CO49-5" href="#CO49-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+	order="1"  <a name="CO49-6" href="#CO49-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+	auto-startup="false"  <a name="CO49-7" href="#CO49-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+	phase="100" /&gt; <a name="CO49-8" href="#CO49-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO49-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel used to send search requests to this gateway.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO49-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">TwitterTemplate</code> with authentication configuration.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO49-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A SpEL expression that evaluates to argument(s) for the search.
+Default: <span class="strong"><strong>"payload"</strong></span> - in which case the payload can be a <code class="literal">String</code> (e.g "#springintegration") and the gateway limits the query to 20 tweets, or the payload can be a <code class="literal">SearchParameters</code> object.
+The expression can also be specified as a <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/expressions.html#expressions-inline-lists" target="_top">SpEL List</a>.
+The first element (String) is the query, the remaining elements (Numbers) are <code class="literal">pageSize, sinceId, maxId</code> respectively - refer to the Spring Social Twitter documentation for more information about these parameters.
+When specifying a <code class="literal">SearchParameters</code> object directly in the SpEL expression, you do not have to fully qualify the class name.
+Some examples:
+<code class="literal">new SearchParameters(payload).count(5).sinceId(headers.sinceId)</code>
+<code class="literal">{payload, 30}</code>
+<code class="literal">{payload, headers.pageSize, headers.sinceId, headers.maxId}</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO49-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which to send the reply; if omitted, the <code class="literal">replyChannel</code> header is used.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO49-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The timeout when sending the reply message to the reply channel; only applies if the reply channel can block, for example a bounded queue channel that is full.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO49-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When subscribed to a publish/subscribe channel, the order in which this endpoint will be invoked.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO49-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">SmartLifecycle</code> method.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO49-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">SmartLifecycle</code> method.</p>
+</td></tr></table></div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ip.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="web-sockets.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">31.&nbsp;TCP and UDP Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;33.&nbsp;WebSockets Support</td></tr></table></div></body></html>

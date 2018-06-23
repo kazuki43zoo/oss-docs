@@ -1,0 +1,686 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>17.&nbsp;HTTP Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="gemfire.html" title="16.&nbsp;GemFire Support"><link rel="next" href="jdbc.html" title="18.&nbsp;JDBC Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">17.&nbsp;HTTP Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="gemfire.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="jdbc.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="http" href="#http"></a>17.&nbsp;HTTP Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="http-intro" href="#http-intro"></a>17.1&nbsp;Introduction</h2></div></div></div>
+
+<p>The HTTP support allows for the execution of HTTP requests and the processing of inbound HTTP requests.
+Because interaction over HTTP is always synchronous, even if all that is returned is a 200 status code, the HTTP support consists of two gateway implementations: <code class="literal">HttpInboundEndpoint</code> and <code class="literal">HttpRequestExecutingMessageHandler</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="http-inbound" href="#http-inbound"></a>17.2&nbsp;Http Inbound Components</h2></div></div></div>
+
+<p>To receive messages over HTTP, you need to use an <span class="emphasis"><em>HTTP Inbound
+		Channel Adapter</em></span> or <span class="emphasis"><em>Gateway</em></span>.
+To support the <span class="emphasis"><em>HTTP Inbound Adapters</em></span>, they need to be deployed within a servlet container such as <a class="ulink" href="http://tomcat.apache.org/" target="_top">Apache Tomcat</a> or <a class="ulink" href="http://www.eclipse.org/jetty/" target="_top">Jetty</a>.
+The easiest way to do this is to use Spring&#8217;s
+<a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/web/context/support/HttpRequestHandlerServlet.html" target="_top">HttpRequestHandlerServlet</a>,
+ by providing the following servlet definition in the <span class="emphasis"><em>web.xml</em></span> file:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;servlet&gt;</span>
+    <span class="hl-tag">&lt;servlet-name&gt;</span>inboundGateway<span class="hl-tag">&lt;/servlet-name&gt;</span>
+    <span class="hl-tag">&lt;servlet-class&gt;</span>o.s.web.context.support.HttpRequestHandlerServlet<span class="hl-tag">&lt;/servlet-class&gt;</span>
+<span class="hl-tag">&lt;/servlet&gt;</span></pre>
+<p>Notice that the servlet name matches the bean name.
+For more information on using the <code class="literal">HttpRequestHandlerServlet</code>, see chapter
+<a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/remoting.html" target="_top">Remoting and web services using Spring</a>,
+which is part of the Spring Framework Reference documentation.</p>
+<p>If you are running within a Spring MVC application, then the aforementioned explicit servlet definition is not necessary.
+In that case, the bean name for your gateway can be matched against the URL path just like a Spring MVC Controller bean.
+For more information, please see the chapter
+<a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/mvc.html" target="_top">Web MVC framework</a>, which is part of the Spring Framework Reference documentation.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>For a sample application and the corresponding configuration, please see the <a class="ulink" href="https://github.com/spring-projects/spring-integration-samples" target="_top">Spring Integration Samples</a> repository.
+It contains the <a class="ulink" href="https://github.com/spring-projects/spring-integration-samples/tree/master/basic/http" target="_top">Http Sample</a> application demonstrating Spring Integration&#8217;s HTTP support.</p>
+</td></tr></table></div>
+<p>Below is an example bean definition for a simple HTTP inbound endpoint.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpInbound"</span>
+  <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.http.inbound.HttpRequestHandlingMessagingGateway"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"requestChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"httpRequestChannel"</span><span class="hl-tag"> /&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"replyChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"httpReplyChannel"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The <code class="literal">HttpRequestHandlingMessagingGateway</code> accepts a list of <code class="literal">HttpMessageConverter</code> instances or else relies on a default list.
+The converters allow customization of the mapping from <code class="literal">HttpServletRequest</code> to <code class="literal">Message</code>.
+The default converters encapsulate simple strategies, which for example will create a String message for a <span class="emphasis"><em>POST</em></span> request where the content type starts with "text", see the Javadoc for full details.
+An additional flag (<code class="literal">mergeWithDefaultConverters</code>) can be set along with the list of custom <code class="literal">HttpMessageConverter</code> to add the default converters after the custom converters.
+By default this flag is set to false, meaning that the custom converters replace the default list.</p>
+<p>The message conversion process uses the (optional) <code class="literal">requestPayloadType</code> property and the incoming <code class="literal">Content-Type</code> header.
+Starting with <span class="emphasis"><em>version 4.3</em></span>, if a request has no content type header, <code class="literal">application/octet-stream</code> is assumed, as
+recommended by <code class="literal">RFC 2616</code>.
+Previously, the body of such messages was ignored.</p>
+<p>Starting with <span class="emphasis"><em>Spring Integration 2.0</em></span>, MultiPart File support is implemented.
+If the request has been wrapped as a <code class="literal">MultipartHttpServletRequest</code>, when using the default converters, that request will be converted to a Message payload that is a <code class="literal">MultiValueMap</code> containing values that may be byte arrays, Strings, or instances of Spring&#8217;s <code class="literal">MultipartFile</code> depending on the content type of the individual parts.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The HTTP inbound Endpoint will locate a <code class="literal">MultipartResolver</code> in the context if one exists with the bean name "multipartResolver" (the same name expected by Spring&#8217;s <code class="literal">DispatcherServlet</code>).
+If it does in fact locate that bean, then the support for MultipartFiles will be enabled on the inbound request mapper.
+Otherwise, it will fail when trying to map a multipart-file request to a Spring Integration Message.
+For more on Spring&#8217;s support for <code class="literal">MultipartResolver</code>, refer to the
+<a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/mvc.html#mvc-multipart" target="_top">Spring Reference Manual</a>.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If you wish to proxy a <code class="literal">multipart/form-data</code> to another server, it may be better to keep it in raw form.
+To handle this situation, do not add the <code class="literal">multipartResolver</code> bean to the context; configure the endpoint to expect
+a <code class="literal">byte[]</code> request; customize the message converters to include a <code class="literal">ByteArrayHttpMessageConverter</code>, and
+disable the default multipart converter.
+You may need some other converter(s) for the replies:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:inbound-gateway</span>
+                  <span class="hl-attribute">channel</span>=<span class="hl-value">"receiveChannel"</span>
+                  <span class="hl-attribute">path</span>=<span class="hl-value">"/inboundAdapter.htm"</span>
+                  <span class="hl-attribute">request-payload-type</span>=<span class="hl-value">"byte[]"</span>
+                  <span class="hl-attribute">message-converters</span>=<span class="hl-value">"converters"</span>
+                  <span class="hl-attribute">merge-with-default-converters</span>=<span class="hl-value">"false"</span>
+                  <span class="hl-attribute">supported-methods</span>=<span class="hl-value">"POST"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;util:list</span> <span class="hl-attribute">id</span>=<span class="hl-value">"converters"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.http.converter.ByteArrayHttpMessageConverter"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.http.converter.StringHttpMessageConverter"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/util:list&gt;</span></pre>
+</td></tr></table></div>
+<p>In sending a response to the client there are a number of ways to customize the behavior of the gateway.
+By default the gateway will simply acknowledge that the request was received by sending a 200 status code back.
+It is possible to customize this response by providing a <span class="emphasis"><em>viewName</em></span> to be resolved by the Spring MVC <code class="literal">ViewResolver</code>.
+In the case that the gateway should expect a reply to the <code class="literal">Message</code> then setting the <code class="literal">expectReply</code> flag (constructor argument) will cause the gateway to wait for a reply <code class="literal">Message</code> before creating an HTTP response.
+Below is an example of a gateway configured to serve as a Spring MVC Controller with a view name.
+Because of the constructor arg value of TRUE, it wait for a reply.
+This also shows how to customize the HTTP methods accepted by the gateway, which are <span class="emphasis"><em>POST</em></span> and <span class="emphasis"><em>GET</em></span> by default.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpInbound"</span>
+  <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.http.inbound.HttpRequestHandlingController"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag"> /&gt;</span> <span class="hl-comment">&lt;!-- indicates that a reply is expected --&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"requestChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"httpRequestChannel"</span><span class="hl-tag"> /&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"replyChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"httpReplyChannel"</span><span class="hl-tag"> /&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"viewName"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"jsonView"</span><span class="hl-tag"> /&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"supportedMethodNames"</span><span class="hl-tag"> &gt;</span>
+    <span class="hl-tag">&lt;list&gt;</span>
+      <span class="hl-tag">&lt;value&gt;</span>GET<span class="hl-tag">&lt;/value&gt;</span>
+      <span class="hl-tag">&lt;value&gt;</span>DELETE<span class="hl-tag">&lt;/value&gt;</span>
+    <span class="hl-tag">&lt;/list&gt;</span>
+  <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The reply message will be available in the Model map.
+The key that is used for that map entry by default is <span class="emphasis"><em>reply</em></span>, but this can be overridden by setting the <span class="emphasis"><em>replyKey</em></span> property on the endpoint&#8217;s configuration.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="http-outbound" href="#http-outbound"></a>17.3&nbsp;Http Outbound Components</h2></div></div></div>
+
+<p>To configure the <code class="literal">HttpRequestExecutingMessageHandler</code> write a bean definition like this:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpOutbound"</span>
+  <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.http.outbound.HttpRequestExecutingMessageHandler"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"http://localhost:8080/example"</span><span class="hl-tag"> /&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"outputChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"responseChannel"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>This bean definition will execute HTTP requests by delegating to a <code class="literal">RestTemplate</code>.
+That template in turn delegates to a list of HttpMessageConverters to generate the HTTP request body from the Message payload.
+You can configure those converters as well as the ClientHttpRequestFactory instance to use:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpOutbound"</span>
+  <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.http.outbound.HttpRequestExecutingMessageHandler"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"http://localhost:8080/example"</span><span class="hl-tag"> /&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"outputChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"responseChannel"</span><span class="hl-tag"> /&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"messageConverters"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"messageConverterList"</span><span class="hl-tag"> /&gt;</span>
+  <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"requestFactory"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"customRequestFactory"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>By default the HTTP request will be generated using an instance of <code class="literal">SimpleClientHttpRequestFactory</code> which uses the JDK <code class="literal">HttpURLConnection</code>.
+Use of the Apache Commons HTTP Client is also supported through the provided <code class="literal">CommonsClientHttpRequestFactory</code> which can be injected as shown above.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>In the case of the Outbound Gateway, the reply message produced by the gateway will contain all Message Headers present in the request message.</p>
+</td></tr></table></div>
+<p><span class="emphasis"><em>Cookies</em></span></p>
+<p>Basic cookie support is provided by the <span class="emphasis"><em>transfer-cookies</em></span> attribute on the outbound gateway.
+When set to true (default is false), a <span class="emphasis"><em>Set-Cookie</em></span> header received from the server in a response will be converted to <span class="emphasis"><em>Cookie</em></span> in the reply message.
+This header will then be used on subsequent sends.
+This enables simple stateful interactions, such as&#8230;&#8203;</p>
+<p><code class="literal">...-&gt;logonGateway-&gt;...-&gt;doWorkGateway-&gt;...-&gt;logoffGateway-&gt;...</code></p>
+<p>If <span class="emphasis"><em>transfer-cookies</em></span> is false, any <span class="emphasis"><em>Set-Cookie</em></span> header received will remain as <span class="emphasis"><em>Set-Cookie</em></span> in the reply message, and will be dropped on subsequent sends.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note: Note: Empty Response Bodies"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note: Empty Response Bodies</th></tr><tr><td align="left" valign="top">
+
+<p>HTTP is a request/response protocol.
+However the response may not have a body, just headers.
+In this case, the <code class="literal">HttpRequestExecutingMessageHandler</code> produces a reply <code class="literal">Message</code> with the payload being an <code class="literal">org.springframework.http.ResponseEntity</code>, regardless of any provided <code class="literal">expected-response-type</code>.
+According to the <a class="ulink" href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html" target="_top">HTTP RFC Status Code Definitions</a>, there are many statuses which identify that a response MUST NOT contain a message-body (e.g.
+204 No Content).
+There are also cases where calls to the same URL might, or might not, return a response body; for example, the first request to an HTTP resource returns content, but the second does not (e.g.
+304 Not Modified).
+In all cases, however, the <code class="literal">http_statusCode</code> message header is populated.
+This can be used in some routing logic after the Http Outbound Gateway.
+You could also use a`&lt;payload-type-router/&gt;` to route messages with an <code class="literal">ResponseEntity</code> to a different flow than that used for responses with a body.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note: Note: expected-response-type"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note: expected-response-type</th></tr><tr><td align="left" valign="top">
+
+<p>Further to the note above regarding <span class="strong"><strong>empty response bodies</strong></span>, if a response <span class="strong"><strong>does</strong></span> contain a body, you must provide an appropriate <code class="literal">expected-response-type</code> attribute or, again, you will simply receive a <code class="literal">ResponseEntity</code> with no body.
+The <code class="literal">expected-response-type</code> must be compatible with the (configured or default) <code class="literal">HttpMessageConverter</code> s and the <code class="literal">Content-Type</code> header in the response.
+Of course, this can be an abstract class, or even an interface (such as <code class="literal">java.io.Serializable</code> when using java serialization and <code class="literal">Content-Type: application/x-java-serialized-object</code>).</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="http-namespace" href="#http-namespace"></a>17.4&nbsp;HTTP Namespace Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_introduction_4" href="#_introduction_4"></a>17.4.1&nbsp;Introduction</h3></div></div></div>
+
+<p>Spring Integration provides an <span class="emphasis"><em>http</em></span> namespace and the corresponding schema definition.
+To include it in your configuration, simply provide the following namespace declaration in your application context configuration file:</p>
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;beans</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://www.springframework.org/schema/beans"</span>
+  <span class="hl-attribute">xmlns:xsi</span>=<span class="hl-value">"http://www.w3.org/2001/XMLSchema-instance"</span>
+  <span class="hl-attribute">xmlns:int</span>=<span class="hl-value">"http://www.springframework.org/schema/integration"</span>
+  <span class="hl-attribute">xmlns:int-http</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/http"</span>
+  <span class="hl-attribute">xsi:schemaLocation</span>=<span class="hl-value">"
+    http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/integration
+    http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/http
+    http://www.springframework.org/schema/integration/http/spring-integration-http.xsd"</span><span class="hl-tag">&gt;</span>
+    ...
+<span class="hl-tag">&lt;/beans&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_inbound" href="#_inbound"></a>17.4.2&nbsp;Inbound</h3></div></div></div>
+
+<p>The XML Namespace provides two components for handling HTTP Inbound requests.
+In order to process requests without returning a dedicated response, use the <span class="emphasis"><em>inbound-channel-adapter</em></span>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpChannelAdapter"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"requests"</span>
+    <span class="hl-attribute">supported-methods</span>=<span class="hl-value">"PUT, DELETE"</span><span class="hl-tag">/&gt;</span></pre>
+<p>To process requests that do expect a response, use an <span class="emphasis"><em>inbound-gateway</em></span>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inboundGateway"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requests"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"responses"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_request_mapping_support" href="#_request_mapping_support"></a>17.4.3&nbsp;Request Mapping Support</h3></div></div></div>
+
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p><span class="emphasis"><em>Spring Integration 3.0</em></span> is improving the REST support by introducing the <a class="ulink" href="http://static.springsource.org/spring-integration/api/org/springframework/integration/http/inbound/IntegrationRequestMappingHandlerMapping.html" target="_top">IntegrationRequestMappingHandlerMapping</a>.
+The implementation relies on the enhanced REST support provided by Spring Framework 3.1 or higher.</p>
+</td></tr></table></div>
+<p>The parsing of the <span class="emphasis"><em>HTTP Inbound Gateway</em></span> or the <span class="emphasis"><em>HTTP Inbound Channel Adapter</em></span> registers an <code class="literal">integrationRequestMappingHandlerMapping</code> bean of type <a class="ulink" href="http://static.springsource.org/spring-integration/api/org/springframework/integration/http/inbound/IntegrationRequestMappingHandlerMapping.html" target="_top">IntegrationRequestMappingHandlerMapping</a>, in case there is none registered, yet.
+This particular implementation of the <a class="ulink" href="http://static.springsource.org/spring/docs/current/javadoc-api/org/springframework/web/servlet/HandlerMapping.html" target="_top"><code class="literal">HandlerMapping</code></a> delegates its logic to the <a class="ulink" href="http://static.springsource.org/spring/docs/current/javadoc-api/org/springframework/web/servlet/mvc/method/RequestMappingInfoHandlerMapping.html" target="_top"><code class="literal">RequestMappingInfoHandlerMapping</code></a>.
+The implementation provides similar functionality as the one provided by the <a class="ulink" href="http://static.springsource.org/spring/docs/current/javadoc-api/org/springframework/web/bind/annotation/RequestMapping.html" target="_top"><code class="literal">org.springframework.web.bind.annotation.RequestMapping</code></a> annotation in Spring MVC.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>For more information, please see <a class="ulink" href="http://static.springsource.org/spring/docs/current/spring-framework-reference/html/mvc.html#mvc-ann-requestmapping" target="_top">Mapping Requests With <code class="literal">@RequestMapping</code></a>.</p>
+</td></tr></table></div>
+<p>For this purpose, <span class="emphasis"><em>Spring Integration 3.0</em></span> introduces the <code class="literal">&lt;request-mapping&gt;</code> sub-element.
+This optional sub-element can be added to the <code class="literal">&lt;http:inbound-channel-adapter&gt;</code> and the <code class="literal">&lt;http:inbound-gateway&gt;</code>.
+It works in conjunction with the <code class="literal">path</code> and <code class="literal">supported-methods</code> attributes:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inboundController"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requests"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"responses"</span>
+    <span class="hl-attribute">path</span>=<span class="hl-value">"/foo/{fooId}"</span>
+    <span class="hl-attribute">supported-methods</span>=<span class="hl-value">"GET"</span>
+    <span class="hl-attribute">view-name</span>=<span class="hl-value">"foo"</span>
+    <span class="hl-attribute">error-code</span>=<span class="hl-value">"oops"</span><span class="hl-tag">&gt;</span>
+   <span class="hl-tag">&lt;request-mapping</span> <span class="hl-attribute">headers</span>=<span class="hl-value">"User-Agent"</span>
+     <span class="hl-attribute">params</span>=<span class="hl-value">"myParam=myValue"</span>
+     <span class="hl-attribute">consumes</span>=<span class="hl-value">"application/json"</span>
+     <span class="hl-attribute">produces</span>=<span class="hl-value">"!text/plain"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/inbound-gateway&gt;</span></pre>
+<p>Based on this configuration, the namespace parser creates an instance of the <code class="literal">IntegrationRequestMappingHandlerMapping</code> (if none exists, yet), a <code class="literal">HttpRequestHandlingController</code> bean and associated with it an instance of <a class="ulink" href="http://static.springsource.org/spring-integration/api/org/springframework/integration/http/inbound/RequestMapping.html" target="_top"><code class="literal">RequestMapping</code></a>, which in turn, is converted to the Spring MVC <a class="ulink" href="http://static.springsource.org/spring/docs/current/javadoc-api/org/springframework/web/servlet/mvc/method/RequestMappingInfo.html" target="_top"><code class="literal">RequestMappingInfo</code></a>.</p>
+<p>The <code class="literal">&lt;request-mapping&gt;</code> sub-element provides the following attributes:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+headers
+</li><li class="listitem">
+params
+</li><li class="listitem">
+consumes
+</li><li class="listitem">
+produces
+</li></ul></div>
+<p>With the <code class="literal">path</code> and <code class="literal">supported-methods</code> attributes of the <code class="literal">&lt;http:inbound-channel-adapter&gt;</code> or the <code class="literal">&lt;http:inbound-gateway&gt;</code>, <code class="literal">&lt;request-mapping&gt;</code> attributes translate directly into the respective options provided by the <code class="literal">org.springframework.web.bind.annotation.RequestMapping</code> annotation in Spring MVC.</p>
+<p>The <code class="literal">&lt;request-mapping&gt;</code> sub-element allows you to configure several <span class="emphasis"><em>Spring Integration</em></span> HTTP Inbound Endpoints to the same <code class="literal">path</code> (or even the same <code class="literal">supported-methods</code>) and to provide different downstream message flows based on incoming HTTP requests.</p>
+<p>Alternatively, you can also declare just one HTTP Inbound Endpoint and apply routing and filtering logic within the <span class="emphasis"><em>Spring Integration</em></span> flow to achieve the same result.
+This allows you to get the <code class="literal">Message</code> into the flow as early as possibly, e.g.:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:inbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"httpMethodRouter"</span>
+    <span class="hl-attribute">supported-methods</span>=<span class="hl-value">"GET,DELETE"</span>
+    <span class="hl-attribute">path</span>=<span class="hl-value">"/process/{entId}"</span>
+    <span class="hl-attribute">payload-expression</span>=<span class="hl-value">"#pathVariables.entId"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:router</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"httpMethodRouter"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"headers.http_requestMethod"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:mapping</span> <span class="hl-attribute">value</span>=<span class="hl-value">"GET"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"in1"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:mapping</span> <span class="hl-attribute">value</span>=<span class="hl-value">"DELETE"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"in2"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:router&gt;</span>
+
+<span class="hl-tag">&lt;int:service-activator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in1"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"service"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"getEntity"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:service-activator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in2"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"service"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"delete"</span><span class="hl-tag">/&gt;</span></pre>
+<p>For more information regarding <span class="emphasis"><em>Handler Mappings</em></span>, please see: <a class="ulink" href="http://static.springsource.org/spring/docs/current/spring-framework-reference/html/mvc.html#mvc-handlermapping" target="_top">Handler Mappings</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="http-cors" href="#http-cors"></a>17.4.4&nbsp;Cross-Origin Resource Sharing (CORS) Support</h3></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.2</em></span> the <code class="literal">&lt;http:inbound-channel-adapter&gt;</code> and <code class="literal">&lt;http:inbound-gateway&gt;</code> can be configured with
+a <code class="literal">&lt;cross-origin&gt;</code> sub-element.
+It represents the same options as Spring MVC&#8217;s <code class="literal">@CrossOrigin</code> for <code class="literal">@Controller</code> methods
+and allows the configuration of Cross-origin resource sharing (CORS) for Spring Integration HTTP endpoints:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">origin</code> - List of allowed origins.
+<code class="literal">*</code> means that all origins are allowed.
+These values are placed in the <code class="literal">Access-Control-Allow-Origin</code> header of both the pre-flight
+and actual responses.
+Default value is <code class="literal">*</code>.
+</li><li class="listitem">
+<code class="literal">allowed-headers</code> - Indicates which request headers can be used during the actual request.
+<code class="literal">*</code> means that all headers asked by the client are allowed.
+This property controls the value of the pre-flight response&#8217;s <code class="literal">Access-Control-Allow-Headers</code> header.
+Default value is <code class="literal">*</code>.
+</li><li class="listitem">
+<code class="literal">exposed-headers</code> - List of response headers that the user-agent will allow the client to access.
+This property controls the value of the actual response&#8217;s <code class="literal">Access-Control-Expose-Headers</code> header.
+</li><li class="listitem">
+<code class="literal">method</code> - The HTTP request methods to allow: GET, POST, HEAD, OPTIONS, PUT, PATCH, DELETE, TRACE.
+Methods specified here overrides those in <code class="literal">supported-methods</code>.
+</li><li class="listitem">
+<code class="literal">allow-credentials</code> - Set to <code class="literal">true</code> if the the browser should include any cookies associated to the domain
+of the request, or <code class="literal">false</code> if it should not.
+Empty string "" means undefined.
+If <code class="literal">true</code>, the pre-flight response will include the header <code class="literal">Access-Control-Allow-Credentials=true</code>.
+Default value is <code class="literal">true</code>.
+</li><li class="listitem">
+<code class="literal">max-age</code> - Controls the cache duration for pre-flight responses.
+Setting this to a reasonable value can reduce the number of pre-flight request/response interactions required by
+the browser.
+This property controls the value of the <code class="literal">Access-Control-Max-Age</code> header in the pre-flight response.
+A value of <code class="literal">-1</code> means undefined.
+Default value is 1800 seconds, or 30 minutes.
+</li></ul></div>
+<p>The CORS Java Configuration is represented by the <code class="literal">org.springframework.integration.http.inbound.CrossOrigin</code> class,
+instances of which can be injected to the <code class="literal">HttpRequestHandlingEndpointSupport</code> beans.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="http-response-statuscode" href="#http-response-statuscode"></a>17.4.5&nbsp;Response StatusCode</h3></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.1</em></span> the <code class="literal">&lt;http:inbound-channel-adapter&gt;</code> can be configured with a <code class="literal">status-code-expression</code> to override the default <code class="literal">200 OK</code> status.
+The expression must return an object which can be converted to an <code class="literal">org.springframework.http.HttpStatus</code> enum value.
+The <code class="literal">evaluationContext</code> has a <code class="literal">BeanResolver</code> but no variables, so the usage of this attribute is somewhat limited.
+An example might be to resolve, at runtime, some scoped Bean that returns a status code value but, most likely, it will be set to a fixed value such as <code class="literal">status-code=expression="204"</code> (No Content), or <code class="literal">status-code-expression="T(org.springframework.http.HttpStatus).NO_CONTENT"</code>.
+By default, <code class="literal">status-code-expression</code> is null meaning that the normal <span class="emphasis"><em>200 OK</em></span> response status will be returned.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;http:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inboundController"</span>
+       <span class="hl-attribute">channel</span>=<span class="hl-value">"requests"</span> <span class="hl-attribute">view-name</span>=<span class="hl-value">"foo"</span> <span class="hl-attribute">error-code</span>=<span class="hl-value">"oops"</span>
+       <span class="hl-attribute">status-code-expression</span>=<span class="hl-value">"T(org.springframework.http.HttpStatus).ACCEPTED"</span><span class="hl-tag">&gt;</span>
+   <span class="hl-tag">&lt;request-mapping</span> <span class="hl-attribute">headers</span>=<span class="hl-value">"BAR"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/http:inbound-channel-adapter&gt;</span></pre>
+<p>The <code class="literal">&lt;http:inbound-gateway&gt;</code> resolves the <span class="emphasis"><em>status code</em></span> from the <code class="literal">http_statusCode</code> header of the reply Message.
+Starting with <span class="emphasis"><em>version 4.2</em></span>, the default response status code when no reply is received within the <code class="literal">reply-timeout</code>
+is <code class="literal">500 Internal Server Error</code>.
+There are two ways to modify this behavior:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+add a <code class="literal">reply-timeout-status-code-expression</code> - this has the same semantics as the <code class="literal">status-code-expression</code> on the
+inbound adapter.
+</li><li class="listitem">
+Add an <code class="literal">error-channel</code> and return an appropriate message with an http status code header, such as&#8230;&#8203;
+</li></ul></div>
+<pre class="programlisting"><span class="hl-tag">&lt;int:chain</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"errors"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header-enricher&gt;</span>
+        <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"http_statusCode"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"504"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;/int:header-enricher&gt;</span>
+    <span class="hl-tag">&lt;int:transformer</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.failedMessage"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int:chain&gt;</span></pre>
+<p>The payload of the <code class="literal">ErrorMessage</code> is a <code class="literal">MessageTimeoutException</code>; it must be transformed to something that can be
+converted by the gateway, such as a <code class="literal">String</code>; a good candidate is the exception&#8217;s message property, which is the
+value used when using the expression technique.</p>
+<p>If the error flow times out after a main flow timeout, <code class="literal">500 Internal Server Error</code> is returned, or the
+<code class="literal">reply-timeout-status-code-expression</code> is evaluated, if present.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>previously, the default status code for a timeout was <code class="literal">200 OK</code>; to restore that behavior, set
+<code class="literal">reply-timeout-status-code-expression="200"</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_uri_template_variables_and_expressions" href="#_uri_template_variables_and_expressions"></a>17.4.6&nbsp;URI Template Variables and Expressions</h3></div></div></div>
+
+<p>By Using the <span class="emphasis"><em>path</em></span> attribute in conjunction with the <span class="emphasis"><em>payload-expression</em></span> attribute as well as the <span class="emphasis"><em>header</em></span> sub-element, you have a high degree of flexibility for mapping inbound request data.</p>
+<p>In the following example configuration, an Inbound Channel Adapter is configured to accept requests using the following URI: <code class="literal">/first-name/{firstName}/last-name/{lastName}</code></p>
+<p>Using the <span class="emphasis"><em>payload-expression</em></span> attribute, the URI template variable <span class="emphasis"><em>{firstName}</em></span> is mapped to be the Message payload, while the <span class="emphasis"><em>{lastName}</em></span> URI template variable will map to the <span class="emphasis"><em>lname</em></span> Message header.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inboundAdapterWithExpressions"</span>
+    <span class="hl-attribute">path</span>=<span class="hl-value">"/first-name/{firstName}/last-name/{lastName}"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"requests"</span>
+    <span class="hl-attribute">payload-expression</span>=<span class="hl-value">"#pathVariables.firstName"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-http:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"lname"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"#pathVariables.lastName"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-http:inbound-channel-adapter&gt;</span></pre>
+<p>For more information about <span class="emphasis"><em>URI template variables</em></span>, please see the Spring Reference Manual: <a class="ulink" href="http://static.springsource.org/spring/docs/current/spring-framework-reference/html/mvc.html#mvc-ann-requestmapping-uri-templates" target="_top">uri template patterns</a>.</p>
+<p>Since <span class="emphasis"><em>Spring Integration 3.0</em></span>, in addition to the existing <code class="literal">#pathVariables</code> and <code class="literal">#requestParams</code> variables being available in payload and header expressions, other useful variables have been added.</p>
+<p>The entire list of available expression variables:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>#requestParams</em></span> - the <code class="literal">MultiValueMap</code> from the <code class="literal">ServletRequest</code> <code class="literal">parameterMap</code>.
+</li><li class="listitem">
+<span class="emphasis"><em>#pathVariables</em></span> - the <code class="literal">Map</code> from URI Template placeholders and their values;
+</li><li class="listitem">
+<span class="emphasis"><em>#matrixVariables</em></span> - the <code class="literal">Map</code> of <code class="literal">MultiValueMap</code> according to <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/mvc.html#mvc-ann-matrix-variables" target="_top">Spring MVC Specification</a>.
+Note, <span class="emphasis"><em>#matrixVariables</em></span> require Spring MVC 3.2 or higher;
+</li><li class="listitem">
+<span class="emphasis"><em>#requestAttributes</em></span> - the <code class="literal">org.springframework.web.context.request.RequestAttributes</code> associated with the current Request;
+</li><li class="listitem">
+<span class="emphasis"><em>#requestHeaders</em></span> - the <code class="literal">org.springframework.http.HttpHeaders</code> object from the current Request;
+</li><li class="listitem">
+<span class="emphasis"><em>#cookies</em></span> - the <code class="literal">Map&lt;String, Cookie&gt;</code> of <code class="literal">javax.servlet.http.Cookie</code> s from the current Request.
+</li></ul></div>
+<p>Note, all these values (and others) can be accessed within expressions in the downstream message flow via the <code class="literal">ThreadLocal</code> <code class="literal">org.springframework.web.context.request.RequestAttributes</code> variable, if that message flow is single-threaded and lives within the request thread:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-:transformer</span>
+	<span class="hl-attribute">expression</span>=<span class="hl-value">"T(org.springframework.web.context.request.RequestContextHolder).
+	              requestAttributes.request.queryString"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_outbound" href="#_outbound"></a>17.4.7&nbsp;Outbound</h3></div></div></div>
+
+<p>To configure the outbound gateway you can use the namespace support as well.
+The following code snippet shows the different configuration options for an outbound Http gateway.
+Most importantly, notice that the <span class="emphasis"><em>http-method</em></span> and <span class="emphasis"><em>expected-response-type</em></span> are provided.
+Those are two of the most commonly configured values.
+The default http-method is POST, and the default response type is <span class="emphasis"><em>null</em></span>.
+With a null response type, the payload of the reply Message would contain the ResponseEntity as long as it&#8217;s http status is a success (non-successful status codes will throw Exceptions).
+If you are expecting a different type, such as a <code class="literal">String</code>, then provide that fully-qualified class name as shown below.
+See also the note about empty response bodies in <a class="xref" href="http.html#http-outbound" title="17.3&nbsp;Http Outbound Components">Section&nbsp;17.3, &#8220;Http Outbound Components&#8221;</a>.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Beginning with Spring Integration 2.1 the <span class="emphasis"><em>request-timeout</em></span> attribute of the HTTP Outbound Gateway was renamed to <span class="emphasis"><em>reply-timeout</em></span> to better reflect the intent.</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"example"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requests"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"http://localhost/test"</span>
+    <span class="hl-attribute">http-method</span>=<span class="hl-value">"POST"</span>
+    <span class="hl-attribute">extract-request-payload</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">expected-response-type</span>=<span class="hl-value">"java.lang.String"</span>
+    <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span>
+    <span class="hl-attribute">request-factory</span>=<span class="hl-value">"requestFactory"</span>
+    <span class="hl-attribute">reply-timeout</span>=<span class="hl-value">"1234"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"replies"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Since <span class="emphasis"><em>Spring Integration 2.2</em></span>, Java serialization over HTTP is no longer enabled by default.
+Previously, when setting the <code class="literal">expected-response-type</code> attribute to a <code class="literal">Serializable</code> object, the <code class="literal">Accept</code> header was not properly set up.
+Since <span class="emphasis"><em>Spring Integration 2.2</em></span>, the <code class="literal">SerializingHttpMessageConverter</code> has now been updated to set the <code class="literal">Accept</code> header to <code class="literal">application/x-java-serialized-object</code>.</p>
+<p>However, because this could cause incompatibility with existing applications, it was decided to no longer automatically add this converter to the HTTP endpoints.
+If you wish to use Java serialization, you will need to add the <code class="literal">SerializingHttpMessageConverter</code> to the appropriate endpoints, using the <code class="literal">message-converters</code> attribute, when using XML configuration, or using the <code class="literal">setMessageConverters()</code> method.
+Alternatively, you may wish to consider using JSON instead which is enabled by simply having <code class="literal">Jackson</code> on the classpath.</p>
+</td></tr></table></div>
+<p>Beginning with Spring Integration 2.2 you can also determine the HTTP Method dynamically using SpEL and the <span class="emphasis"><em>http-method-expression</em></span> attribute.
+Note that this attribute is obviously murually exclusive with <span class="emphasis"><em>http-method</em></span> You can also use <code class="literal">expected-response-type-expression</code> attribute instead of <code class="literal">expected-response-type</code> and provide any valid SpEL expression that determines the type of the response.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"example"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requests"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"http://localhost/test"</span>
+    <span class="hl-attribute">http-method-expression</span>=<span class="hl-value">"headers.httpMethod"</span>
+    <span class="hl-attribute">extract-request-payload</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">expected-response-type-expression</span>=<span class="hl-value">"payload"</span>
+    <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span>
+    <span class="hl-attribute">request-factory</span>=<span class="hl-value">"requestFactory"</span>
+    <span class="hl-attribute">reply-timeout</span>=<span class="hl-value">"1234"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"replies"</span><span class="hl-tag">/&gt;</span></pre>
+<p>If your outbound adapter is to be used in a unidirectional way, then you can use an outbound-channel-adapter instead.
+This means that a successful response will simply execute without sending any Messages to a reply channel.
+In the case of any non-successful response status code, it will throw an exception.
+The configuration looks very similar to the gateway:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"example"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"http://localhost/example"</span>
+    <span class="hl-attribute">http-method</span>=<span class="hl-value">"GET"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"requests"</span>
+    <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span>
+    <span class="hl-attribute">extract-payload</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">expected-response-type</span>=<span class="hl-value">"java.lang.String"</span>
+    <span class="hl-attribute">request-factory</span>=<span class="hl-value">"someRequestFactory"</span>
+    <span class="hl-attribute">order</span>=<span class="hl-value">"3"</span>
+    <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>To specify the URL; you can use either the <span class="emphasis"><em>url</em></span> attribute or the <span class="emphasis"><em>url-expression</em></span> attribute.
+The <span class="emphasis"><em>url</em></span> is a simple string (with placedholders for URI variables, as described below); the <span class="emphasis"><em>url-expression</em></span> is a SpEL expression, with the Message as the root object, enabling dynamic urls.
+The url resulting from the expression evaluation can still have placeholders for URI variables.</p>
+<p>In previous releases, some users used the place holders to replace the entire URL with a URI variable.
+Changes in Spring 3.1 can cause some issues with escaped characters, such as <span class="emphasis"><em>?</em></span>.
+For this reason, it is recommended that if you wish to generate the URL entirely at runtime, you use the <span class="emphasis"><em>url-expression</em></span> attribute.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_mapping_uri_variables" href="#_mapping_uri_variables"></a>17.4.8&nbsp;Mapping URI Variables</h3></div></div></div>
+
+<p>If your URL contains URI variables, you can map them using the <code class="literal">uri-variable</code> sub-element.
+This sub-element is available for the <span class="emphasis"><em>Http Outbound Gateway</em></span> and the <span class="emphasis"><em>Http Outbound Channel Adapter</em></span>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"trafficGateway"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"http://local.yahooapis.com/trafficData?appid=YdnDemo&amp;amp;zip={zipCode}"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"trafficChannel"</span>
+    <span class="hl-attribute">http-method</span>=<span class="hl-value">"GET"</span>
+    <span class="hl-attribute">expected-response-type</span>=<span class="hl-value">"java.lang.String"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-http:uri-variable</span> <span class="hl-attribute">name</span>=<span class="hl-value">"zipCode"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.getZip()"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-http:outbound-gateway&gt;</span></pre>
+<p>The <code class="literal">uri-variable</code> sub-element defines two attributes: <code class="literal">name</code> and <code class="literal">expression</code>.
+The <code class="literal">name</code> attribute identifies the name of the URI variable, while the <code class="literal">expression</code> attribute is used to set the actual value.
+Using the <code class="literal">expression</code> attribute, you can leverage the full power of the Spring Expression Language (SpEL) which gives you full dynamic access to the message payload and the message headers.
+For example, in the above configuration the <code class="literal">getZip()</code> method will be invoked on the payload object of the Message and the result of that method will be used as the value for the URI variable named <span class="emphasis"><em>zipCode</em></span>.</p>
+<p>Since <span class="emphasis"><em>Spring Integration 3.0</em></span>, HTTP Outbound Endpoints support the <code class="literal">uri-variables-expression</code> attribute to specify an <code class="literal">Expression</code> which should be evaluated, resulting in a <code class="literal">Map</code> for all URI variable placeholders within the URL template.
+It provides a mechanism whereby different variable expressions can be used, based on the outbound message.
+This attribute is mutually exclusive with the <code class="literal">&lt;uri-variable/&gt;</code> sub-element:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:outbound-gateway</span>
+     <span class="hl-attribute">url</span>=<span class="hl-value">"http://foo.host/{foo}/bars/{bar}"</span>
+     <span class="hl-attribute">request-channel</span>=<span class="hl-value">"trafficChannel"</span>
+     <span class="hl-attribute">http-method</span>=<span class="hl-value">"GET"</span>
+     <span class="hl-attribute">uri-variables-expression</span>=<span class="hl-value">"@uriVariablesBean.populate(payload)"</span>
+     <span class="hl-attribute">expected-response-type</span>=<span class="hl-value">"java.lang.String"</span><span class="hl-tag">/&gt;</span></pre>
+<p>where <code class="literal">uriVariablesBean</code> might be:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> UriVariablesBean {
+	<span class="hl-keyword">private</span> <span class="hl-keyword">static</span> <span class="hl-keyword">final</span> ExpressionParser EXPRESSION_PARSER = <span class="hl-keyword">new</span> SpelExpressionParser();
+
+	<span class="hl-keyword">public</span> Map&lt;String, ?&gt; populate(Object payload) {
+		Map&lt;String, Object&gt; variables = <span class="hl-keyword">new</span> HashMap&lt;String, Object&gt;();
+		<span class="hl-keyword">if</span> (payload instanceOf String.<span class="hl-keyword">class</span>)) {
+			variables.put(<span class="hl-string">"foo"</span>, <span class="hl-string">"foo"</span>));
+		}
+		<span class="hl-keyword">else</span> {
+			variables.put(<span class="hl-string">"foo"</span>, EXPRESSION_PARSER.parseExpression(<span class="hl-string">"headers.bar"</span>));
+		}
+		<span class="hl-keyword">return</span> variables;
+	}
+
+}</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">uri-variables-expression</code> must evaluate to a <code class="literal">Map</code>.
+The values of the Map must be instances of <code class="literal">String</code> or <code class="literal">Expression</code>.
+This Map is provided to an <code class="literal">ExpressionEvalMap</code> for further resolution of URI variable placeholders using those expressions in the context of the outbound <code class="literal">Message</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_controlling_uri_encoding" href="#_controlling_uri_encoding"></a>17.4.9&nbsp;Controlling URI Encoding</h3></div></div></div>
+
+<p>By default, the URL string is encoded (see <a class="ulink" href="http://static.springsource.org/spring/docs/current/javadoc-api/org/springframework/web/util/UriComponentsBuilder.html" target="_top">UriComponentsBuilder</a>) to the URI object before sending the request.
+In some scenarios with a non-standard URI (e.g.
+the RabbitMQ Rest API) it is undesirable to perform the encoding.
+The <code class="literal">&lt;http:outbound-gateway/&gt;</code> and <code class="literal">&lt;http:outbound-channel-adapter/&gt;</code> provide an <code class="literal">encode-uri</code> attribute.
+To disable encoding the URL, this attribute should be set to <code class="literal">false</code> (by default it is <code class="literal">true</code>).
+If you wish to partially encode some of the URL, this can be achieved using an <code class="literal">expression</code> within a <code class="literal">&lt;uri-variable/&gt;</code>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;http:outbound-gateway</span> <span class="hl-attribute">url</span>=<span class="hl-value">"http://somehost/%2f/fooApps?bar={param}"</span> <span class="hl-attribute">encode-uri</span>=<span class="hl-value">"false"</span><span class="hl-tag">&gt;</span>
+          <span class="hl-tag">&lt;http:uri-variable</span> <span class="hl-attribute">name</span>=<span class="hl-value">"param"</span>
+            <span class="hl-attribute">expression</span>=<span class="hl-value">"T(org.apache.commons.httpclient.util.URIUtil)
+                                             .encodeWithinQuery('Hello World!')"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/http:outbound-gateway&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="http-timeout" href="#http-timeout"></a>17.5&nbsp;Timeout Handling</h2></div></div></div>
+
+<p>In the context of HTTP components, there are two timing areas that have to be considered.</p>
+<p>Timeouts when interacting with Spring Integration Channels</p>
+<p>Timeouts when interacting with a remote HTTP server</p>
+<p>First, the components interact with Message Channels, for which timeouts can be specified.
+For example, an HTTP Inbound Gateway will forward messages received from connected HTTP Clients to a Message Channel (Request Timeout) and consequently the HTTP Inbound Gateway will receive a reply Message from the Reply Channel (Reply Timeout) that will be used to generate the HTTP Response.
+Please see the figure below for an illustration.</p>
+<div class="figure"><a name="d5e11881" href="#d5e11881"></a><p class="title"><b>Figure&nbsp;17.1.&nbsp;How timeout settings apply to an HTTP Inbound Gateway</b></p><div class="figure-contents">
+
+<div class="mediaobject" align="center"><img src="images/http-inbound-gateway.png" align="middle" alt="http inbound gateway"></div>
+</div></div><br class="figure-break">
+<p>For outbound endpoints, the second thing to consider is timing while interacting with the remote server.</p>
+<div class="figure"><a name="d5e11889" href="#d5e11889"></a><p class="title"><b>Figure&nbsp;17.2.&nbsp;How timeout settings apply to an HTTP Outbound Gateway</b></p><div class="figure-contents">
+
+<div class="mediaobject" align="center"><img src="images/http-outbound-gateway.png" align="middle" alt="http outbound gateway"></div>
+</div></div><br class="figure-break">
+<p>You may want to configure the HTTP related timeout behavior, when making active HTTP requests using the <span class="emphasis"><em>HTTP Outbound Gateway</em></span> or the <span class="emphasis"><em>HTTP Outbound Channel Adapter</em></span>.
+In those instances, these two components use Spring&#8217;s
+<a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/web/client/RestTemplate.html" target="_top">RestTemplate</a> support to execute HTTP requests.</p>
+<p>In order to configure timeouts for the <span class="emphasis"><em>HTTP Outbound Gateway</em></span> and the <span class="emphasis"><em>HTTP Outbound Channel Adapter</em></span>, you can either reference a <code class="literal">RestTemplate</code> bean directly, using the <span class="emphasis"><em>rest-template</em></span> attribute, or you can provide a reference to a <a class="ulink" href="http://static.springsource.org/spring/docs/current/javadoc-api/org/springframework/http/client/ClientHttpRequestFactory.html" target="_top">ClientHttpRequestFactory</a> bean using the <span class="emphasis"><em>request-factory</em></span> attribute.
+Spring provides the following implementations of the <code class="literal">ClientHttpRequestFactory</code> interface:</p>
+<p><a class="ulink" href="http://static.springsource.org/spring/docs/current/javadoc-api/org/springframework/http/client/SimpleClientHttpRequestFactory.html" target="_top">SimpleClientHttpRequestFactory</a> - Uses standard J2SE facilities for making HTTP Requests</p>
+<p><a class="ulink" href="http://static.springsource.org/spring/docs/current/javadoc-api/org/springframework/http/client/HttpComponentsClientHttpRequestFactory.html" target="_top">HttpComponentsClientHttpRequestFactory</a> - Uses <a class="ulink" href="http://hc.apache.org/httpcomponents-client-ga/" target="_top">Apache HttpComponents HttpClient</a> (Since Spring 3.1)</p>
+<p><a class="ulink" href="http://static.springsource.org/spring/docs/current/javadoc-api/org/springframework/http/client/CommonsClientHttpRequestFactory.html" target="_top">ClientHttpRequestFactory</a> - Uses <a class="ulink" href="http://hc.apache.org/httpclient-3.x/" target="_top">Jakarta Commons HttpClient</a> (Deprecated as of Spring 3.1)</p>
+<p>If you don&#8217;t explicitly configure the <span class="emphasis"><em>request-factory</em></span> or <span class="emphasis"><em>rest-template</em></span> attribute respectively, then a default RestTemplate which uses a <code class="literal">SimpleClientHttpRequestFactory</code> will be instantiated.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>With some JVM implementations, the handling of timeouts using the <span class="emphasis"><em>URLConnection</em></span> class may not be consistent.</p>
+<p>E.g.
+from the <span class="emphasis"><em>Java&#8482; Platform, Standard Edition 6 API Specification</em></span> on <span class="emphasis"><em>setConnectTimeout</em></span>: [quote]
+Some non-standard implementation of this method may ignore the specified timeout.
+To see the connect timeout set, please call getConnectTimeout().</p>
+<p>Please test your timeouts if you have specific needs.
+Consider using the <code class="literal">HttpComponentsClientHttpRequestFactory</code> which, in turn, uses <a class="ulink" href="http://hc.apache.org/httpcomponents-client-ga/" target="_top">Apache HttpComponents HttpClient</a> instead.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>When using the <span class="emphasis"><em>Apache HttpComponents HttpClient</em></span> with a Pooling Connection Manager, be aware that, by default, the connection manager will create no more than 2 concurrent connections per given route and no more than 20 connections in total.
+For many real-world applications these limits may prove too constraining.
+Refer to the Apache documentation (link above) for information about configuring this important component.</p>
+</td></tr></table></div>
+<p>Here is an example of how to configure an <span class="emphasis"><em>HTTP Outbound Gateway</em></span> using a <code class="literal">SimpleClientHttpRequestFactory</code>, configured with connect and read timeouts of 5 seconds respectively:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:outbound-gateway</span> <span class="hl-attribute">url</span>=<span class="hl-value">"http://www.google.com/ig/api?weather={city}"</span>
+                           <span class="hl-attribute">http-method</span>=<span class="hl-value">"GET"</span>
+                           <span class="hl-attribute">expected-response-type</span>=<span class="hl-value">"java.lang.String"</span>
+                           <span class="hl-attribute">request-factory</span>=<span class="hl-value">"requestFactory"</span>
+                           <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requestChannel"</span>
+                           <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"replyChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-http:uri-variable</span> <span class="hl-attribute">name</span>=<span class="hl-value">"city"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-http:outbound-gateway&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"requestFactory"</span>
+      <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.http.client.SimpleClientHttpRequestFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"connectTimeout"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"5000"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"readTimeout"</span>    <span class="hl-attribute">value</span>=<span class="hl-value">"5000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p><span class="emphasis"><em>HTTP Outbound Gateway</em></span></p>
+<p>For the <span class="emphasis"><em>HTTP Outbound Gateway</em></span>, the XML Schema defines only the <span class="emphasis"><em>reply-timeout</em></span>.
+The <span class="emphasis"><em>reply-timeout</em></span> maps to the <span class="emphasis"><em>sendTimeout</em></span> property of the <span class="emphasis"><em>org.springframework.integration.http.outbound.HttpRequestExecutingMessageHandler</em></span> class.
+More precisely, the property is set on the extended <code class="literal">AbstractReplyProducingMessageHandler</code> class, which ultimately sets the property on the <code class="literal">MessagingTemplate</code>.</p>
+<p>The value of the <span class="emphasis"><em>sendTimeout</em></span> property defaults to "-1" and will be applied to the connected <code class="literal">MessageChannel</code>.
+This means, that depending on the implementation, the Message Channel&#8217;s <span class="emphasis"><em>send</em></span> method may block indefinitely.
+Furthermore, the <span class="emphasis"><em>sendTimeout</em></span> property is only used, when the actual MessageChannel implementation has a blocking send (such as <span class="emphasis"><em>full</em></span> bounded QueueChannel).</p>
+<p><span class="emphasis"><em>HTTP Inbound Gateway</em></span></p>
+<p>For the <span class="emphasis"><em>HTTP Inbound Gateway</em></span>, the XML Schema defines the <span class="emphasis"><em>request-timeout</em></span> attribute, which will be used to set the <span class="emphasis"><em>requestTimeout</em></span> property on the <code class="literal">HttpRequestHandlingMessagingGateway</code> class (on the extended MessagingGatewaySupport class).
+Secondly, the_reply-timeout_ attribute exists and it maps to the <span class="emphasis"><em>replyTimeout</em></span> property on the same class.</p>
+<p>The default for both timeout properties is "1000ms".
+Ultimately, the <span class="emphasis"><em>request-timeout</em></span> property will be used to set the <span class="emphasis"><em>sendTimeout</em></span> on the used <code class="literal">MessagingTemplate</code> instance.
+The <span class="emphasis"><em>replyTimeout</em></span> property on the other hand, will be used to set the <span class="emphasis"><em>receiveTimeout</em></span> property on the used <code class="literal">MessagingTemplate</code> instance.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>In order to simulate connection timeouts, connect to a non-routable IP address, for example 10.255.255.10.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="http-proxy" href="#http-proxy"></a>17.6&nbsp;HTTP Proxy configuration</h2></div></div></div>
+
+<p>If you are behind a proxy and need to configure proxy settings for HTTP outbound adapters and/or gateways, you can apply one of two approaches.
+In most cases, you can rely on the standard Java System Properties that control the proxy settings.
+Otherwise, you can explicitly configure a Spring bean for the HTTP client request factory instance.</p>
+<p><span class="emphasis"><em>Standard Java Proxy configuration</em></span></p>
+<p>There are 3 System Properties you can set to configure the proxy settings that will be used by the HTTP protocol handler:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>http.proxyHost</em></span> - the host name of the proxy server.
+</li><li class="listitem">
+<span class="emphasis"><em>http.proxyPort</em></span> - the port number, the default value being 80.
+</li><li class="listitem">
+<span class="emphasis"><em>http.nonProxyHosts</em></span> - a list of hosts that should be reached directly, bypassing the proxy.
+This is a list of patterns separated by <span class="emphasis"><em>|</em></span>.
+The patterns may start or end with a <span class="emphasis"><em>*</em></span> for wildcards.
+Any host matching one of these patterns will be reached through a direct connection instead of through a proxy.
+</li></ul></div>
+<p>And for HTTPS:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<span class="emphasis"><em>https.proxyHost</em></span> - the host name of the proxy server.
+</li><li class="listitem">
+<span class="emphasis"><em>https.proxyPort</em></span> - the port number, the default value being 80.
+</li></ul></div>
+<p>For more information please refer to this document: <a class="ulink" href="http://download.oracle.com/javase/6/docs/technotes/guides/net/proxies.html" target="_top">http://download.oracle.com/javase/6/docs/technotes/guides/net/proxies.html</a></p>
+<p><span class="emphasis"><em>Spring&#8217;s SimpleClientHttpRequestFactory</em></span></p>
+<p>If for any reason, you need more explicit control over the proxy configuration, you can use Spring&#8217;s <code class="literal">SimpleClientHttpRequestFactory</code> and configure its <span class="emphasis"><em>proxy</em></span> property as such:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"requestFactory"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.http.client.SimpleClientHttpRequestFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"proxy"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"proxy"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"java.net.Proxy"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;constructor-arg&gt;</span>
+                <span class="hl-tag">&lt;util:constant</span> <span class="hl-attribute">static-field</span>=<span class="hl-value">"java.net.Proxy.Type.HTTP"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+            <span class="hl-tag">&lt;constructor-arg&gt;</span>
+                <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"java.net.InetSocketAddress"</span><span class="hl-tag">&gt;</span>
+                    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"123.0.0.1"</span><span class="hl-tag">/&gt;</span>
+                    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"8080"</span><span class="hl-tag">/&gt;</span>
+                <span class="hl-tag">&lt;/bean&gt;</span>
+            <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="http-header-mapping" href="#http-header-mapping"></a>17.7&nbsp;HTTP Header Mappings</h2></div></div></div>
+
+<p>Spring Integration provides support for Http Header mapping for both HTTP Request and HTTP Responses.</p>
+<p>By default all standard Http Headers as defined here <a class="ulink" href="http://en.wikipedia.org/wiki/List_of_HTTP_header_fields" target="_top">http://en.wikipedia.org/wiki/List_of_HTTP_header_fields</a> will be mapped from the message to HTTP request/response headers without further configuration.
+However if you do need further customization you may provide additional configuration via convenient namespace support.
+You can provide a comma-separated list of header names, and you can also include simple patterns with the <span class="emphasis"><em>*</em></span> character acting as a wildcard.
+If you do provide such values, it will override the default behavior.
+Basically, it assumes you are in complete control at that point.
+However, if you do want to include all of the standard HTTP headers, you can use the shortcut patterns: <code class="literal">HTTP_REQUEST_HEADERS</code> and <code class="literal">HTTP_RESPONSE_HEADERS</code>.
+Here are some examples:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpGateway"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"http://localhost/test2"</span>
+    <span class="hl-attribute">mapped-request-headers</span>=<span class="hl-value">"foo, bar"</span>
+    <span class="hl-attribute">mapped-response-headers</span>=<span class="hl-value">"X-*, HTTP_RESPONSE_HEADERS"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"someChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-http:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpAdapter"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"http://localhost/test2"</span>
+    <span class="hl-attribute">mapped-request-headers</span>=<span class="hl-value">"foo, bar, HTTP_REQUEST_HEADERS"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"someChannel"</span><span class="hl-tag">/&gt;</span></pre>
+<p>The adapters and gateways will use the <code class="literal">DefaultHttpHeaderMapper</code> which now provides two static factory methods for "inbound" and "outbound" adapters so that the proper direction can be applied (mapping HTTP requests/responses IN/OUT as appropriate).</p>
+<p>If further customization is required you can also configure a <code class="literal">DefaultHttpHeaderMapper</code> independently and inject it into the adapter via the <code class="literal">header-mapper</code> attribute.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpGateway"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"http://localhost/test2"</span>
+    <span class="hl-attribute">header-mapper</span>=<span class="hl-value">"headerMapper"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"someChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"headerMapper"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.http.support.DefaultHttpHeaderMapper"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"inboundHeaderNames"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"foo*, *bar, baz"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"outboundHeaderNames"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"a*b, d"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>Of course, you can even implement the HeaderMapper strategy interface directly and provide a reference to that if you need to do something other than what the <code class="literal">DefaultHttpHeaderMapper</code> supports.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="int-graph-controller" href="#int-graph-controller"></a>17.8&nbsp;Integration Graph Controller</h2></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 4.3</em></span>, the HTTP module provides an <code class="literal">@EnableIntegrationGraphController</code> <code class="literal">@Configuration</code> class annotation and <code class="literal">&lt;int-http:graph-controller/&gt;</code> XML element to expose the <code class="literal">IntegrationGraphServer</code> as a REST service.
+See <a class="xref" href="system-management-chapter.html#integration-graph" title="9.8&nbsp;Integration Graph">Section&nbsp;9.8, &#8220;Integration Graph&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="http-samples" href="#http-samples"></a>17.9&nbsp;HTTP Samples</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="multipart-rest-inbound" href="#multipart-rest-inbound"></a>17.9.1&nbsp;Multipart HTTP request - RestTemplate (client) and Http Inbound Gateway (server)</h3></div></div></div>
+
+<p>This example demonstrates how simple it is to send a Multipart HTTP request via Spring&#8217;s RestTemplate and receive it with a Spring Integration HTTP Inbound Adapter.
+All we are doing is creating a <code class="literal">MultiValueMap</code> and populating it with multi-part data.
+The <code class="literal">RestTemplate</code> will take care of the rest (no pun intended) by converting it to&nbsp;a <code class="literal">MultipartHttpServletRequest</code> .&nbsp;This particular client will send a multipart HTTP Request which contains the name of the company as well as an image file with the company logo.</p>
+<pre class="programlisting">RestTemplate template =&nbsp;<span class="hl-keyword">new</span>&nbsp;RestTemplate();
+String uri =&nbsp;<span class="hl-string">"http://localhost:8080/multipart-http/inboundAdapter.htm"</span>;
+Resource s2logo =&nbsp;
+   <span class="hl-keyword">new</span>&nbsp;ClassPathResource(<span class="hl-string">"org/springframework/samples/multipart/spring09_logo.png"</span>);
+MultiValueMap map =&nbsp;<span class="hl-keyword">new</span>&nbsp;LinkedMultiValueMap();
+map.add(<span class="hl-string">"company"</span>,&nbsp;<span class="hl-string">"SpringSource"</span>);
+map.add(<span class="hl-string">"company-logo"</span>, s2logo);
+HttpHeaders headers =&nbsp;<span class="hl-keyword">new</span>&nbsp;HttpHeaders();
+headers.setContentType(<span class="hl-keyword">new</span>&nbsp;MediaType(<span class="hl-string">"multipart"</span>,&nbsp;<span class="hl-string">"form-data"</span>));
+HttpEntity request =&nbsp;<span class="hl-keyword">new</span>&nbsp;HttpEntity(map, headers);
+ResponseEntity&lt;?&gt; httpResponse = template.exchange(uri, HttpMethod.POST, request,&nbsp;null);</pre>
+<p>That is all for the client.</p>
+<p>On the server side we have the following configuration:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-http:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpInboundAdapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"receiveChannel"</span>
+    <span class="hl-attribute">path</span>=<span class="hl-value">"/inboundAdapter.htm"</span>
+    <span class="hl-attribute">supported-methods</span>=<span class="hl-value">"GET, POST"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"receiveChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:service-activator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"receiveChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.samples.multipart.MultipartReceiver"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:service-activator&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"multipartResolver"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.web.multipart.commons.CommonsMultipartResolver"</span><span class="hl-tag">/&gt;</span></pre>
+<p>The <span class="emphasis"><em>httpInboundAdapter</em></span> will receive the request, convert it to a <code class="literal">Message</code> with a payload that is a&nbsp;<code class="literal">LinkedMultiValueMap</code>.
+We then are parsing that in the <span class="emphasis"><em>multipartReceiver</em></span> service-activator;</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">void</span> receive(LinkedMultiValueMap&lt;String, Object&gt; multipartRequest){
+    System.out.println(<span class="hl-string">"### Successfully received multipart request ###"</span>);
+    <span class="hl-keyword">for</span> (String elementName : multipartRequest.keySet()) {
+        <span class="hl-keyword">if</span> (elementName.equals(<span class="hl-string">"company"</span>)){
+            System.out.println(<span class="hl-string">"\t"</span> + elementName + <span class="hl-string">" - "</span> +
+                ((String[]) multipartRequest.getFirst(<span class="hl-string">"company"</span>))[<span class="hl-number">0</span>]);
+        }
+        <span class="hl-keyword">else</span> <span class="hl-keyword">if</span> (elementName.equals(<span class="hl-string">"company-logo"</span>)){
+            System.out.println(<span class="hl-string">"\t"</span> + elementName + <span class="hl-string">" - as UploadedMultipartFile: "</span> +
+                ((UploadedMultipartFile) multipartRequest
+                    .getFirst(<span class="hl-string">"company-logo"</span>)).getOriginalFilename());
+        }
+    }
+}</pre>
+<p>You should see the following output:</p>
+<pre class="programlisting">### Successfully received multipart request ###
+   company - SpringSource
+   company-logo - as UploadedMultipartFile: spring09_logo.png</pre>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="gemfire.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="jdbc.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">16.&nbsp;GemFire Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;18.&nbsp;JDBC Support</td></tr></table></div></body></html>
