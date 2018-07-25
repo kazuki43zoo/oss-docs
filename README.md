@@ -87,3 +87,61 @@ $ ./mvnw clean site:site
 
 target/site
 
+## junit4
+
+```
+$ git clone https://github.com/junit-team/junit4.wiki.git
+$ cd junit4.wiki
+$ gitbook init
+```
+
+* README.md
+
+```
+# Introduction
+
+This pages generated from JUnit 4 [wiki](https://github.com/junit-team/junit4/wiki).
+```
+
+* SUMMARY.md
+
+```
+# Summary
+
+* [Download and Install](Download-and-Install.md)
+* [Getting Started](Getting-Started.md)
+* [Maintainer Documentation](Maintainer-Documentation.md)
+* [Deprecation Policy](Deprecation-Policy.md)
+* [I want to help!](I-want-to-help!.md)
+
+##  JUnit Usage and Idioms
+* [Assertions](Assertions.md)
+* [Test Runners](Test-Runners.md)
+* [Aggregating tests in Suites](Aggregating-tests-in-Suites.md)
+* [Test Execution Order](Test-Execution-Order.md)
+* [Exception Testing](Exception-Testing.md)
+* [Matchers and assertThat](Matchers-and-assertThat.md)
+* [Ignoring Tests](Ignoring-Tests.md)
+* [Timeout for Tests](Timeout-for-Tests.md)
+* [Parameterized Tests](Parameterized-Tests.md)
+* [Assumptions with Assume](Assumptions-with-Assume.md)
+* [Rules](Rules.md)
+* [Theories](Theories.md)
+* [Test Fixtures](Test-Fixtures.md)
+* [Categories](Categories.asciidoc)
+* [Use with Maven](Use-with-Maven.md)
+* [Use with Gradle](Use-with-Gradle.md)
+* [Multithreaded code and Concurrency](Multithreaded-code-and-Concurrency.md)
+* [Java contract test helpers](Java-contract-test-helpers.md)
+* [Continuous Testing](Continuous-Testing.md)
+
+##  Third-party extensions
+
+* [Custom Runners](Custom-Runners.md)
+```
+
+```
+$ gitbook build
+```
+
+_book
