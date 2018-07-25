@@ -1,5 +1,45 @@
 # oss-docs
 
+## spring-security
+
+```
+$ git clone https://github.com/spring-projects/spring-security.git
+$ cd spring-security
+$ cd checkout {version}
+$ ./gradlew reference
+```
+docs/manual/build/reference
+
+## spring-batch
+
+```
+$ git clone https://github.com/spring-projects/spring-batch.git
+$ cd spring-batch
+$ git checkout {version}
+$ ./gradlew reference
+```
+
+## logback
+
+```
+$ git clone https://github.com/qos-ch/logback.git
+$ cd logback
+$ git checkout v_{version}
+```
+
+logback-site/src/site/pages
+
+## hibernate-validator
+
+```
+$ git clone https://github.com/hibernate/hibernate-validator.git
+$ cd hibernate-validator
+$ git checkout {version}
+$ mvn -pl documentation clean package
+```
+
+documentation/target/asciidoc-html
+
 ## mybatis
 
 ```
@@ -21,35 +61,4 @@ $ ./mvnw clean site:site
 ```
 
 target/site
-
-## spring-security
-
-```
-$ git clone https://github.com/spring-projects/spring-security.git
-$ cd spring-security
-$ cd checkout {version}
-$ ./gradlew reference
-```
-docs/manual/build/reference
-
-## logback
-
-```
-$ git clone https://github.com/qos-ch/logback.git
-$ cd logback
-$ git checkout v_{version}
-```
-
-logback-site/src/site/pages
-
-## hibernate-validator
-
-```
-$ git clone
-$ cd hibernate-validator
-$ git checkout 5.3.5.Final
-$ mvn -pl documentation clean package
-```
-
-documentation/target/asciidoc-html
 
