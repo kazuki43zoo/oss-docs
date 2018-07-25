@@ -9,6 +9,8 @@ $ git checkout mybatis-{version}
 $ ./mvnw clean site:site
 ```
 
+target/site
+
 ## mybatis-spring
 
 ```
@@ -18,6 +20,8 @@ $ git checkout mybatis-spring-{version}
 $ ./mvnw clean site:site
 ```
 
+target/site
+
 ## spring-security
 
 ```
@@ -26,4 +30,15 @@ $ cd spring-security
 $ cd checkout {version}
 $ ./gradlew reference
 ```
+docs/manual/build/reference
+
+## logback
+
+```
+$ git clone https://github.com/qos-ch/logback.git
+$ cd logback
+$ git checkout v_{version}
+```
+
+logback-site/src/site/pages
 
