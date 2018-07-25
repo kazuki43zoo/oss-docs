@@ -43,6 +43,17 @@ $ ./gradlew reference
 
 build/reference
 
+## spring-ws
+
+```
+$ git clone https://github.com/spring-projects/spring-ws.git
+$ cd spring-ws
+$ git checkout v{version}
+$ ./gradlew reference
+```
+
+build/reference
+
 
 ## logback
 
