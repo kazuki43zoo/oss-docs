@@ -5,6 +5,7 @@
 ```
 $ git clone https://github.com/mybatis/mybatis-3.git
 $ cd mybatis-3
+$ git checkout mybatis-{version}
 $ ./mvnw clean site:site
 ```
 
@@ -13,5 +14,6 @@ $ ./mvnw clean site:site
 ```
 $ git clone https://github.com/mybatis/spring.git
 $ cd spring
+$ git checkout mybatis-spring-{version}
 $ ./mvnw clean site:site
 ```
