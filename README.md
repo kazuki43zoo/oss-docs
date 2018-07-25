@@ -19,6 +19,8 @@ $ git checkout {version}
 $ ./gradlew reference
 ```
 
+build/reference
+
 ## logback
 
 ```
