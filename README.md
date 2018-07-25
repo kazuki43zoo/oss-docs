@@ -1,5 +1,16 @@
 # oss-docs
 
+## spring-framework
+
+```
+$ git clone https://github.com/spring-projects/spring-framework.git
+$ cd spring-framework
+$ git checkout v{version}
+$ ./gradlew reference
+```
+
+build/reference
+
 ## spring-security
 
 ```
@@ -20,6 +31,18 @@ $ ./gradlew reference
 ```
 
 build/reference
+
+## spring-integration
+
+```
+$ git clone https://github.com/spring-projects/spring-integration.git
+$ cd spring-integration
+$ git checkout v{version}
+$ ./gradlew reference
+```
+
+build/reference
+
 
 ## logback
 
