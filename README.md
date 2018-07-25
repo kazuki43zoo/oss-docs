@@ -93,7 +93,10 @@ target/site
 $ git clone https://github.com/junit-team/junit4.wiki.git
 $ cd junit4.wiki
 $ gitbook init
+$ gitbook build
 ```
+
+_book
 
 * README.md
 
@@ -139,9 +142,3 @@ This pages generated from JUnit 4 [wiki](https://github.com/junit-team/junit4/wi
 
 * [Custom Runners](Custom-Runners.md)
 ```
-
-```
-$ gitbook build
-```
-
-_book
