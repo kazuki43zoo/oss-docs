@@ -1,0 +1,756 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>6.&nbsp;Using Spring Web Services on the Client</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Web Services Reference Documentation"><link rel="up" href="pt02.html" title="Part&nbsp;II.&nbsp;Reference"><link rel="prev" href="server.html" title="5.&nbsp;Creating a Web service with Spring-WS"><link rel="next" href="security.html" title="7.&nbsp;Securing your Web services with Spring-WS"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">6.&nbsp;Using Spring Web Services on the Client</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="server.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;II.&nbsp;Reference</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="security.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="client" href="#client"></a>6.&nbsp;Using Spring Web Services on the Client</h2></div></div></div>
+    
+    <div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d5e1768" href="#d5e1768"></a>6.1&nbsp;Introduction</h2></div></div></div>
+        
+        <p>
+            Spring-WS provides a client-side Web service API that allows for consistent, XML-driven access to
+            Web services. It also caters for the use of marshallers and unmarshallers
+            so that your service tier code can deal exclusively with Java objects.
+        </p>
+        <p>
+            The <span class="package">org.springframework.ws.client.core</span> package provides the core functionality
+            for using the client-side access API. It contains template classes that simplify the use of Web
+            services, much like the core Spring <code class="classname">JdbcTemplate</code> does for JDBC. The
+            design principle common to Spring template classes is to provide helper methods to perform common
+            operations, and for more sophisticated usage, delegate to user implemented callback interfaces.
+            The Web service template follows the same design. The classes offer various convenience methods
+            for the sending and receiving of XML messages, marshalling objects to XML before sending, and
+            allows for multiple transport options.
+        </p>
+    </div>
+    <div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d5e1774" href="#d5e1774"></a>6.2&nbsp;Using the client-side API</h2></div></div></div>
+        
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="client-web-service-template" href="#client-web-service-template"></a>6.2.1&nbsp;<code class="classname">WebServiceTemplate</code></h3></div></div></div>
+            
+            <p>
+                The <code class="classname">WebServiceTemplate</code> is the core class for client-side Web service
+                access in Spring-WS. It contains methods for sending <code class="classname">Source</code> objects,
+                and receiving response messages as either <code class="classname">Source</code> or
+                <code class="classname">Result</code>. Additionally, it can marshal objects to XML before sending
+                them across a transport, and unmarshal any response XML into an object again.
+            </p>
+            <div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="client-transports" href="#client-transports"></a>URIs and Transports</h4></div></div></div>
+                
+                <p>
+                    The <code class="classname">WebServiceTemplate</code> class uses an URI as the message destination.
+                    You can either set a <span class="property">defaultUri</span> property on the template itself,
+                    or supply an URI explicitly when calling a method on the template. The URI will be
+                    resolved into a <code class="interfacename">WebServiceMessageSender</code>, which is
+                    responsible for sending the XML message across a transport layer. You can set one or
+                    more message senders using the <span class="property">messageSender</span> or
+                    <span class="property">messageSenders</span> properties of the
+                    <code class="classname">WebServiceTemplate</code> class.
+                </p>
+                <div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="d5e1793" href="#d5e1793"></a>HTTP transports</h5></div></div></div>
+                    
+                    <p>
+                        There are two implementations of the <code class="classname">WebServiceMessageSender</code>
+                        interface for sending messages via HTTP. The default implementation is the
+                        <code class="classname">HttpUrlConnectionMessageSender</code>, which uses the facilities provided
+                        by Java itself. The alternative is the <code class="classname">HttpComponentsMessageSender</code>,
+                        which uses the
+                        <a class="ulink" href="http://hc.apache.org/httpcomponents-client-ga" target="_top">Apache HttpComponents HttpClient</a>.
+                        Use the latter if you need more advanced and easy-to-use functionality (such as authentication,
+                        HTTP connection pooling, and so forth).
+                    </p>
+                    <p>
+                        To use the HTTP transport, either set the <span class="property">defaultUri</span> to something like
+                        <code class="uri">http://example.com/services</code>, or supply the <em class="parameter"><code>uri</code></em> parameter
+                        for one of the methods.
+                    </p>
+                    <p>
+                        The following example shows how the default configuration can be used for HTTP transports:
+                        </p><pre class="programlisting">&lt;beans&gt;
+
+    &lt;bean id="messageFactory" class="org.springframework.ws.soap.saaj.SaajSoapMessageFactory"/&gt;
+
+    &lt;bean id="webServiceTemplate" class="org.springframework.ws.client.core.WebServiceTemplate"&gt;
+        &lt;constructor-arg ref="messageFactory"/&gt;
+        &lt;property name="defaultUri" value="http://example.com/WebService"/&gt;
+    &lt;/bean&gt;
+
+&lt;/beans&gt;</pre><p>
+                    </p>
+                    <p>
+                        The following example shows how override the default configuration, and to use Apache HttpClient to
+                        authenticate using HTTP authentication:
+                        </p><pre class="programlisting">&lt;bean id="webServiceTemplate" class="org.springframework.ws.client.core.WebServiceTemplate"&gt;
+    &lt;constructor-arg ref="messageFactory"/&gt;
+    &lt;property name="messageSender"&gt;
+        &lt;bean class="org.springframework.ws.transport.http.HttpComponentsMessageSender"&gt;
+            &lt;property name="credentials"&gt;
+                &lt;bean class="org.apache.http.auth.UsernamePasswordCredentials"&gt;
+                    &lt;constructor-arg value="john:secret"/&gt;
+                &lt;/bean&gt;
+            &lt;/property&gt;
+        &lt;/bean&gt;
+    &lt;/property&gt;
+    &lt;property name="defaultUri" value="http://example.com/WebService"/&gt;
+&lt;/bean&gt;</pre><p>
+                    </p>
+                </div>
+                <div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="d5e1808" href="#d5e1808"></a>JMS transport</h5></div></div></div>
+                    
+                    <p>
+                        For sending messages over JMS, Spring Web Services provides the
+                        <code class="classname">JmsMessageSender</code>. This class uses the facilities of the Spring framework
+                        to transform the <code class="interfacename">WebServiceMessage</code> into a JMS
+                        <code class="interfacename">Message</code>, send it on its way on a
+                        <code class="interfacename">Queue</code> or <code class="interfacename">Topic</code>, and receive a
+                        response (if any).
+                    </p>
+                    <p>
+                        To use the <code class="classname">JmsMessageSender</code>, you need to set the
+                        <span class="property">defaultUri</span> or <em class="parameter"><code>uri</code></em> parameter to a JMS URI, which - at a
+                        minimum - consists of the <code class="literal">jms:</code> prefix and a destination name. Some examples of
+                        JMS URIs are: <code class="uri">jms:SomeQueue</code>,
+                        <code class="uri">jms:SomeTopic?priority=3&amp;deliveryMode=NON_PERSISTENT</code>, and
+                        <code class="uri">jms:RequestQueue?replyToName=ResponseName</code>.
+                        For more information on this URI syntax, refer to the class level Javadoc of the
+                        <code class="classname">JmsMessageSender</code>.
+                    </p>
+                    <p>
+                        By default, the <code class="classname">JmsMessageSender</code> send JMS
+                        <code class="interfacename">BytesMessage</code>, but
+                        this can be overriden to use <code class="interfacename">TextMessages</code> by using the
+                        <code class="literal">messageType</code> parameter on the JMS URI. For example:
+                        <code class="uri">jms:Queue?messageType=TEXT_MESSAGE</code>.
+                        Note that <code class="interfacename">BytesMessages</code> are the preferred type, because
+                        <code class="interfacename">TextMessages</code> do not support attachments and character
+                        encodings reliably.
+                    </p>
+                    <p>
+                        The following example shows how to use the JMS transport in combination with an ActiceMQ
+                        connection factory:</p><pre class="programlisting">&lt;beans&gt;
+
+    &lt;bean id="messageFactory" class="org.springframework.ws.soap.saaj.SaajSoapMessageFactory"/&gt;
+
+    &lt;bean id="connectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory"&gt;
+        &lt;property name="brokerURL" value="vm://localhost?broker.persistent=false"/&gt;
+    &lt;/bean&gt;
+
+    &lt;bean id="webServiceTemplate" class="org.springframework.ws.client.core.WebServiceTemplate"&gt;
+        &lt;constructor-arg ref="messageFactory"/&gt;
+        &lt;property name="messageSender"&gt;
+            &lt;bean class="org.springframework.ws.transport.jms.JmsMessageSender"&gt;
+                &lt;property name="connectionFactory" ref="connectionFactory"/&gt;
+            &lt;/bean&gt;
+        &lt;/property&gt;
+        &lt;property name="defaultUri" value="jms:RequestQueue?deliveryMode=NON_PERSISTENT"/&gt;
+    &lt;/bean&gt;
+
+&lt;/beans&gt;</pre><p>
+                    </p>
+                </div>
+                <div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="d5e1835" href="#d5e1835"></a>Email transport</h5></div></div></div>
+                    
+                    <p>
+                        Spring Web Services also provides an email transport, which can be used to send web service
+                        messages via SMTP, and retrieve them via either POP3 or IMAP. The client-side email
+                        functionality is contained in the <code class="classname">MailMessageSender</code> class.
+                        This class creates an email message from the request
+                        <code class="interfacename">WebServiceMessage</code>, and sends it via SMTP. It then waits for a
+                        response message to arrive in the incoming POP3 or IMAP server.
+                    </p>
+                    <p>
+                        To use the <code class="classname">MailMessageSender</code>, set the <span class="property">defaultUri</span> or
+                        <em class="parameter"><code>uri</code></em> parameter to a <code class="literal">mailto</code> URI. Here are some URI
+                        examples: <code class="uri">mailto:john@example.com</code>, and
+                        <code class="uri">mailto:server@localhost?subject=SOAP%20Test</code>. Make sure that the message sender is
+                        properly configured with a <span class="property">transportUri</span>, which indicates the server to use for
+                        sending requests (typically a SMTP server), and a <span class="property">storeUri</span>, which indicates
+                        the server to poll for responses (typically a POP3 or IMAP server).
+                    </p>
+                    <p>
+                        The following example shows how to use the email transport:</p><pre class="programlisting">&lt;beans&gt;
+
+    &lt;bean id="messageFactory" class="org.springframework.ws.soap.saaj.SaajSoapMessageFactory"/&gt;
+
+    &lt;bean id="webServiceTemplate" class="org.springframework.ws.client.core.WebServiceTemplate"&gt;
+        &lt;constructor-arg ref="messageFactory"/&gt;
+        &lt;property name="messageSender"&gt;
+            &lt;bean class="org.springframework.ws.transport.mail.MailMessageSender"&gt;
+                &lt;property name="from" value="Spring-WS SOAP Client &amp;lt;client@example.com&amp;gt;"/&gt;
+                &lt;property name="transportUri" value="smtp://client:s04p@smtp.example.com"/&gt;
+                &lt;property name="storeUri" value="imap://client:s04p@imap.example.com/INBOX"/&gt;
+            &lt;/bean&gt;
+        &lt;/property&gt;
+        &lt;property name="defaultUri" value="mailto:server@example.com?subject=SOAP%20Test"/&gt;
+    &lt;/bean&gt;
+
+&lt;/beans&gt;</pre><p>
+                    </p>
+                </div>
+                <div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="d5e1851" href="#d5e1851"></a>XMPP transport</h5></div></div></div>
+                    
+                    <p>
+                        Spring Web Services 2.0 introduced an XMPP (Jabber) transport, which can be used to send and
+                        receive web service messages via XMPP. The client-side XMPP
+                        functionality is contained in the <code class="classname">XmppMessageSender</code> class.
+                        This class creates an XMPP message from the request
+                        <code class="interfacename">WebServiceMessage</code>, and sends it via XMPP. It then listens for a
+                        response message to arrive.
+                    </p>
+                    <p>
+                        To use the <code class="classname">XmppMessageSender</code>, set the <span class="property">defaultUri</span> or
+                        <em class="parameter"><code>uri</code></em> parameter to a <code class="literal">xmpp</code> URI, for example
+                        <code class="uri">xmpp:johndoe@jabber.org</code>. The sender also requires an
+                        <code class="classname">XMPPConnection</code> to work, which can be conveniently created using the
+                        <code class="classname">org.springframework.ws.transport.xmpp.support.XmppConnectionFactoryBean</code>.
+                    </p>
+                    <p>
+                        The following example shows how to use the xmpp transport:</p><pre class="programlisting">&lt;beans&gt;
+
+    &lt;bean id="messageFactory" class="org.springframework.ws.soap.saaj.SaajSoapMessageFactory"/&gt;
+
+    &lt;bean id="connection" class="org.springframework.ws.transport.xmpp.support.XmppConnectionFactoryBean"&gt;
+        &lt;property name="host" value="jabber.org"/&gt;
+        &lt;property name="username" value="username"/&gt;
+        &lt;property name="password" value="password"/&gt;
+    &lt;/bean&gt;
+
+    &lt;bean id="webServiceTemplate" class="org.springframework.ws.client.core.WebServiceTemplate"&gt;
+        &lt;constructor-arg ref="messageFactory"/&gt;
+        &lt;property name="messageSender"&gt;
+            &lt;bean class="org.springframework.ws.transport.xmpp.XmppMessageSender"&gt;
+                &lt;property name="connection" ref="connection"/&gt;
+            &lt;/bean&gt;
+        &lt;/property&gt;
+        &lt;property name="defaultUri" value="xmpp:user@jabber.org"/&gt;
+    &lt;/bean&gt;
+
+&lt;/beans&gt;</pre><p>
+                    </p>
+                </div>
+            </div>
+            <div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="d5e1866" href="#d5e1866"></a>Message factories</h4></div></div></div>
+                
+                <p>
+                    In addition to a message sender, the <code class="classname">WebServiceTemplate</code> requires a Web
+                    service message factory. There are two message factories for SOAP:
+                    <code class="classname">SaajSoapMessageFactory</code> and <code class="classname">AxiomSoapMessageFactory</code>.
+                    If no message factory is specified (via the <span class="property">messageFactory</span> property),
+                    Spring-WS will use the <code class="classname">SaajSoapMessageFactory</code> by default.
+                </p>
+            </div>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e1874" href="#d5e1874"></a>6.2.2&nbsp;Sending and receiving a <code class="interfacename">WebServiceMessage</code>
+            </h3></div></div></div>
+            
+            <p>
+                The <code class="classname">WebServiceTemplate</code> contains many convenience methods to send and receive
+                web service messages. There are methods that accept and return a <code class="interfacename">Source</code>
+                and those that return a <code class="interfacename">Result</code>. Additionally, there are methods which
+                marshal and unmarshal objects to XML. Here is an example that sends a simple XML message to a Web
+                service.
+            </p>
+
+            <pre class="programlisting">
+import java.io.StringReader;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
+
+import org.springframework.ws.WebServiceMessageFactory;
+import org.springframework.ws.client.core.WebServiceTemplate;
+import org.springframework.ws.transport.WebServiceMessageSender;
+
+public class WebServiceClient {
+
+    private static final String MESSAGE =
+        "&lt;message xmlns=\"http://tempuri.org\"&gt;Hello Web Service World&lt;/message&gt;";
+
+    private final WebServiceTemplate webServiceTemplate = new WebServiceTemplate();
+
+    public void setDefaultUri(String defaultUri) {
+        webServiceTemplate.setDefaultUri(defaultUri);
+    }
+
+    <em class="lineannotation"><span class="lineannotation">// send to the configured default URI</span></em>
+    public void simpleSendAndReceive() {
+        StreamSource source = new StreamSource(new StringReader(MESSAGE));
+        StreamResult result = new StreamResult(System.out);
+        webServiceTemplate.sendSourceAndReceiveToResult(source, result);
+    }
+
+    <em class="lineannotation"><span class="lineannotation">// send to an explicit URI</span></em>
+    public void customSendAndReceive() {
+        StreamSource source = new StreamSource(new StringReader(MESSAGE));
+        StreamResult result = new StreamResult(System.out);
+        webServiceTemplate.sendSourceAndReceiveToResult("http://localhost:8080/AnotherWebService",
+            source, result);
+    }
+
+}</pre>
+            <pre class="programlisting">
+&lt;beans xmlns="http://www.springframework.org/schema/beans"&gt;
+
+    &lt;bean id="webServiceClient" class="WebServiceClient"&gt;
+        &lt;property name="defaultUri" value="http://localhost:8080/WebService"/&gt;
+    &lt;/bean&gt;
+
+&lt;/beans&gt;</pre>
+            <p>
+                The above example uses the <code class="classname">WebServiceTemplate</code> to send a hello
+                world message to the web service located at <code class="uri">http://localhost:8080/WebService</code>
+                (in the case of the <code class="methodname">simpleSendAndReceive()</code> method),
+                and writes the result to the console. The <code class="classname">WebServiceTemplate</code> is
+                injected with the default URI, which is used because no URI was supplied explicitly
+                in the Java code.
+            </p>
+            <p>
+                Please note that the <code class="classname">WebServiceTemplate</code> class is thread-safe once
+                configured (assuming that all of it's dependencies are thread-safe too, which is the case for
+                all of the dependencies that ship with Spring-WS), and so multiple objects can use the same
+                shared <code class="classname">WebServiceTemplate</code> instance if so desired.
+                The <code class="classname">WebServiceTemplate</code> exposes a zero argument constructor and
+                <span class="property">messageFactory</span>/<span class="property">messageSender</span> bean properties which
+                can be used for constructing the instance (using a Spring container or plain Java code).
+                Alternatively, consider deriving from Spring-WS's <code class="classname">WebServiceGatewaySupport</code>
+                convenience base class, which exposes convenient bean properties to enable easy configuration.
+                (You do <span class="emphasis"><em>not</em></span> have to extend this base class... it is provided as a convenience
+                class only.)
+            </p>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e1898" href="#d5e1898"></a>6.2.3&nbsp;Sending and receiving POJOs - marshalling and unmarshalling</h3></div></div></div>
+            
+            <p>
+                In order to facilitate the sending of plain Java objects, the
+                <code class="classname">WebServiceTemplate</code> has a number of <code class="literal">send(..)</code> methods
+                that take an <code class="classname">Object</code> as an argument for a message's data content.
+                The method <code class="methodname">marshalSendAndReceive(..)</code> in the
+                <code class="classname">WebServiceTemplate</code> class delegates the conversion of the request object
+                to XML to a <code class="interfacename">Marshaller</code>, and the conversion of the response
+                XML to an object to an <code class="interfacename">Unmarshaller</code>. (For more information
+                about marshalling and unmarshaller, refer to
+                <a class="ulink" href="http://static.springsource.org/spring/docs/3.0.x/spring-framework-reference/html/oxm.html" target="_top">the Spring documentation</a>.)
+                By using the
+                marshallers, your application code can focus on the business object that is being sent or
+                received and not be concerned with the details of how it is represented as XML. In order to
+                use the marshalling functionality, you have to set a marshaller and unmarshaller with the
+                <span class="property">marshaller</span>/<span class="property">unmarshaller</span> properties of the
+                <code class="classname">WebServiceTemplate</code> class.
+            </p>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e1912" href="#d5e1912"></a>6.2.4&nbsp;
+                <code class="interfacename">WebServiceMessageCallback</code>
+            </h3></div></div></div>
+            
+            <p>
+                To accommodate the setting of SOAP headers and other settings on the message, the
+                <code class="interfacename">WebServiceMessageCallback</code> interface gives you access to the
+                message <span class="emphasis"><em>after</em></span> it has been created, but <span class="emphasis"><em>before</em></span> it
+                is sent. The example below demonstrates how to set the SOAP Action header on a message
+                that is created by marshalling an object.
+            </p>
+            <pre class="programlisting">
+public void marshalWithSoapActionHeader(MyObject o) {
+
+    webServiceTemplate.marshalSendAndReceive(o, new WebServiceMessageCallback() {
+
+        public void doWithMessage(WebServiceMessage message) {
+            ((SoapMessage)message).setSoapAction("http://tempuri.org/Action");
+        }
+    });
+}</pre>
+            <div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+                <p>
+                    Note that you can also use the
+                    <code class="classname">org.springframework.ws.soap.client.core.SoapActionCallback</code> to set the SOAP
+                    Action header.
+                </p>
+            </td></tr></table></div>
+            <div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="d5e1923" href="#d5e1923"></a>WS-Addressing</h4></div></div></div>
+                
+                <p>
+                    In addition to the <a class="link" href="server.html#server-ws-addressing" title="5.5.1&nbsp;WS-Addressing">server-side WS-Addressing</a> support,
+                    Spring Web Services also has support for this specification on the client-side.
+                </p>
+                <p>
+                    For setting WS-Addressing headers on the client, you can use the
+                    <code class="classname">org.springframework.ws.soap.addressing.client.ActionCallback</code>. This callback
+                    takes the desired Action header as a parameter. It also has constructors for specifying the
+                    WS-Addressing version, and a <code class="literal">To</code> header. If not specified, the
+                    <code class="literal">To</code> header will default to the URL of the connection being made.
+                </p>
+                <p>
+                    Here is an example of setting the <code class="literal">Action</code> header to
+                    <code class="uri">http://samples/RequestOrder</code>:</p><pre class="programlisting">
+webServiceTemplate.marshalSendAndReceive(o, new ActionCallback("http://samples/RequestOrder"));
+</pre><p>
+
+                </p>
+            </div>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e1935" href="#d5e1935"></a>6.2.5&nbsp;
+                <code class="interfacename">WebServiceMessageExtractor</code>
+            </h3></div></div></div>
+            
+            <p>
+                The <code class="interfacename">WebServiceMessageExtractor</code> interface is a low-level
+                callback interface that allows you to have full control over the process to extract an
+                <code class="classname">Object</code> from a received <code class="interfacename">WebServiceMessage</code>.
+                The <code class="classname">WebServiceTemplate</code> will invoke the <code class="methodname">extractData(..)</code>
+                method on a supplied <code class="interfacename">WebServiceMessageExtractor</code>
+                <span class="emphasis"><em>while the underlying connection to the serving resource is still open</em></span>.
+                The following example illustrates the <code class="interfacename">WebServiceMessageExtractor</code>
+                in action:
+            </p>
+            <pre class="programlisting">
+public void marshalWithSoapActionHeader(final Source s) {
+    final Transformer transformer = transformerFactory.newTransformer();
+    webServiceTemplate.sendAndReceive(new WebServiceMessageCallback() {
+        public void doWithMessage(WebServiceMessage message) {
+            transformer.transform(s, message.getPayloadResult());
+        },
+        new WebServiceMessageExtractor() {
+            public Object extractData(WebServiceMessage message) throws IOException
+                <em class="lineannotation"><span class="lineannotation">// do your own transforms with message.getPayloadResult()</span></em>
+                <em class="lineannotation"><span class="lineannotation">//     or message.getPayloadSource()</span></em>
+            }
+        });
+}</pre>
+        </div>
+    </div>
+    <div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d5e1950" href="#d5e1950"></a>6.3&nbsp;Client-side testing</h2></div></div></div>
+        
+        <p>
+            When it comes to testing your Web service clients (i.e. classes that uses the
+            <code class="classname">WebServiceTemplate</code> to access a Web service), there are two possible
+            approaches:
+        </p>
+        <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+                <p>
+                    Write <span class="emphasis"><em>Unit Tests</em></span>, which simply mock away the
+                    <code class="classname">WebServiceTemplate</code> class,
+                    <code class="interfacename">WebServiceOperations</code> interface, or the complete client class.
+                </p>
+                <p>
+                    The advantage of this approach is that it's quite easy to accomplish; the disadvantage is that
+                    you are not really testing the exact content of the XML messages that are sent over the wire,
+                    especially when mocking out the entire client class.
+                </p>
+            </li><li class="listitem">
+                <p>
+                    Write <span class="emphasis"><em>Integrations Tests</em></span>, which do test the contents of the message.
+                </p>
+            </li></ul></div>
+        <p>
+            The first approach can easily be accomplished with mocking frameworks such as EasyMock, JMock, etc.
+            The next section will focus on writing integration tests, using the test features introduced in Spring
+            Web Services 2.0.
+        </p>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e1965" href="#d5e1965"></a>6.3.1&nbsp;Writing client-side integration tests</h3></div></div></div>
+            
+            <p>
+                Spring Web Services 2.0 introduced support for creating Web service client integration tests.
+                In this context, a client is a class that uses the <code class="classname">WebServiceTemplate</code>
+                to access a Web service.
+            </p>
+            <p>
+                The integration test support lives in the <span class="package">org.springframework.ws.test.client</span> package.
+                The core class in that package is the <code class="classname">MockWebServiceServer</code>.
+                The underlying idea is that the web service template connects to this mock server, sends it request
+                message, which the mock server then verifies against the registered expectations.
+                If the expectations are met, the mock server then prepares a response message, which is send back to the
+                template.
+            </p>
+            <p>
+                The typical usage of the <code class="classname">MockWebServiceServer</code> is:
+                </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+                        <p>
+                            Create a <code class="classname">MockWebServiceServer</code> instance by calling
+                            <code class="methodname">MockWebServiceServer.createServer(WebServiceTemplate)</code>,
+                            <code class="methodname">MockWebServiceServer.createServer(WebServiceGatewaySupport)</code>, or
+                            <code class="methodname">MockWebServiceServer.createServer(ApplicationContext)</code>.
+                        </p>
+                    </li><li class="listitem">
+                        <p>
+                            Set up request expectations by calling <code class="methodname">expect(RequestMatcher)</code>,
+                            possibly by using the default <code class="interfacename">RequestMatcher</code> implementations
+                            provided in <code class="classname">RequestMatchers</code> (which can be statically imported).
+                            Multiple expectations can be set up by chaining
+                            <code class="methodname">andExpect(RequestMatcher)</code> calls.
+                        </p>
+                    </li><li class="listitem">
+                        <p>
+                            Create an appropriate response message by calling
+                            <code class="methodname">andRespond(ResponseCreator)</code>, possibly by using the default
+                            <code class="interfacename">ResponseCreator</code> implementations provided in
+                            <code class="classname">ResponseCreators</code> (which can be statically imported).
+                        </p>
+                    </li><li class="listitem">
+                        <p>
+                            Use the <code class="classname">WebServiceTemplate</code> as normal, either directly of through
+                            client code.
+                        </p>
+                    </li><li class="listitem">
+                        <p>
+                            Call <code class="methodname">MockWebServiceServer.verify()</code> to make sure that all
+                            expectations have been met.
+                        </p>
+                    </li></ol></div><p>
+            </p>
+            <div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+                <p>
+                    Note that the <code class="classname">MockWebServiceServer</code> (and related classes) offers a
+                    'fluent' API, so you can typically use the Code Completion features (i.e. ctrl-space) in your IDE
+                    to guide you through the process of setting up the mock server.
+                </p>
+            </td></tr></table></div>
+            <div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+                <p>
+                    Also note that you rely on the standard logging features available in Spring Web Services in your
+                    unit tests.
+                    Sometimes it might be useful to inspect the request or response message to find out why a
+                    particular tests failed.
+                    See <a class="xref" href="common.html#logging" title="4.4&nbsp;Message Logging and Tracing">Section&nbsp;4.4, &#8220;Message Logging and Tracing&#8221;</a> for more information.
+                </p>
+            </td></tr></table></div>
+            <p>
+                Consider, for example, this Web service client class:
+            </p>
+            <div class="programlistingco"><pre class="programlisting">import org.springframework.ws.client.core.support.WebServiceGatewaySupport;
+
+public class CustomerClient extends WebServiceGatewaySupport {                                                         <span class="co" id="client.test.client.gateway"><img src="images/callouts/1.png" alt="(1)"></span>
+
+  public int getCustomerCount() {
+    CustomerCountRequest request = new CustomerCountRequest();                                                         <span class="co" id="client.test.client.request"><img src="images/callouts/2.png" alt="(2)"></span>
+    request.setCustomerName("John Doe");
+
+    CustomerCountResponse response =
+      (CustomerCountResponse) getWebServiceTemplate().marshalSendAndReceive(request);                                  <span class="co" id="client.test.client.response"><img src="images/callouts/3.png" alt="(3)"></span>
+      
+    return response.getCustomerCount();
+  }
+
+}</pre><div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/1.png" alt="1" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            The <code class="classname">CustomerClient</code> extends
+                            <code class="classname">WebServiceGatewaySupport</code>, which provides it with a
+                            <span class="property">webServiceTemplate</span> property.
+                        </p>
+                    </td></tr><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/2.png" alt="2" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            <code class="classname">CustomerCountRequest</code> is an object supported by a marshaller.
+                            For instance, it can have a <code class="interfacename">@XmlRootElement</code> annotation
+                            to be supported by JAXB2.
+                        </p>
+                    </td></tr><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/3.png" alt="3" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            The <code class="classname">CustomerClient</code> uses the <code class="classname">WebServiceTemplate</code>
+                            offered by <code class="classname">WebServiceGatewaySupport</code> to marshal the request object
+                            into a SOAP message, and sends that to the web service.
+                            The response object is unmarshalled into a <code class="classname">CustomerCountResponse</code>.
+                        </p>
+                    </td></tr></table></div></div>
+            <p>
+                A typical test for <code class="classname">CustomerClient</code> would look like this:
+            </p>
+            <div class="programlistingco"><pre class="programlisting">import javax.xml.transform.Source;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.xml.transform.StringSource;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import static org.junit.Assert.assertEquals;
+
+import org.springframework.ws.test.client.MockWebServiceServer;                                                        <span class="co" id="client.test.test.imports.server"><img src="images/callouts/1.png" alt="(1)"></span>
+import static org.springframework.ws.test.client.RequestMatchers.*;                                                    <span class="co" id="client.test.test.imports.requestMatchers"><img src="images/callouts/1.png" alt="(1)"></span>
+import static org.springframework.ws.test.client.ResponseCreators.*;                                                   <span class="co" id="client.test.test.imports.responseCreators"><img src="images/callouts/1.png" alt="(1)"></span>
+
+@RunWith(SpringJUnit4ClassRunner.class)                                                                                <span class="co" id="client.test.test.spring.runwith"><img src="images/callouts/2.png" alt="(2)"></span>
+@ContextConfiguration("integration-test.xml")                                                                          <span class="co" id="client.test.test.spring.configuration"><img src="images/callouts/2.png" alt="(2)"></span>
+public class CustomerClientIntegrationTest {
+
+  @Autowired
+  private CustomerClient client;                                                                                       <span class="co" id="client.test.test.client"><img src="images/callouts/3.png" alt="(3)"></span>
+
+  private MockWebServiceServer mockServer;                                                                             <span class="co" id="client.test.test.mockserver"><img src="images/callouts/4.png" alt="(4)"></span>
+
+  @Before
+  public void createServer() throws Exception {
+    mockServer = MockWebServiceServer.createServer(client);
+  }
+
+  @Test
+  public void customerClient() throws Exception {
+    Source requestPayload = new StringSource(
+      "&lt;customerCountRequest xmlns='http://springframework.org/spring-ws'&gt;" +
+        "&lt;customerName&gt;John Doe&lt;/customerName&gt;" +
+      "&lt;/customerCountRequest&gt;");
+    Source responsePayload = new StringSource(
+      "&lt;customerCountResponse xmlns='http://springframework.org/spring-ws'&gt;" +
+        "&lt;customerCount&gt;10&lt;/customerCount&gt;" +
+      "&lt;/customerCountResponse&gt;");
+
+    mockServer.expect(payload(requestPayload)).andRespond(withPayload(responsePayload));                               <span class="co" id="client.test.test.expectAndRespond"><img src="images/callouts/5.png" alt="(5)"></span>
+
+    int result = client.getCustomerCount();                                                                            <span class="co" id="client.test.test.client.invoke.actual"><img src="images/callouts/6.png" alt="(6)"></span>
+    assertEquals(10, result);                                                                                          <span class="co" id="client.test.test.client.invoke.assert"><img src="images/callouts/6.png" alt="(6)"></span>
+
+    mockServer.verify();                                                                                               <span class="co" id="client.test.test.client.verify"><img src="images/callouts/7.png" alt="(7)"></span>
+  }
+
+}</pre><div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/1.png" alt="1" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            The <code class="classname">CustomerClientIntegrationTest</code> imports the
+                            <code class="classname">MockWebServiceServer</code>, and statically imports
+                            <code class="classname">RequestMatchers</code> and <code class="classname">ResponseCreators</code>.
+                        </p>
+                    </td></tr><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/2.png" alt="2" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            This test uses the standard testing facilities provided in the Spring Framework.
+                            This is not required, but is generally the easiest way to set up the test.
+                        </p>
+                    </td></tr><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/3.png" alt="3" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            The <code class="classname">CustomerClient</code> is configured in
+                            <code class="filename">integration-test.xml</code>, and wired into this test using
+                            <code class="interfacename">@Autowired</code>.
+                        </p>
+                    </td></tr><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/4.png" alt="4" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            In a <code class="interfacename">@Before</code> method, we create a
+                            <code class="classname">MockWebServiceServer</code> by using the
+                            <code class="methodname">createServer</code> factory method.
+                        </p>
+                    </td></tr><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/5.png" alt="5" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            We define expectations by calling <code class="methodname">expect()</code> with a
+                            <code class="methodname">payload()</code> <code class="interfacename">RequestMatcher</code> provided
+                            by the statically imported <code class="classname">RequestMatchers</code> (see <a class="xref" href="client.html#client-test-request-matcher" title="6.3.2&nbsp;RequestMatcher and RequestMatchers">Section&nbsp;6.3.2, &#8220;<code class="interfacename">RequestMatcher</code> and <code class="classname">RequestMatchers</code>&#8221;</a>).
+                        </p>
+                        <p>
+                            We also set up a response by calling <code class="methodname">andRespond()</code> with a
+                            <code class="methodname">withPayload()</code> <code class="interfacename">ResponseCreator</code>
+                            provided by the statically imported <code class="classname">ResponseCreators</code> (see
+                            <a class="xref" href="client.html#client-test-response-creator" title="6.3.3&nbsp;ResponseCreator and ResponseCreators">Section&nbsp;6.3.3, &#8220;<code class="interfacename">ResponseCreator</code> and <code class="classname">ResponseCreators</code>&#8221;</a>).
+                        </p>
+                        <p>
+                            This part of the test might look a bit confusing, but the Code Completion features of your
+                            IDE are of great help.
+                            After typing <code class="methodname">expect(</code>, simply type ctrl-space, and your IDE will
+                            provide you with a list of possible request matching strategies, provided you
+                            statically imported <code class="classname">RequestMatchers</code>.
+                            The same applies to <code class="methodname">andRespond(</code>, provided you statically imported
+                            <code class="classname">ResponseCreators</code>.
+                        </p>
+                    </td></tr><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/6.png" alt="6" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            We call <code class="methodname">getCustomerCount()</code> on the
+                            <code class="classname">CustomerClient</code>, thus using the
+                            <code class="classname">WebServiceTemplate</code>.
+                            The template has been set up for 'testing mode' by now, so no real
+                            (HTTP) connection is made by this method call.
+                            We also make some JUnit assertions based on the result of the method call.
+                        </p>
+                    </td></tr><tr><td width="5%" valign="top" align="left"><p><span><img src="images/callouts/7.png" alt="7" border="0"></span></p></td><td valign="top" align="left">
+                        <p>
+                            We call <code class="methodname">verify()</code> on the
+                            <code class="classname">MockWebServiceServer</code>, thus verifying that the expected
+                            message was actually received.
+                        </p>
+                    </td></tr></table></div></div>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="client-test-request-matcher" href="#client-test-request-matcher"></a>6.3.2&nbsp;<code class="interfacename">RequestMatcher</code> and <code class="classname">RequestMatchers</code></h3></div></div></div>
+            
+            <p>
+                To verify whether the request message meets certain expectations, the
+                <code class="classname">MockWebServiceServer</code> uses the <code class="interfacename">RequestMatcher</code>
+                strategy interface.
+                The contract defined by this interface is quite simple:
+            </p>
+            <pre class="programlisting">public interface RequestMatcher {
+
+  void match(URI uri,
+             WebServiceMessage request)
+    throws IOException,
+           AssertionError;
+
+}</pre>
+            <p>
+                You can write your own implementations of this interface, throwing
+                <code class="classname">AssertionError</code>s when the message does not meet your expectations, but you
+                certainly do not have to.
+                The <code class="classname">RequestMatchers</code> class provides standard
+                <code class="interfacename">RequestMatcher</code> implementations for you to use in your tests.
+                You will typically statically import this class.
+            </p>
+            <p>
+                The <code class="classname">RequestMatchers</code> class provides the following request matchers:
+                </p><div class="informaltable">
+                    <table style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col><col></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="classname">RequestMatchers</code> method</th><th style="border-bottom: 0.5pt solid ; ">Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="methodname">anything()</code></td><td style="border-bottom: 0.5pt solid ; ">Expects any sort of request.</td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="methodname">payload()</code></td><td style="border-bottom: 0.5pt solid ; ">Expects a given request payload.</td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="methodname">validPayload()</code></td><td style="border-bottom: 0.5pt solid ; ">Expects the request payload to validate against given XSD schema(s).</td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="methodname">xpath()</code></td><td style="border-bottom: 0.5pt solid ; ">
+                                    Expects a given XPath expression to exist, not exist, or evaluate to a given
+                                    value.
+                                </td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="methodname">soapHeader()</code></td><td style="border-bottom: 0.5pt solid ; ">Expects a given SOAP header to exist in the request message.</td></tr><tr><td style="border-right: 0.5pt solid ; "><code class="methodname">connectionTo()</code></td><td style="">Expects a connection to the given URL.</td></tr></tbody></table>
+                </div><p>
+                You can set up multiple request expectations by chaining <code class="methodname">andExpect()</code> calls,
+                like so:
+                </p><pre class="programlisting">mockServer.expect(connectionTo("http://example.com")).
+ andExpect(payload(expectedRequestPayload)).
+ andExpect(validPayload(schemaResource)).
+ andRespond(...);
+</pre><p>
+            </p>
+            <p>
+                For more information on the request matchers provided by <code class="classname">RequestMatchers</code>,
+                refer to the class level Javadoc.
+            </p>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="client-test-response-creator" href="#client-test-response-creator"></a>6.3.3&nbsp;<code class="interfacename">ResponseCreator</code> and <code class="classname">ResponseCreators</code></h3></div></div></div>
+            
+            <p>
+                When the request message has been verified and meets the defined expectations, the
+                <code class="classname">MockWebServiceServer</code> will create a response message for the
+                <code class="classname">WebServiceTemplate</code> to consume.
+                The server uses the <code class="interfacename">ResponseCreator</code>
+                strategy interface for this purpose:
+            </p>
+            <pre class="programlisting">public interface ResponseCreator {
+
+  WebServiceMessage createResponse(URI uri,
+                                   WebServiceMessage request,
+                                   WebServiceMessageFactory messageFactory)
+    throws IOException;
+
+}</pre>
+            <p>
+                Once again you can write your own implementations of this interface, creating a response message
+                by using the message factory, but you certainly do not have to, as the
+                <code class="classname">ResponseCreators</code> class provides standard
+                <code class="interfacename">ResponseCreator</code> implementations for you to use in your tests.
+                You will typically statically import this class.
+            </p>
+            <p>
+                The <code class="classname">ResponseCreators</code> class provides the following responses:
+                </p><div class="informaltable">
+                    <table style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col><col></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="classname">ResponseCreators</code> method</th><th style="border-bottom: 0.5pt solid ; ">Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="methodname">withPayload()</code></td><td style="border-bottom: 0.5pt solid ; ">Creates a response message with a given payload.</td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="methodname">withError()</code></td><td style="border-bottom: 0.5pt solid ; ">
+                                    Creates an error in the response connection.
+                                    This method gives you the opportunity to test your error handling.
+                                </td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; "><code class="methodname">withException()</code></td><td style="border-bottom: 0.5pt solid ; ">
+                                    Throws an exception when reading from the response connection.
+                                    This method gives you the opportunity to test your exception handling.
+                                </td></tr><tr><td style="border-right: 0.5pt solid ; ">
+                                    <code class="methodname">withMustUnderstandFault()</code>,
+                                    <code class="methodname">withClientOrSenderFault()</code>,
+                                    <code class="methodname">withServerOrReceiverFault()</code>, and
+                                    <code class="methodname">withVersionMismatchFault()</code>
+                                </td><td style="">
+                                    Creates a response message with a given SOAP fault.
+                                    This method gives you the opportunity to test your Fault handling.
+                                </td></tr></tbody></table>
+                </div><p>
+            </p>
+            <p>
+                For more information on the request matchers provided by <code class="classname">RequestMatchers</code>,
+                refer to the class level Javadoc.
+            </p>
+        </div>
+    </div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="server.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="pt02.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="security.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">5.&nbsp;Creating a Web service with Spring-WS&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;7.&nbsp;Securing your Web services with Spring-WS</td></tr></table></div></body></html>

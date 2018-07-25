@@ -1,0 +1,127 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>1.&nbsp;What is Spring Web Services?</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Web Services Reference Documentation"><link rel="up" href="pt01.html" title="Part&nbsp;I.&nbsp;Introduction"><link rel="prev" href="pt01.html" title="Part&nbsp;I.&nbsp;Introduction"><link rel="next" href="why-contract-first.html" title="2.&nbsp;Why Contract First?"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">1.&nbsp;What is Spring Web Services?</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="pt01.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;I.&nbsp;Introduction</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="why-contract-first.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="what-is-spring-ws" href="#what-is-spring-ws"></a>1.&nbsp;What is Spring Web Services?</h2></div></div></div>
+    
+    <div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d5e40" href="#d5e40"></a>1.1&nbsp;Introduction</h2></div></div></div>
+        
+        <p>
+            Spring Web Services (Spring-WS) is a product of the Spring community focused on creating document-driven 
+            Web services.
+            Spring Web Services aims to facilitate contract-first SOAP service development, allowing for the creation of
+            flexible web services using one of the many ways to manipulate XML payloads.
+            The product is based on Spring itself, which means you can use the Spring concepts such as dependency 
+            injection as an integral part of your Web service.
+        </p>
+        <p>
+            People use Spring-WS for many reasons, but most are drawn to it after finding alternative SOAP stacks 
+            lacking when it comes to following Web service best practices.
+            Spring-WS makes the best practice an easy practice. This includes practices such as the WS-I basic profile,
+            Contract-First development, and having a loose coupling between contract and implementation.
+            The other key features of Spring Web services are:
+        </p>
+        <p>
+            <b>Powerful mappings.&nbsp;</b>
+            
+                You can distribute incoming XML requests to any object, depending on message payload, SOAP Action header, 
+                or an XPath expression.
+            
+        </p>
+        <p>
+            <b>XML API support.&nbsp;</b>
+            
+                Incoming XML messages can be handled not only with standard JAXP APIs such as DOM, SAX, and StAX, but also JDOM, 
+                dom4j, XOM, or even marshalling technologies.
+            
+        </p>
+        <p>
+            <b>Flexible XML Marshalling.&nbsp;</b>
+            
+                Spring Web Services builds on the Object/XML Mapping module in the Spring Framework, which supports JAXB 1 and 2, Castor,
+                XMLBeans, JiBX, and XStream.
+            
+        </p>
+        <p>
+            <b>Reuses your Spring expertise.&nbsp;</b>
+            
+                Spring-WS uses Spring application contexts for all configuration, which should help Spring developers 
+                get up-to-speed nice and quickly. Also, the architecture of Spring-WS resembles that of Spring-MVC.
+            
+        </p>
+        <p>
+            <b>Supports WS-Security.&nbsp;</b>
+            
+                WS-Security allows you to sign SOAP messages, encrypt and decrypt them, or authenticate against them.
+            
+        </p>
+        <p>
+            <b>Integrates with Spring Security.&nbsp;</b>
+            
+                The WS-Security implementation of Spring Web Services provides integration with Spring Security.
+                This means you can use your existing Spring Security configuration for your SOAP service as well.
+            
+        </p>
+        <p>
+            <b>Apache license.&nbsp;</b>
+            
+                You can confidently use Spring-WS in your project.
+            
+        </p>
+    </div>
+    <div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d5e65" href="#d5e65"></a>1.2&nbsp;Runtime environment</h2></div></div></div>
+        
+        <p>
+            Spring Web Services requires a standard Java 7 Runtime Environment. Java 8 is also supported.
+            Spring-WS is built on Spring Framework 4.0.9, but higher versions are supported.
+        </p>
+        <p>
+            Spring-WS consists of a number of modules, which are described in the remainder of this section.
+        </p>
+        <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+            <p>
+                The XML module (<code class="filename">spring-xml.jar</code>) contains various XML support classes for Spring Web 
+                Services. This module is mainly intended for the Spring-WS framework itself, and not a Web service 
+                developers.
+            </p>
+            </li><li class="listitem">
+                <p>
+                    The Core module (<code class="filename">spring-ws-core.jar</code>) is the central part of the Spring's
+                    Web services functionality.
+                    It provides the central <a class="link" href="common.html#web-service-messages" title="4.1&nbsp;Web service messages">
+                    <code class="classname">WebServiceMessage</code></a> and <a class="link" href="common.html#soap-message" title="4.1.2&nbsp;SoapMessage">
+                    <code class="classname">SoapMessage</code></a> interfaces, the <a class="link" href="server.html" title="5.&nbsp;Creating a Web service with Spring-WS">server-side</a> 
+                    framework, with powerful message dispatching, and the various support classes for implementing Web
+                    service endpoints; and the <a class="link" href="client.html" title="6.&nbsp;Using Spring Web Services on the Client">client-side</a>
+                    <code class="classname">WebServiceTemplate</code>.
+                </p>
+            </li><li class="listitem">
+                <p>
+                    The Support module (<code class="filename">spring-ws-support.jar</code>) contains additional transports
+                    (JMS, Email, and others).
+                </p>
+            </li><li class="listitem">
+                <p>
+                    The <a class="link" href="security.html" title="7.&nbsp;Securing your Web services with Spring-WS">Security</a> package (<code class="filename">spring-ws-security.jar</code>)
+                    provides a WS-Security implementation that integrates
+                    with the core Web service package. It allows you to add principal tokens, sign, and decrypt and encrypt SOAP
+                    messages. Additionally, it allows you to leverage your existing Spring Security security implementation for
+                    authentication and authorization.
+                </p>
+            </li></ul></div>
+        <p>
+            The following figure illustrates the Spring-WS modules and the dependencies between them. Arrows indicate 
+            dependencies, i.e. Spring-WS Core depends on Spring-XML and the OXM module found in Spring 3 and higher.
+            </p><div class="mediaobject" align="center"><img src="images/spring-deps.png" align="middle"><div class="caption">
+                        <p>
+                            Dependencies between Spring-WS modules
+                        </p>
+                    </div></div><p>
+        </p>
+    </div>
+    <div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d5e96" href="#d5e96"></a>1.3&nbsp;Supported standards</h2></div></div></div>
+        
+        <p>
+            Spring Web Services supports the following standards:
+        </p>
+        <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>SOAP 1.1 and 1.2</p></li><li class="listitem"><p>WSDL 1.1 and 2.0 (XSD-based generation only supported for WSDL 1.1)</p></li><li class="listitem"><p>WS-I Basic Profile 1.0, 1.1, 1.2 and 2.0</p></li><li class="listitem"><p>WS-Addressing 1.0 and the August 2004 draft</p></li><li class="listitem"><p>SOAP Message Security 1.1, Username Token Profile 1.1, X.509 Certificate Token Profile 1.1, SAML Token Profile 1.1, Kerberos Token Profile 1.1, Basic Security Profile 1.1</p></li></ul></div>
+    </div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="pt01.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="pt01.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="why-contract-first.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Part&nbsp;I.&nbsp;Introduction&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;2.&nbsp;Why Contract First?</td></tr></table></div></body></html>

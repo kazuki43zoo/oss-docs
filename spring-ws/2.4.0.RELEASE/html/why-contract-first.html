@@ -1,0 +1,240 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>2.&nbsp;Why Contract First?</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Web Services Reference Documentation"><link rel="up" href="pt01.html" title="Part&nbsp;I.&nbsp;Introduction"><link rel="prev" href="what-is-spring-ws.html" title="1.&nbsp;What is Spring Web Services?"><link rel="next" href="tutorial.html" title="3.&nbsp;Writing Contract-First Web Services"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">2.&nbsp;Why Contract First?</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="what-is-spring-ws.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;I.&nbsp;Introduction</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="tutorial.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="why-contract-first" href="#why-contract-first"></a>2.&nbsp;Why Contract First?</h2></div></div></div>
+    
+    <div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d5e112" href="#d5e112"></a>2.1&nbsp;Introduction</h2></div></div></div>
+        
+        <p>
+            When creating Web services, there are two development styles: <span class="emphasis"><em>Contract Last</em></span> and 
+            <span class="emphasis"><em>Contract First</em></span>. When using a contract-last approach, you start with the Java code, and 
+            let the Web service contract (<acronym class="acronym">WSDL</acronym>, see sidebar) be generated from that.
+            When using contract-first, you start with the WSDL contract, and use Java to implement said contract.
+        </p>
+        <div class="sidebar"><div class="titlepage"><div><div><p class="title"><b>What is WSDL?</b></p></div></div></div>
+            
+            <p>
+                WSDL stands for Web Services Description Language. A WSDL file is an XML document that describes a Web 
+                service. It specifies the location of the service and the operations (or methods) the service exposes.
+                For more information about WSDL, refer to the 
+                <a class="ulink" href="http://www.w3.org/TR/wsdl" target="_top">WSDL specification</a>.
+            </p>
+        </div>
+        <p> 
+            Spring-WS only supports the contract-first development style, and this section explains why.
+        </p>
+    </div>
+    <div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d5e123" href="#d5e123"></a>2.2&nbsp;Object/XML Impedance Mismatch</h2></div></div></div>
+        
+        <p>
+            Similar to the field of ORM, where we have an 
+            <a class="ulink" href="http://en.wikipedia.org/wiki/Object-Relational_impedance_mismatch" target="_top">Object/Relational impedance mismatch</a>,
+            there is a similar problem when converting Java objects to XML.
+            At first glance, the O/X mapping problem appears simple: create an XML element for each Java object, 
+            converting all Java properties and fields to sub-elements or attributes. However, things are not as  
+            simple as they appear: there is a fundamental difference between hierarchical languages such as XML 
+            (and especially XSD) and the graph model of Java<a href="#ftn.d5e127" class="footnote" name="d5e127"><sup class="footnote">[1]</sup></a>.
+        </p>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e131" href="#d5e131"></a>2.2.1&nbsp;XSD extensions</h3></div></div></div>
+            
+            <p>
+                In Java, the only way to change the behavior of a class is to subclass it, adding the new behavior to 
+                that subclass. In XSD, you can extend a data type by restricting it: that is, constraining the valid values
+                for the elements and attributes.
+                For instance, consider the following example:</p><pre class="programlisting">
+&lt;simpleType name="AirportCode"&gt;
+  &lt;restriction base="string"&gt;
+      &lt;pattern value="[A-Z][A-Z][A-Z]"/&gt;
+  &lt;/restriction&gt;
+&lt;/simpleType&gt;</pre><p>
+                This type restricts a XSD string by ways of a regular expression, allowing only three upper case 
+                letters. If this type is converted to Java, we will end up with an ordinary 
+                <code class="classname">java.lang.String</code>; the regular expression is lost in the conversion process, 
+                because Java does not allow for these sorts of extensions.
+            </p>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e136" href="#d5e136"></a>2.2.2&nbsp;Unportable types</h3></div></div></div>
+            
+            <p>
+                One of the most important goals of a Web service is to be interoperable: to support multiple platforms
+                such as Java, .NET, Python, etc. Because all of these languages have different class libraries, you
+                must use some common, interlingual format to communicate between them. That format is XML, which is
+                supported by all of these languages.
+            </p>
+            <p>
+                Because of this conversion, you must make sure that you use portable types in your service 
+                implementation. Consider, for example, a service that returns a 
+                <code class="classname">java.util.TreeMap</code>, like so:</p><pre class="programlisting">
+public Map getFlights() {
+  // use a tree map, to make sure it's sorted
+  TreeMap map = new TreeMap();
+  map.put("KL1117", "Stockholm");
+  ...
+  return map;
+}</pre><p>
+                Undoubtedly, the contents of this map can be converted into some sort of 
+                XML, but since there is no <span class="emphasis"><em>standard</em></span> way to describe a map in XML, it will be 
+                proprietary. Also, even if it can be converted to XML, many platforms do not have a data structure 
+                similar to the <code class="classname">TreeMap</code>. So when a .NET client accesses your Web service, it
+                will probably end up with a <code class="classname">System.Collections.Hashtable</code>, which has different 
+                semantics.
+            </p>
+            <p>
+                This problem is also present when working on the client side. Consider the following XSD snippet, which
+                describes a service contract:</p><pre class="programlisting">
+&lt;element name="GetFlightsRequest"&gt;
+  &lt;complexType&gt;
+    &lt;all&gt;
+      &lt;element name="departureDate" type="date"/&gt;
+      &lt;element name="from" type="string"/&gt;
+      &lt;element name="to" type="string"/&gt;
+    &lt;/all&gt;
+  &lt;/complexType&gt;
+&lt;/element&gt;</pre><p>
+                This contract defines a request that takes an <span class="type">date</span>, which is a XSD datatype representing
+                a year, month, and day. If we call this service from Java, we will probably use 
+                either a <code class="classname">java.util.Date</code> or <code class="classname">java.util.Calendar</code>. However,
+                both of these classes actually describe times, rather than dates. So, we will actually end up sending data that
+                represents the fourth of April 2007 at midnight (<code class="literal">2007-04-04T00:00:00</code>), which is not
+                the same as <code class="literal">2007-04-04</code>.
+            </p>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e152" href="#d5e152"></a>2.2.3&nbsp;Cyclic graphs</h3></div></div></div>
+            
+            <p>
+                Imagine we have the following simple class structure:</p><pre class="programlisting">
+public class Flight {
+  private String number;
+  private List&lt;Passenger&gt; passengers;
+    
+  // getters and setters omitted
+}
+
+public class Passenger {
+  private String name;
+  private Flight flight;
+    
+  // getters and setters omitted
+}</pre><p>
+                This is a cyclic graph: the <code class="classname">Flight</code> refers to the <code class="classname">Passenger</code>,
+                which refers to the <code class="classname">Flight</code> again. Cyclic graphs like these are quite common in 
+                Java. If we took a naive approach to converting this to XML, we will end up with something 
+                like:</p><pre class="programlisting">
+&lt;flight number="KL1117"&gt;
+  &lt;passengers&gt;
+    &lt;passenger&gt;
+      &lt;name&gt;Arjen Poutsma&lt;/name&gt;
+      &lt;flight number="KL1117"&gt;
+        &lt;passengers&gt;
+          &lt;passenger&gt;
+            &lt;name&gt;Arjen Poutsma&lt;/name&gt;
+            &lt;flight number="KL1117"&gt;
+              &lt;passengers&gt;
+                &lt;passenger&gt;
+                   &lt;name&gt;Arjen Poutsma&lt;/name&gt;
+                   ...</pre><p>
+                which will take a pretty long time to finish, because there is no stop condition for this loop.
+            </p>
+            <p>
+                One way to solve this problem is to use references to objects that were already marshalled, like 
+                so:</p><pre class="programlisting">
+&lt;flight number="KL1117"&gt;
+  &lt;passengers&gt;
+    &lt;passenger&gt;
+      &lt;name&gt;Arjen Poutsma&lt;/name&gt;
+      &lt;flight href="KL1117" /&gt;
+    &lt;/passenger&gt;
+    ...
+  &lt;/passengers&gt;
+&lt;/flight&gt;</pre><p>
+                This solves the recursiveness problem, but introduces new ones. For one, you cannot use an XML validator
+                to validate this structure. Another issue is that the standard way to use these references in SOAP 
+                (RPC/encoded) has been deprecated in favor of document/literal (see WS-I
+                <a class="ulink" href="http://www.ws-i.org/Profiles/BasicProfile-1.1.html#SOAP_encodingStyle_Attribute" target="_top">Basic
+                Profile</a>).
+            </p>
+        </div>
+        <p>
+            These are just a few of the problems when dealing with O/X mapping. It is important to respect these issues
+            when writing Web services. The best way to respect them is to focus on the XML completely, while using Java
+            as an implementation language. This is what contract-first is all about.
+        </p>
+    </div>
+    <div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d5e164" href="#d5e164"></a>2.3&nbsp;Contract-first versus Contract-last</h2></div></div></div>
+        
+        <p>
+            Besides the Object/XML Mapping issues mentioned in the previous section, there are other reasons for 
+            preferring a contract-first development style.
+        </p>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e167" href="#d5e167"></a>2.3.1&nbsp;Fragility</h3></div></div></div>
+            
+            <p>
+                As mentioned earlier, the contract-last development style results in your web service contract 
+                (WSDL and your XSD) being generated from your Java contract (usually an interface). If you are using 
+                this approach, you will have no guarantee that the contract stays constant over time. Each time you 
+                change your Java contract and redeploy it, there might be subsequent changes to the web service
+                contract.
+            </p>
+            <p>
+                Aditionally, not all SOAP stacks generate the same web service contract from a Java contract. This 
+                means changing your current SOAP stack for a different one (for whatever reason), might also change
+                your web service contract.
+            </p>
+            <p>
+                When a web service contract changes, users of the contract will have to be instructed to obtain 
+                the new contract and potentially change their code to accommodate for any changes in the contract.
+            </p>
+            <p>
+                In order for a contract to be useful, it must remain constant for as long as possible. If a contract 
+                changes, you will have to contact all of the users of your service, and instruct them to get the new 
+                version of the contract.
+            </p>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e173" href="#d5e173"></a>2.3.2&nbsp;Performance</h3></div></div></div>
+            
+            <p>
+                When Java is automatically transformed into XML, there is no way to be sure as to what is sent across 
+                the wire. An object might reference another object, which refers to another, etc. In the end, half of 
+                the objects on the heap in your virtual machine might be converted into XML,
+                which will result in slow response times. 
+            </p>
+            <p>
+                When using contract-first, you explicitly describe what XML is sent where, thus making sure that it is 
+                exactly what you want.
+            </p>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e177" href="#d5e177"></a>2.3.3&nbsp;Reusability</h3></div></div></div>
+            
+            <p>
+                Defining your schema in a separate file allows you to reuse that file in different scenarios. If you 
+                define an <span class="type">AirportCode</span> in a file called <code class="filename">airline.xsd</code>, like so:                
+            </p>
+            <pre class="programlisting">
+&lt;simpleType name="AirportCode"&gt;
+    &lt;restriction base="string"&gt;
+        &lt;pattern value="[A-Z][A-Z][A-Z]"/&gt;
+    &lt;/restriction&gt;
+&lt;/simpleType&gt;</pre>
+            <p>
+                You can reuse this definition in other schemas, or even WSDL files, using an
+                <code class="literal">import</code> statement.
+            </p>
+        </div>
+        <div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="d5e185" href="#d5e185"></a>2.3.4&nbsp;Versioning</h3></div></div></div>
+            
+            <p>
+                Even though a contract must remain constant for as long as possible, they <span class="emphasis"><em>do</em></span> need 
+                to be changed sometimes. In Java, this typically results in a new Java interface, such as 
+                <code class="interfacename">AirlineService2</code>, and a (new) implementation of that interface. Of 
+                course, the old service must be kept around, because there might be clients who have not migrated 
+                yet.
+            </p>
+            <p>
+                If using contract-first, we can have a looser coupling between contract and implementation. Such a 
+                looser coupling allows us to implement both versions of the contract in one class. We could, for 
+                instance, use an XSLT stylesheet to convert any "old-style" messages to the "new-style" messages.
+            </p>
+        </div>
+    </div>
+<div class="footnotes"><br><hr style="width:100; text-align:left;margin-left: 0"><div id="ftn.d5e127" class="footnote">
+            <p><a href="#d5e127" class="para"><sup class="para">[1] </sup></a>Most of the contents in this section was inspired by <a class="xref" href="bi01.html#alpine" title="Rethinking the Java SOAP Stack">[alpine]</a> and 
+            <a class="xref" href="bi01.html#effective-enterprise-java" title="Effective Enterprise Java">[effective-enterprise-java]</a>.</p></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="what-is-spring-ws.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="pt01.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="tutorial.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">1.&nbsp;What is Spring Web Services?&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;3.&nbsp;Writing Contract-First Web Services</td></tr></table></div></body></html>
