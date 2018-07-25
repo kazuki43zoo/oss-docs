@@ -1,0 +1,630 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>Matchers and assertThat · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.2">
+        
+        
+        
+    
+    <link rel="stylesheet" href="gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="Ignoring-Tests.html" />
+    
+    
+    <link rel="prev" href="Exception-Testing.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="Download-and-Install.html">
+            
+                <a href="Download-and-Install.html">
+            
+                    
+                    Download and Install
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="Getting-Started.html">
+            
+                <a href="Getting-Started.html">
+            
+                    
+                    Getting Started
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="Maintainer-Documentation.html">
+            
+                <a href="Maintainer-Documentation.html">
+            
+                    
+                    Maintainer Documentation
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="Deprecation-Policy.html">
+            
+                <a href="Deprecation-Policy.html">
+            
+                    
+                    Deprecation Policy
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="I-want-to-help!.html">
+            
+                <a href="I-want-to-help!.html">
+            
+                    
+                    I want to help!
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+        
+        <li class="header">JUnit Usage and Idioms</li>
+        
+        
+    
+        <li class="chapter " data-level="2.1" data-path="Assertions.html">
+            
+                <a href="Assertions.html">
+            
+                    
+                    Assertions
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.2" data-path="Test-Runners.html">
+            
+                <a href="Test-Runners.html">
+            
+                    
+                    Test Runners
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.3" data-path="Aggregating-tests-in-Suites.html">
+            
+                <a href="Aggregating-tests-in-Suites.html">
+            
+                    
+                    Aggregating tests in Suites
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.4" data-path="Test-Execution-Order.html">
+            
+                <a href="Test-Execution-Order.html">
+            
+                    
+                    Test Execution Order
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.5" data-path="Exception-Testing.html">
+            
+                <a href="Exception-Testing.html">
+            
+                    
+                    Exception Testing
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="2.6" data-path="Matchers-and-assertThat.html">
+            
+                <a href="Matchers-and-assertThat.html">
+            
+                    
+                    Matchers and assertThat
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.7" data-path="Ignoring-Tests.html">
+            
+                <a href="Ignoring-Tests.html">
+            
+                    
+                    Ignoring Tests
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.8" data-path="Timeout-for-Tests.html">
+            
+                <a href="Timeout-for-Tests.html">
+            
+                    
+                    Timeout for Tests
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.9" data-path="Parameterized-Tests.html">
+            
+                <a href="Parameterized-Tests.html">
+            
+                    
+                    Parameterized Tests
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.10" data-path="Assumptions-with-Assume.html">
+            
+                <a href="Assumptions-with-Assume.html">
+            
+                    
+                    Assumptions with Assume
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.11" data-path="Rules.html">
+            
+                <a href="Rules.html">
+            
+                    
+                    Rules
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.12" data-path="Theories.html">
+            
+                <a href="Theories.html">
+            
+                    
+                    Theories
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.13" data-path="Test-Fixtures.html">
+            
+                <a href="Test-Fixtures.html">
+            
+                    
+                    Test Fixtures
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.14" data-path="Categories.html">
+            
+                <a href="Categories.html">
+            
+                    
+                    Categories
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.15" data-path="Use-with-Maven.html">
+            
+                <a href="Use-with-Maven.html">
+            
+                    
+                    Use with Maven
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.16" data-path="Use-with-Gradle.html">
+            
+                <a href="Use-with-Gradle.html">
+            
+                    
+                    Use with Gradle
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.17" data-path="Multithreaded-code-and-Concurrency.html">
+            
+                <a href="Multithreaded-code-and-Concurrency.html">
+            
+                    
+                    Multithreaded code and Concurrency
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.18" data-path="Java-contract-test-helpers.html">
+            
+                <a href="Java-contract-test-helpers.html">
+            
+                    
+                    Java contract test helpers
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.19" data-path="Continuous-Testing.html">
+            
+                <a href="Continuous-Testing.html">
+            
+                    
+                    Continuous Testing
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+        
+        <li class="header">Third-party extensions</li>
+        
+        
+    
+        <li class="chapter " data-level="3.1" data-path="Custom-Runners.html">
+            
+                <a href="Custom-Runners.html">
+            
+                    
+                    Custom Runners
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href="." >Matchers and assertThat</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="assertthat">assertThat</h1>
+<p>Joe Walnes built a new assertion mechanism on top of what was then JMock 1. The method name was assertThat, and the syntax looked like this:</p>
+<pre><code class="lang-java">assertThat(x, is(<span class="hljs-number">3</span>));
+assertThat(x, is(not(<span class="hljs-number">4</span>)));
+assertThat(responseString, either(containsString(<span class="hljs-string">&quot;color&quot;</span>)).or(containsString(<span class="hljs-string">&quot;colour&quot;</span>)));
+assertThat(myList, hasItem(<span class="hljs-string">&quot;3&quot;</span>));
+</code></pre>
+<p>More generally:</p>
+<pre><code class="lang-java">assertThat([value], [matcher statement]);
+</code></pre>
+<p>Advantages of this assertion syntax include:</p>
+<p>More readable and typeable: this syntax allows you to think in terms of subject, verb, object (assert &quot;x is 3&quot;) rather than <code>assertEquals</code>, which uses verb, object, subject (assert &quot;equals 3 x&quot;)</p>
+<p>Combinations: any matcher statement s can be negated (<code>not(s)</code>), combined (<code>either(s).or(t)</code>), mapped to a collection (<code>each(s)</code>), or used in custom combinations (<code>afterFiveSeconds(s)</code>)</p>
+<p>Readable failure messages. Compare:</p>
+<pre><code class="lang-java">assertTrue(responseString.contains(<span class="hljs-string">&quot;color&quot;</span>) || responseString.contains(<span class="hljs-string">&quot;colour&quot;</span>));
+<span class="hljs-comment">// ==&gt; failure message: </span>
+<span class="hljs-comment">// java.lang.AssertionError:</span>
+
+
+assertThat(responseString, anyOf(containsString(<span class="hljs-string">&quot;color&quot;</span>), containsString(<span class="hljs-string">&quot;colour&quot;</span>)));
+<span class="hljs-comment">// ==&gt; failure message:</span>
+<span class="hljs-comment">// java.lang.AssertionError: </span>
+<span class="hljs-comment">// Expected: (a string containing &quot;color&quot; or a string containing &quot;colour&quot;)</span>
+<span class="hljs-comment">//      got: &quot;Please choose a font&quot;</span>
+</code></pre>
+<p>Custom Matchers. By implementing the Matcher interface yourself, you can get all of the above benefits for your own custom assertions.</p>
+<p>For a more thorough description of these points, see Joe Walnes&apos;s original post.</p>
+<p>We have decided to include this API directly in JUnit. It&apos;s an extensible and readable syntax, and it enables new features, like assumptions and theories.</p>
+<p>Some notes:</p>
+<p>The old assert methods are never, ever, going away. Developers may continue using the old assertEquals, assertTrue, and so on.
+The second parameter of an assertThat statement is a Matcher. We include the Matchers we want as static imports, like this:</p>
+<pre><code class="lang-java"><span class="hljs-keyword">import</span> <span class="hljs-keyword">static</span> org.hamcrest.CoreMatchers.is;
+</code></pre>
+<p>or:</p>
+<pre><code class="lang-java"><span class="hljs-keyword">import</span> <span class="hljs-keyword">static</span> org.hamcrest.CoreMatchers.*;
+</code></pre>
+<p>Manually importing Matcher methods can be frustrating. Eclipse 3.3 includes the ability to define &quot;Favorite&quot; classes to import static methods from, which makes it easier (Search for &quot;Favorites&quot; in the Preferences dialog). We expect that support for static imports will improve in all Java IDEs in the future.</p>
+<p>To allow compatibility with a wide variety of possible matchers, we have decided to include the classes from hamcrest-core, from the Hamcrest project. This is the first time that third-party classes have been included in JUnit.</p>
+<p>JUnit currently ships with a few matchers, defined in <code>org.hamcrest.CoreMatchers</code> and <code>org.junit.matchers.JUnitMatchers</code>.</p>
+<p>To use many, many more, consider downloading the full hamcrest package:</p>
+<ul>
+<li>Hamcrest page <a href="http://code.google.com/p/hamcrest/wiki/Tutorial" target="_blank">http://code.google.com/p/hamcrest/wiki/Tutorial</a></li>
+<li>Hamcrest Java on GitHub: <a href="https://github.com/hamcrest/JavaHamcrest" target="_blank">https://github.com/hamcrest/JavaHamcrest</a></li>
+</ul>
+<p>JUnit contains special support for comparing string and array values, giving specific information on how they differ. This is not yet available using the assertThat syntax, but we hope to bring the two assert methods into closer alignment in future releases.</p>
+<h1 id="junit-matchers">JUnit Matchers</h1>
+<p>JUnit includes useful matchers for use with the assertThat method, but they are not currently included in the basic CoreMatchers class from hamcrest.</p>
+<ul>
+<li>Javadoc JUnitMatchers <a href="http://junit.org/junit4/javadoc/latest/org/junit/matchers/JUnitMatchers.html" target="_blank">http://junit.org/junit4/javadoc/latest/org/junit/matchers/JUnitMatchers.html</a></li>
+</ul>
+<h1 id="hamcrest-corematchers">Hamcrest CoreMatchers</h1>
+<p>Useful Hamcrest CoreMatchers are included in the JUnit distribution</p>
+<ul>
+<li>JavaDoc Hamcrest CoreMatchers <a href="http://junit.org/junit4/javadoc/latest/org/hamcrest/CoreMatchers.html" target="_blank">http://junit.org/junit4/javadoc/latest/org/hamcrest/CoreMatchers.html</a></li>
+</ul>
+<h1 id="thirdparty-matchers">Thirdparty Matchers</h1>
+<p>Other, potentially Matchers out there include</p>
+<ul>
+<li><a href="https://github.com/tobyweston/simple-excel" target="_blank">Excel spreadsheet matchers</a></li>
+<li><a href="https://github.com/hertzsprung/hamcrest-json" target="_blank">JSON matchers</a></li>
+<li><a href="https://github.com/davidehringer/xml-matchers" target="_blank">XML/XPath matchers</a></li>
+</ul>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="Exception-Testing.html" class="navigation navigation-prev " aria-label="Previous page: Exception Testing">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="Ignoring-Tests.html" class="navigation navigation-next " aria-label="Next page: Ignoring Tests">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"Matchers and assertThat","level":"2.6","depth":1,"next":{"title":"Ignoring Tests","level":"2.7","depth":1,"path":"Ignoring-Tests.md","ref":"Ignoring-Tests.md","articles":[]},"previous":{"title":"Exception Testing","level":"2.5","depth":1,"path":"Exception-Testing.md","ref":"Exception-Testing.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"Matchers-and-assertThat.md","mtime":"2018-07-25T18:16:39.441Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2018-07-25T19:06:52.738Z"},"basePath":".","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="gitbook/gitbook.js"></script>
+    <script src="gitbook/theme.js"></script>
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+

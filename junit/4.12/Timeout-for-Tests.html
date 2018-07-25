@@ -1,0 +1,617 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>Timeout for Tests · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.2">
+        
+        
+        
+    
+    <link rel="stylesheet" href="gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="Parameterized-Tests.html" />
+    
+    
+    <link rel="prev" href="Ignoring-Tests.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="Download-and-Install.html">
+            
+                <a href="Download-and-Install.html">
+            
+                    
+                    Download and Install
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="Getting-Started.html">
+            
+                <a href="Getting-Started.html">
+            
+                    
+                    Getting Started
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="Maintainer-Documentation.html">
+            
+                <a href="Maintainer-Documentation.html">
+            
+                    
+                    Maintainer Documentation
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="Deprecation-Policy.html">
+            
+                <a href="Deprecation-Policy.html">
+            
+                    
+                    Deprecation Policy
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="I-want-to-help!.html">
+            
+                <a href="I-want-to-help!.html">
+            
+                    
+                    I want to help!
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+        
+        <li class="header">JUnit Usage and Idioms</li>
+        
+        
+    
+        <li class="chapter " data-level="2.1" data-path="Assertions.html">
+            
+                <a href="Assertions.html">
+            
+                    
+                    Assertions
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.2" data-path="Test-Runners.html">
+            
+                <a href="Test-Runners.html">
+            
+                    
+                    Test Runners
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.3" data-path="Aggregating-tests-in-Suites.html">
+            
+                <a href="Aggregating-tests-in-Suites.html">
+            
+                    
+                    Aggregating tests in Suites
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.4" data-path="Test-Execution-Order.html">
+            
+                <a href="Test-Execution-Order.html">
+            
+                    
+                    Test Execution Order
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.5" data-path="Exception-Testing.html">
+            
+                <a href="Exception-Testing.html">
+            
+                    
+                    Exception Testing
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.6" data-path="Matchers-and-assertThat.html">
+            
+                <a href="Matchers-and-assertThat.html">
+            
+                    
+                    Matchers and assertThat
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.7" data-path="Ignoring-Tests.html">
+            
+                <a href="Ignoring-Tests.html">
+            
+                    
+                    Ignoring Tests
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="2.8" data-path="Timeout-for-Tests.html">
+            
+                <a href="Timeout-for-Tests.html">
+            
+                    
+                    Timeout for Tests
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.9" data-path="Parameterized-Tests.html">
+            
+                <a href="Parameterized-Tests.html">
+            
+                    
+                    Parameterized Tests
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.10" data-path="Assumptions-with-Assume.html">
+            
+                <a href="Assumptions-with-Assume.html">
+            
+                    
+                    Assumptions with Assume
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.11" data-path="Rules.html">
+            
+                <a href="Rules.html">
+            
+                    
+                    Rules
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.12" data-path="Theories.html">
+            
+                <a href="Theories.html">
+            
+                    
+                    Theories
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.13" data-path="Test-Fixtures.html">
+            
+                <a href="Test-Fixtures.html">
+            
+                    
+                    Test Fixtures
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.14" data-path="Categories.html">
+            
+                <a href="Categories.html">
+            
+                    
+                    Categories
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.15" data-path="Use-with-Maven.html">
+            
+                <a href="Use-with-Maven.html">
+            
+                    
+                    Use with Maven
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.16" data-path="Use-with-Gradle.html">
+            
+                <a href="Use-with-Gradle.html">
+            
+                    
+                    Use with Gradle
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.17" data-path="Multithreaded-code-and-Concurrency.html">
+            
+                <a href="Multithreaded-code-and-Concurrency.html">
+            
+                    
+                    Multithreaded code and Concurrency
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.18" data-path="Java-contract-test-helpers.html">
+            
+                <a href="Java-contract-test-helpers.html">
+            
+                    
+                    Java contract test helpers
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.19" data-path="Continuous-Testing.html">
+            
+                <a href="Continuous-Testing.html">
+            
+                    
+                    Continuous Testing
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+        
+        <li class="header">Third-party extensions</li>
+        
+        
+    
+        <li class="chapter " data-level="3.1" data-path="Custom-Runners.html">
+            
+                <a href="Custom-Runners.html">
+            
+                    
+                    Custom Runners
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href="." >Timeout for Tests</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <p>Tests that &apos;runaway&apos; or take too long, can be automatically failed.  There are two options for implementing this behavior:</p>
+<h3 id="timeout-parameter-on-test-annotation-applies-to-test-method">Timeout parameter on @Test Annotation (applies to test method)</h3>
+<p>You can optionally specify timeout in milliseconds to cause a test method to fail if it takes longer than that number of milliseconds.  If the time limit is exceeded, then the failure is triggered by an <code>Exception</code> being thrown:</p>
+<pre><code class="lang-java"><span class="hljs-meta">@Test</span>(timeout=<span class="hljs-number">1000</span>)
+<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">testWithTimeout</span><span class="hljs-params">()</span> </span>{
+  ...
+}
+</code></pre>
+<p>This is implemented by running the test method in a separate thread. If the test runs longer than the allotted timeout, the test will fail and JUnit will interrupt the thread running the test. If a test times out while executing an interruptible operation, the thread running the test will exit (if the test is in an infinite loop, the thread running the test will run forever, while other tests continue to execute).</p>
+<h3 id="timeout-rule-applies-to-all-test-cases-in-the-test-class">Timeout Rule (applies to all test cases in the test class)</h3>
+<p>The Timeout Rule applies the same timeout to all test methods in a class, and will <a href="https://github.com/junit-team/junit/issues/1126" target="_blank">currently</a> execute in addition to any timeout specified by the <code>timeout</code> parameter on an individual Test annotation.:</p>
+<pre><code class="lang-java"><span class="hljs-keyword">import</span> org.junit.Rule;
+<span class="hljs-keyword">import</span> org.junit.Test;
+<span class="hljs-keyword">import</span> org.junit.rules.Timeout;
+
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HasGlobalTimeout</span> </span>{
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> String log;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> CountDownLatch latch = <span class="hljs-keyword">new</span> CountDownLatch(<span class="hljs-number">1</span>);
+
+    <span class="hljs-meta">@Rule</span>
+    <span class="hljs-keyword">public</span> Timeout globalTimeout = Timeout.seconds(<span class="hljs-number">10</span>); <span class="hljs-comment">// 10 seconds max per method tested</span>
+
+    <span class="hljs-meta">@Test</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">testSleepForTooLong</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception </span>{
+        log += <span class="hljs-string">&quot;ran1&quot;</span>;
+        TimeUnit.SECONDS.sleep(<span class="hljs-number">100</span>); <span class="hljs-comment">// sleep for 100 seconds</span>
+    }
+
+    <span class="hljs-meta">@Test</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">testBlockForever</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception </span>{
+        log += <span class="hljs-string">&quot;ran2&quot;</span>;
+        latch.await(); <span class="hljs-comment">// will block </span>
+    }
+}
+</code></pre>
+<p>The timeout specified in the <code>Timeout</code> rule applies to the entire test fixture, including any <code>@Before</code> or <code>@After</code> methods. If the test method is in an infinite loop (or is otherwise not responsive to interrupts) then <code>@After</code> methods will not be called.</p>
+<h3 id="global-timeout-management-with-junit-foundation">Global Timeout Management with JUnit Foundation</h3>
+<p><a href="https://github.com/Nordstrom/JUnit-Foundation" target="_blank">JUnit Foundation</a> provides a timeout management feature that enables you you specify a configurable global timeout interval. The timeout behavior is provided by the <strong>JUnit</strong> framework via the <code>timeout</code> parameter of the <strong><code>@Test</code></strong> annotation. If no <code>timeout</code> parameter has been specified, or if the configured global timeout specifies a longer interval, <strong>JUnit Foundation</strong> overrides the <strong><code>@Test</code></strong> annotation with a mutable replacement that specifies the configured <code>timeout</code> parameter.</p>
+<p>Timeout management is applied by <strong>HookInstallingRunner</strong>, activated by setting the <code>TEST_TIMEOUT</code> configuration option to the desired default test timeout interval in milliseconds. This timeout specification is applied to every test method that doesn&apos;t explicitly specify a longer interval.</p>
+<pre><code class="lang-java"><span class="hljs-keyword">import</span> org.junit.runner.RunWith;
+<span class="hljs-keyword">import</span> com.nordstrom.automation.junit.HookInstallingRunner;
+
+<span class="hljs-meta">@RunWith</span>(HookInstallingRunner.class)
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ExampleTest</span> </span>{
+
+    ...
+
+}
+</code></pre>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="Ignoring-Tests.html" class="navigation navigation-prev " aria-label="Previous page: Ignoring Tests">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="Parameterized-Tests.html" class="navigation navigation-next " aria-label="Next page: Parameterized Tests">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"Timeout for Tests","level":"2.8","depth":1,"next":{"title":"Parameterized Tests","level":"2.9","depth":1,"path":"Parameterized-Tests.md","ref":"Parameterized-Tests.md","articles":[]},"previous":{"title":"Ignoring Tests","level":"2.7","depth":1,"path":"Ignoring-Tests.md","ref":"Ignoring-Tests.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"Timeout-for-Tests.md","mtime":"2018-07-25T18:16:39.454Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2018-07-25T19:06:52.738Z"},"basePath":".","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="gitbook/gitbook.js"></script>
+    <script src="gitbook/theme.js"></script>
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+

@@ -1,0 +1,613 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>Custom Runners · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.2">
+        
+        
+        
+    
+    <link rel="stylesheet" href="gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    
+    <link rel="prev" href="Continuous-Testing.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="Download-and-Install.html">
+            
+                <a href="Download-and-Install.html">
+            
+                    
+                    Download and Install
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="Getting-Started.html">
+            
+                <a href="Getting-Started.html">
+            
+                    
+                    Getting Started
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="Maintainer-Documentation.html">
+            
+                <a href="Maintainer-Documentation.html">
+            
+                    
+                    Maintainer Documentation
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="Deprecation-Policy.html">
+            
+                <a href="Deprecation-Policy.html">
+            
+                    
+                    Deprecation Policy
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="I-want-to-help!.html">
+            
+                <a href="I-want-to-help!.html">
+            
+                    
+                    I want to help!
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+        
+        <li class="header">JUnit Usage and Idioms</li>
+        
+        
+    
+        <li class="chapter " data-level="2.1" data-path="Assertions.html">
+            
+                <a href="Assertions.html">
+            
+                    
+                    Assertions
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.2" data-path="Test-Runners.html">
+            
+                <a href="Test-Runners.html">
+            
+                    
+                    Test Runners
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.3" data-path="Aggregating-tests-in-Suites.html">
+            
+                <a href="Aggregating-tests-in-Suites.html">
+            
+                    
+                    Aggregating tests in Suites
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.4" data-path="Test-Execution-Order.html">
+            
+                <a href="Test-Execution-Order.html">
+            
+                    
+                    Test Execution Order
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.5" data-path="Exception-Testing.html">
+            
+                <a href="Exception-Testing.html">
+            
+                    
+                    Exception Testing
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.6" data-path="Matchers-and-assertThat.html">
+            
+                <a href="Matchers-and-assertThat.html">
+            
+                    
+                    Matchers and assertThat
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.7" data-path="Ignoring-Tests.html">
+            
+                <a href="Ignoring-Tests.html">
+            
+                    
+                    Ignoring Tests
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.8" data-path="Timeout-for-Tests.html">
+            
+                <a href="Timeout-for-Tests.html">
+            
+                    
+                    Timeout for Tests
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.9" data-path="Parameterized-Tests.html">
+            
+                <a href="Parameterized-Tests.html">
+            
+                    
+                    Parameterized Tests
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.10" data-path="Assumptions-with-Assume.html">
+            
+                <a href="Assumptions-with-Assume.html">
+            
+                    
+                    Assumptions with Assume
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.11" data-path="Rules.html">
+            
+                <a href="Rules.html">
+            
+                    
+                    Rules
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.12" data-path="Theories.html">
+            
+                <a href="Theories.html">
+            
+                    
+                    Theories
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.13" data-path="Test-Fixtures.html">
+            
+                <a href="Test-Fixtures.html">
+            
+                    
+                    Test Fixtures
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.14" data-path="Categories.html">
+            
+                <a href="Categories.html">
+            
+                    
+                    Categories
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.15" data-path="Use-with-Maven.html">
+            
+                <a href="Use-with-Maven.html">
+            
+                    
+                    Use with Maven
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.16" data-path="Use-with-Gradle.html">
+            
+                <a href="Use-with-Gradle.html">
+            
+                    
+                    Use with Gradle
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.17" data-path="Multithreaded-code-and-Concurrency.html">
+            
+                <a href="Multithreaded-code-and-Concurrency.html">
+            
+                    
+                    Multithreaded code and Concurrency
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.18" data-path="Java-contract-test-helpers.html">
+            
+                <a href="Java-contract-test-helpers.html">
+            
+                    
+                    Java contract test helpers
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="2.19" data-path="Continuous-Testing.html">
+            
+                <a href="Continuous-Testing.html">
+            
+                    
+                    Continuous Testing
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+        
+        <li class="header">Third-party extensions</li>
+        
+        
+    
+        <li class="chapter active" data-level="3.1" data-path="Custom-Runners.html">
+            
+                <a href="Custom-Runners.html">
+            
+                    
+                    Custom Runners
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href="." >Custom Runners</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h2 id="third-party-runners">Third Party Runners</h2>
+<p>Some popular third party implementations of runners for use with <code>@RunWith</code> include:</p>
+<ul>
+<li>Spring Framework<ul>
+<li><a href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/testing.html#testcontext-framework" target="_blank">Spring TestContext Framework</a> reference manual</li>
+<li><a href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/test/context/junit4/SpringJUnit4ClassRunner.html" target="_blank">SpringJUnit4ClassRunner</a> Javadoc API</li>
+</ul>
+</li>
+<li>Mockito<ul>
+<li><a href="http://javadoc.io/page/org.mockito/mockito-core/latest/org/mockito/junit/MockitoJUnitRunner.html" target="_blank">MockitoJUnitRunner</a></li>
+</ul>
+</li>
+<li>JMockit  <ul>
+<li><a href="http://jmockit.org/api1x/mockit/integration/junit4/JMockit.html" target="_blank">http://jmockit.org/api1x/mockit/integration/junit4/JMockit.html</a></li>
+</ul>
+</li>
+<li>Concurrency / Test Helpers<ul>
+<li><a href="https://github.com/diva-e/parallel-test-runner" target="_blank">Parallel Test Runner</a></li>
+<li><a href="http://tempusfugitlibrary.org/apidocs/com/google/code/tempusfugit/concurrency/ConcurrentTestRunner.html" target="_blank">ConcurrentTestRunner</a> (Run tests <a href="http://tempusfugitlibrary.org/documentation/junit/parallel/" target="_blank">in parallel</a>)</li>
+<li><a href="https://code.google.com/p/junit-toolbox/" target="_blank">JUnit Toolbox</a> (Run tests in parallel; also Suite and Categories with Patterns, async)</li>
+<li><a href="http://tempusfugitlibrary.org/apidocs/com/google/code/tempusfugit/concurrency/IntermittentTestRunner.html" target="_blank">IntermittentTestRunner</a> (<a href="http://tempusfugitlibrary.org/documentation/junit/intermittent/" target="_blank">run repeatedly to expose intermittent failures</a>)</li>
+</ul>
+</li>
+<li><a href="https://github.com/bechte/junit-hierarchicalcontextrunner/wiki" target="_blank">Hierarchical Context Runner</a> &#x2013; A runner implementation that supports context hierarchies in JUnit.</li>
+<li>Parameterised and data-driven testing<ul>
+<li><a href="https://github.com/TNG/junit-dataprovider/wiki" target="_blank">junit-dataprovider</a> &#x2013; A <a href="http://testng.org/doc/index.html" target="_blank">TestNG</a> like dataprovider (see <a href="http://testng.org/doc/documentation-main.html#parameters-dataproviders" target="_blank">here</a>) runner for <a href="https://github.com/junit-team/junit" target="_blank">JUnit</a>.</li>
+<li><a href="https://github.com/Pragmatists/JUnitParams" target="_blank">JUnitParams</a> - an alternative to JUnit&apos;s <code>Parameterized</code> runner, which support test data on a per method basis</li>
+<li><a href="https://github.com/PeterWippermann/parameterized-suite" target="_blank">ParameterizedSuite</a> - Allows to define parameters for test suites.</li>
+</ul>
+</li>
+<li><a href="https://github.com/Nordstrom/JUnit-Foundation/blob/master/src/main/java/com/nordstrom/automation/junit/HookInstallingRunner.java" target="_blank">HookInstallingRunner</a> - This JUnit test runner implements four significant features:<ul>
+<li>Invocation hooks for test and configuration methods</li>
+<li>Test method timeout management</li>
+<li>Automatic retry of failed tests</li>
+<li>Shutdown hook installation</li>
+</ul>
+</li>
+<li>BDD testing - these integrate popular BDD/ATDD methodologies<ul>
+<li><a href="https://github.com/cucumber/cucumber-jvm/blob/master/junit/src/main/java/cucumber/api/junit/Cucumber.java" target="_blank">Cucumber Runner</a> - Cucumber JVM integration for JUnit, based on Gherkin specifications written in feature files</li>
+<li>JBehave - <a href="https://github.com/codecentric/jbehave-junit-runner" target="_blank">JBehave JUnit runner</a> - a Gherkin-based specification framework</li>
+<li>FitNesse - <a href="http://fitnesse.org/FitNesse.UserGuide.WritingAcceptanceTests.RunningFromJunit" target="_blank">FitNesse Runner</a></li>
+<li><a href="https://github.com/concordion/concordion/blob/master/src/main/java/org/concordion/integration/junit4/ConcordionRunner.java" target="_blank">ConcordionRunner</a> - the Concordion BDD framework based on Gherkin specifications written in markdown</li>
+<li><a href="https://github.com/greghaskins/spectrum" target="_blank">Spectrum</a> - supports Specs in Jasmine/Mocha/Gherkin syntax (Java 8 required)</li>
+<li><a href="https://github.com/mscharhag/oleaster" target="_blank">Oleaster</a> - supports Specs in Jasmine/Mocha syntax</li>
+<li><a href="https://github.com/paulcwarren/ginkgo4j" target="_blank">Ginkgo4jRunner</a> - supports Specs in Jasmine/Mocha syntax</li>
+<li>Cola tests - technically a precompiler for tests - <a href="http://bmsantos.github.io/cola-maven-plugin/" target="_blank">Cola Documentation</a></li>
+</ul>
+</li>
+<li><a href="https://github.com/Lucas3oo/jicunit" target="_blank">JICUnit</a> - A JUnit runner in the JEE container for in-container testing similar to JUnitEE and Jakarta Cactus, both which are not developed any more.</li>
+<li><a href="https://github.com/dukescript/junit-browser-runner" target="_blank">JUnit Browser Runner</a> - A JUnit runner that executes your tests in a Browser using <a href="http://wiki.apidesign.org/wiki/Bck2Brwsr" target="_blank">bck2brwsr</a>.</li>
+</ul>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="Continuous-Testing.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page: Continuous Testing">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"Custom Runners","level":"3.1","depth":1,"previous":{"title":"Continuous Testing","level":"2.19","depth":1,"path":"Continuous-Testing.md","ref":"Continuous-Testing.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"Custom-Runners.md","mtime":"2018-07-25T18:16:39.425Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2018-07-25T19:06:52.738Z"},"basePath":".","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="gitbook/gitbook.js"></script>
+    <script src="gitbook/theme.js"></script>
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+
