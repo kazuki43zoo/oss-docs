@@ -1,0 +1,443 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>Getting Started · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.2">
+        
+        
+        
+    
+    <link rel="stylesheet" href="gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="Downloads.html" />
+    
+    
+    <link rel="prev" href="./" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.2" data-path="GettingStarted.html">
+            
+                <a href="GettingStarted.html">
+            
+                    
+                    Getting Started
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="Downloads.html">
+            
+                <a href="Downloads.html">
+            
+                    
+                    Downloads
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="Usage.html">
+            
+                <a href="Usage.html">
+            
+                    
+                    Usage Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="ReleaseNotes.html">
+            
+                <a href="ReleaseNotes.html">
+            
+                    
+                    Release Notes
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="snapshot.html">
+            
+                <a href="snapshot.html">
+            
+                    
+                    Snapshot dependencies
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="FAQ.html">
+            
+                <a href="FAQ.html">
+            
+                    
+                    FAQ
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.8" >
+            
+                <a target="_blank" href="http://groups.google.com/group/rest-assured">
+            
+                    
+                    Support
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href="." >Getting Started</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="contents">Contents</h1>
+<ol>
+<li><a href="#maven--gradle-users">Maven / Gradle</a><ol>
+<li><a href="#rest-assured">REST Assured</a></li>
+<li><a href="#jsonpath">JsonPath</a></li>
+<li><a href="#xmlpath">XmlPath</a></li>
+<li><a href="#json-schema-validation">JSON Schema Validation</a></li>
+<li><a href="#spring-mock-mvc">Spring Mock MVC</a></li>
+<li><a href="#scala-support">Scala Module</a></li>
+</ol>
+</li>
+<li><a href="#non-maven-users">Non-maven users</a></li>
+<li><a href="#static-imports">Static Imports</a></li>
+<li><a href="#version-2x">Version 2.x</a></li>
+<li><a href="#documentation">Documentation</a></li>
+</ol>
+<h2 id="maven--gradle-users">Maven / Gradle Users</h2>
+<p>Add the following dependency to your pom.xml:</p>
+<h3 id="rest-assured">REST Assured</h3>
+<p>Includes <a href="#jsonpath">JsonPath</a> and <a href="#xmlpath">XmlPath</a></p>
+<p>Maven:</p>
+<pre><code class="lang-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>io.rest-assured<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>rest-assured<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.1.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>test<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<p>Gradle:</p>
+<pre><code class="lang-groovy">testCompile <span class="hljs-string">&apos;io.rest-assured:rest-assured:3.1.0&apos;</span>
+</code></pre>
+<p>Notes</p>
+<ol>
+<li>You should place rest-assured before the JUnit dependency declaration in your pom.xml / build.gradle in order to make sure that the correct version of Hamcrest is used.</li>
+<li>REST Assured includes JsonPath and XmlPath as transitive dependencies</li>
+</ol>
+<h3 id="jsonpath">JsonPath</h3>
+<p>Standalone JsonPath (included if you depend on the <code>rest-assured</code> artifact). Makes it easy to parse JSON documents. Note that this JsonPath implementation uses <a href="http://groovy-lang.org/processing-xml.html#_gpath" target="_blank">Groovy&apos;s GPath</a> syntax and is not to be confused with Kalle Stenflo&apos;s <a href="https://github.com/json-path/JsonPath" target="_blank">JsonPath</a> implementation.</p>
+<p>Maven:</p>
+<pre><code class="lang-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>io.rest-assured<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>json-path<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.1.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<p>Gradle:</p>
+<pre><code class="lang-groovy">compile <span class="hljs-string">&apos;io.rest-assured:json-path:3.1.0&apos;</span>
+</code></pre>
+<h3 id="xmlpath">XmlPath</h3>
+<p>Stand-alone XmlPath (included if you depend on the <code>rest-assured</code> artifact). Makes it easy to parse XML documents.</p>
+<p>Maven:</p>
+<pre><code class="lang-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>io.rest-assured<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>xml-path<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.1.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<p>Gradle:</p>
+<pre><code class="lang-groovy">compile <span class="hljs-string">&apos;io.rest-assured:xml-path:3.1.0&apos;</span>
+</code></pre>
+<h3 id="json-schema-validation">JSON Schema Validation</h3>
+<p>If you want to validate that a JSON response conforms to a <a href="http://json-schema.org/" target="_blank">Json Schema</a> you can use the <code>json-schema-validator</code> module:</p>
+<p>Maven:</p>
+<pre><code class="lang-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>io.rest-assured<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>json-schema-validator<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.1.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>test<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<p>Gradle:</p>
+<pre><code class="lang-groovy">testCompile <span class="hljs-string">&apos;io.rest-assured:json-schema-validator:3.1.0&apos;</span>
+</code></pre>
+<p>Refer to the <a href="Usage#json-schema-validation">documentation</a> for more info.</p>
+<h3 id="spring-mock-mvc">Spring Mock Mvc</h3>
+<p>If you&apos;re using Spring Mvc you can now unit test your controllers using the <a href="http://static.javadoc.io/io.rest-assured/spring-mock-mvc/3.1.0/com/jayway/restassured/module/mockmvc/RestAssuredMockMvc.html" target="_blank">RestAssuredMockMvc</a> API in the <a href="https://github.com/jayway/rest-assured/wiki/Usage#spring-mock-mvc-module" target="_blank">spring-mock-mvc</a> module. For this to work you need to depend on the <code>spring-mock-mvc</code> module:</p>
+<p>Maven:</p>
+<pre><code class="lang-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>io.rest-assured<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-mock-mvc<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.1.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>test<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<p>Gradle:</p>
+<pre><code class="lang-groovy">testCompile <span class="hljs-string">&apos;io.rest-assured:spring-mock-mvc:3.1.0&apos;</span>
+</code></pre>
+<h3 id="scala-support">Scala Support</h3>
+<p>If you&apos;re using Scala you may leverage the <a href="https://github.com/jayway/rest-assured/wiki/Usage#scala-support-module" target="_blank">scala-support</a> module. For this to work you need to depend on the <code>scala-support</code> module:</p>
+<p>SBT:</p>
+<pre><code class="lang-scala">libraryDependencies += <span class="hljs-string">&quot;io.rest-assured&quot;</span> % <span class="hljs-string">&quot;scala-support&quot;</span> % <span class="hljs-string">&quot;3.1.0&quot;</span>
+</code></pre>
+<p>Maven:</p>
+<pre><code class="lang-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>io.rest-assured<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>scala-support<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.1.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>test<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<p>Gradle:</p>
+<pre><code class="lang-xml">testCompile &apos;io.rest-assured:scala-support:3.1.0&apos;
+</code></pre>
+<h2 id="non-maven-users">Non-maven users</h2>
+<p>Download <a href="http://dl.bintray.com/johanhaleby/generic/rest-assured-3.1.0-dist.zip" target="_blank">REST Assured</a> and <a href="http://dl.bintray.com/johanhaleby/generic/json-schema-validator-3.1.0-dist.zip" target="_blank">Json Schema Validator</a> (optional). You can also download <a href="http://dl.bintray.com/johanhaleby/generic/xml-path-3.1.0-dist.zip" target="_blank">XmlPath</a> and/or <a href="http://dl.bintray.com/johanhaleby/generic/json-path-3.1.0-dist.zip" target="_blank">JsonPath</a> separately if you don&apos;t need REST Assured. If you&apos;re using Spring Mvc then you can download the <a href="http://dl.bintray.com/johanhaleby/generic/spring-mock-mvc-3.1.0-dist.zip" target="_blank">spring-mock-mvc</a> module as well. If you&apos;re using Scala you may optionally download the <a href="http://dl.bintray.com/johanhaleby/generic/scala-support-3.1.0-dist.zip" target="_blank">scala-support</a> module. Extract the distribution zip file and put the jar files in your class-path.</p>
+<h1 id="static-imports">Static imports</h1>
+<p>In order to use REST assured effectively it&apos;s recommended to statically import methods from the following classes:</p>
+<pre><code class="lang-java">io.restassured.RestAssured.*
+io.restassured.matcher.RestAssuredMatchers.*
+org.hamcrest.Matchers.*
+</code></pre>
+<p>If you want to use <a href="http://json-schema.org/" target="_blank">Json Schema</a> validation you should also statically import these methods:</p>
+<pre><code class="lang-java">io.restassured.module.jsv.JsonSchemaValidator.*
+</code></pre>
+<p>Refer to <a href="#json-schema-validation">Json Schema Validation</a> section for more info.</p>
+<p>If you&apos;re using Spring MVC you can use the <a href="https://github.com/jayway/rest-assured/wiki/Usage#spring-mock-mvc-module" target="_blank">spring-mock-mvc</a> module to unit test your Spring Controllers using the Rest Assured DSL. To do this statically import the methods from <a href="http://static.javadoc.io/io.rest-assured/spring-mock-mvc/3.1.0/com/jayway/restassured/module/mockmvc/RestAssuredMockMvc.html" target="_blank">RestAssuredMockMvc</a> <em>instead</em> of importing the methods from <code>io.rest-assured.RestAssured</code> and <code>io.rest-assured.matcher.RestAssuredMatchers</code>:</p>
+<pre><code class="lang-java">io.restassured.module.mockmvc.RestAssuredMockMvc.*
+io.restassured.matcher.RestAssuredMatchers.*
+</code></pre>
+<h1 id="version-2x">Version 2.x</h1>
+<p>If you need to depend on an older version replace groupId <code>io.rest-assured</code> with <code>com.jayway.restassured</code>.</p>
+<h1 id="documentation">Documentation</h1>
+<p>When you&apos;ve successfully downloaded and configured REST Assured in your classpath please refer to the <a href="Usage">usage guide</a> for examples.</p>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="./" class="navigation navigation-prev " aria-label="Previous page: Introduction">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="Downloads.html" class="navigation navigation-next " aria-label="Next page: Downloads">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"Getting Started","level":"1.2","depth":1,"next":{"title":"Downloads","level":"1.3","depth":1,"path":"Downloads.md","ref":"Downloads.md","articles":[]},"previous":{"title":"Introduction","level":"1.1","depth":1,"path":"README.md","ref":"README.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"GettingStarted.md","mtime":"2018-07-30T23:15:05.380Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2018-07-30T23:28:50.789Z"},"basePath":".","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="gitbook/gitbook.js"></script>
+    <script src="gitbook/theme.js"></script>
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+
