@@ -153,3 +153,39 @@ This pages generated from JUnit 4 [wiki](https://github.com/junit-team/junit4/wi
 
 * [Custom Runners](Custom-Runners.md)
 ```
+
+## reset-assured
+
+
+```
+$ git clone https://github.com/rest-assured/rest-assured.wiki.git
+$ cd rest-assured.wiki
+$ gitbook init
+$ gitbook build
+```
+
+_book
+
+* README.md
+
+```
+# Introduction
+
+This pages generated from rest-assured [wiki](https://github.com/rest-assured/rest-assured/wiki).
+```
+
+* SUMMARY.md
+
+```
+# Summary
+
+* [Getting Started](GettingStarted.md)
+* [Downloads](Downloads.md)
+* [Usage Guide](Usage.md) ([Legacy documentation](Usage_Legacy.md) (prior to v2.0))
+* [Release Notes](ReleaseNotes.md) ([Change Log](https://raw.githubusercontent.com/jayway/rest-assured/master/changelog.txt))
+* [Snapshot dependencies](snapshot.md)
+* [FAQ](FAQ.md)
+* [Support](http://groups.google.com/group/rest-assured) (google group/mailing list)
+```
+
+
