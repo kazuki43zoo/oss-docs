@@ -54,6 +54,16 @@ $ ./gradlew reference
 
 build/reference
 
+## spring-restdocs
+
+```
+$ git clone https://github.com/spring-projects/spring-restdocs.git
+$ cd spring-restdocs
+$ git checkout v{version}
+$ ./gradlew docsZip
+```
+docs/build/asciidoc/html5
+
 
 ## logback
 
