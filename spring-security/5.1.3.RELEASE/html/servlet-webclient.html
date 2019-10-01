@@ -1,0 +1,1376 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>13.&nbsp;WebClient for Servlet Environments</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="servlet-applications.html" title="Part&nbsp;II.&nbsp;Servlet Applications"><link rel="prev" href="advanced-topics.html" title="12.&nbsp;Additional Topics"><link rel="next" href="data.html" title="14.&nbsp;Spring Data Integration"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">13.&nbsp;WebClient for Servlet Environments</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="advanced-topics.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;II.&nbsp;Servlet Applications</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="data.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="servlet-webclient" href="#servlet-webclient"></a>13.&nbsp;WebClient for Servlet Environments</h2></div></div></div>
+
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The following documentation is for use within Servlet environments.
+For all other environments, refer to <a class="link" href="webclient.html" title="21.&nbsp;WebClient">WebClient for Reactive</a> environments.</p>
+</td></tr></table></div>
+<p>Spring Framework has built in support for setting a Bearer token.</p>
+<pre class="programlisting">webClient.get()
+    .headers(h -&gt; h.setBearerAuth(token))
+    ...</pre>
+<p>Spring Security builds on this support to provide additional benefits:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Spring Security will automatically refresh expired tokens (if a refresh token is present)
+</li><li class="listitem">
+<p class="simpara">If an access token is requested and not present, Spring Security will automatically request the access token.</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+For authorization_code this involves performing the redirect and then replaying the original request
+</li><li class="listitem">
+For client_credentials the token is simply requested and saved
+</li></ul></div>
+</li><li class="listitem">
+Support for the ability to transparently include the current OAuth token or explicitly select which token should be used.
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="servlet-webclient-setup" href="#servlet-webclient-setup"></a>13.1&nbsp;WebClient OAuth2 Setup</h2></div></div></div>
+
+<p>The first step is ensuring to setup the <code class="literal">WebClient</code> correctly.
+An example of setting up <code class="literal">WebClient</code> in a servlet environment can be found below:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+WebClient webClient(ClientRegistrationRepository clientRegistrations,
+        OAuth2AuthorizedClientRepository authorizedClients) {
+    ServletOAuth2AuthorizedClientExchangeFilterFunction oauth =
+            <span class="hl-keyword">new</span> ServletOAuth2AuthorizedClientExchangeFilterFunction(clientRegistrations, authorizedClients);
+    <span class="hl-comment">// (optional) explicitly opt into using the oauth2Login to provide an access token implicitly</span>
+    <span class="hl-comment">// oauth.setDefaultOAuth2AuthorizedClient(true);</span>
+    <span class="hl-comment">// (optional) set a default ClientRegistration.registrationId</span>
+    <span class="hl-comment">// oauth.setDefaultClientRegistrationId("client-registration-id");</span>
+    <span class="hl-keyword">return</span> WebClient.builder()
+            .apply(oauth2.oauth2Configuration())
+            .build();
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="servlet-webclient-implicit" href="#servlet-webclient-implicit"></a>13.2&nbsp;Implicit OAuth2AuthorizedClient</h2></div></div></div>
+
+<p>If we set <code class="literal">defaultOAuth2AuthorizedClient</code> to <code class="literal">true</code> in our setup and the user authenticated with oauth2Login (i.e. OIDC), then the current authentication is used to automatically provide the access token.
+Alternatively,  if we set <code class="literal">defaultClientRegistrationId</code> to a valid <code class="literal">ClientRegistration</code> id, that registration is used to provide the access token.
+This is convenient, but in environments where not all endpoints should get the access token, it is dangerous (you might provide the wrong access token to an endpoint).</p>
+<pre class="programlisting">Mono&lt;String&gt; body = <span class="hl-keyword">this</span>.webClient
+        .get()
+        .uri(<span class="hl-keyword">this</span>.uri)
+        .retrieve()
+        .bodyToMono(String.<span class="hl-keyword">class</span>);</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="servlet-webclient-explicit" href="#servlet-webclient-explicit"></a>13.3&nbsp;Explicit OAuth2AuthorizedClient</h2></div></div></div>
+
+<p>The <code class="literal">OAuth2AuthorizedClient</code> can be explicitly provided by setting it on the request attributes.
+In the example below we resolve the <code class="literal">OAuth2AuthorizedClient</code> using Spring WebFlux or Spring MVC argument resolver support.
+However, it does not matter how the <code class="literal">OAuth2AuthorizedClient</code> is resolved.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@GetMapping("/explicit")</span></em>
+Mono&lt;String&gt; explicit(<em><span class="hl-annotation" style="color: gray">@RegisteredOAuth2AuthorizedClient("client-id")</span></em> OAuth2AuthorizedClient authorizedClient) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.webClient
+            .get()
+            .uri(<span class="hl-keyword">this</span>.uri)
+            .attributes(oauth2AuthorizedClient(authorizedClient))
+            .retrieve()
+            .bodyToMono(String.<span class="hl-keyword">class</span>);
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="servlet-webclient-clientregistrationid" href="#servlet-webclient-clientregistrationid"></a>13.4&nbsp;clientRegistrationId</h2></div></div></div>
+
+<p>Alternatively, it is possible to specify the <code class="literal">clientRegistrationId</code> on the request attributes and the <code class="literal">WebClient</code> will attempt to lookup the <code class="literal">OAuth2AuthorizedClient</code>.
+If it is not found, one will automatically be acquired.</p>
+<pre class="programlisting">Mono&lt;String&gt; body = <span class="hl-keyword">this</span>.webClient
+        .get()
+        .uri(<span class="hl-keyword">this</span>.uri)
+        .attributes(clientRegistrationId(<span class="hl-string">"client-id"</span>))
+        .retrieve()
+        .bodyToMono(String.<span class="hl-keyword">class</span>);</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="taglibs" href="#taglibs"></a>13.5&nbsp;JSP Tag Libraries</h2></div></div></div>
+
+<p>Spring Security has its own taglib which provides basic support for accessing security information and applying security constraints in JSPs.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="declaring-the-taglib" href="#declaring-the-taglib"></a>13.5.1&nbsp;Declaring the Taglib</h3></div></div></div>
+
+<p>To use any of the tags, you must have the security taglib declared in your JSP:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;%@</span> <span class="hl-attribute">taglib</span> <span class="hl-attribute">prefix</span>=<span class="hl-value">"sec"</span> <span class="hl-attribute">uri</span>=<span class="hl-value">"http://www.springframework.org/security/tags"</span> <span class="hl-attribute">%&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="taglibs-authorize" href="#taglibs-authorize"></a>13.5.2&nbsp;The authorize Tag</h3></div></div></div>
+
+<p>This tag is used to determine whether its contents should be evaluated or not.
+In Spring Security 3.0, it can be used in two ways <a href="#ftn.d5e6267" class="footnote" name="d5e6267"><sup class="footnote">[21]</sup></a>.
+The first approach uses a <a class="link" href="authorization.html#el-access-web" title="11.3.2&nbsp;Web Security Expressions">web-security expression</a>, specified in the <code class="literal">access</code> attribute of the tag.
+The expression evaluation will be delegated to the <code class="literal">SecurityExpressionHandler&lt;FilterInvocation&gt;</code> defined in the application context (you should have web expressions enabled in your <code class="literal">&lt;http&gt;</code> namespace configuration to make sure this service is available).
+So, for example, you might have</p>
+<pre class="programlisting"><span class="hl-tag">&lt;sec:authorize</span> <span class="hl-attribute">access</span>=<span class="hl-value">"hasRole('supervisor')"</span><span class="hl-tag">&gt;</span>
+
+This content will only be visible to users who have the "supervisor" authority in their list of <span class="hl-tag">&lt;tt&gt;</span>GrantedAuthority<span class="hl-tag">&lt;/tt&gt;</span>s.
+
+<span class="hl-tag">&lt;/sec:authorize&gt;</span></pre>
+<p>When used in conjuction with Spring Security&#8217;s PermissionEvaluator, the tag can also be used to check permissions.
+For example:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;sec:authorize</span> <span class="hl-attribute">access</span>=<span class="hl-value">"hasPermission(#domain,'read') or hasPermission(#domain,'write')"</span><span class="hl-tag">&gt;</span>
+
+This content will only be visible to users who have read or write permission to the Object found as a request attribute named "domain".
+
+<span class="hl-tag">&lt;/sec:authorize&gt;</span></pre>
+<p>A common requirement is to only show a particular link, if the user is actually allowed to click it.
+How can we determine in advance whether something will be allowed? This tag can also operate in an alternative mode which allows you to define a particular URL as an attribute.
+If the user is allowed to invoke that URL, then the tag body will be evaluated, otherwise it will be skipped.
+So you might have something like</p>
+<pre class="programlisting"><span class="hl-tag">&lt;sec:authorize</span> <span class="hl-attribute">url</span>=<span class="hl-value">"/admin"</span><span class="hl-tag">&gt;</span>
+
+This content will only be visible to users who are authorized to send requests to the "/admin" URL.
+
+<span class="hl-tag">&lt;/sec:authorize&gt;</span></pre>
+<p>To use this tag there must also be an instance of <code class="literal">WebInvocationPrivilegeEvaluator</code> in your application context.
+If you are using the namespace, one will automatically be registered.
+This is an instance of <code class="literal">DefaultWebInvocationPrivilegeEvaluator</code>, which creates a dummy web request for the supplied URL and invokes the security interceptor to see whether the request would succeed or fail.
+This allows you to delegate to the access-control setup you defined using <code class="literal">intercept-url</code> declarations within the <code class="literal">&lt;http&gt;</code> namespace configuration and saves having to duplicate the information (such as the required roles) within your JSPs.
+This approach can also be combined with a <code class="literal">method</code> attribute, supplying the HTTP method, for a more specific match.</p>
+<p>The Boolean result of evaluating the tag (whether it grants or denies access) can be stored in a page context scope variable by setting the <code class="literal">var</code> attribute to the variable name, avoiding the need for duplicating and re-evaluating the condition at other points in the page.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="disabling-tag-authorization-for-testing" href="#disabling-tag-authorization-for-testing"></a>Disabling Tag Authorization for Testing</h4></div></div></div>
+
+<p>Hiding a link in a page for unauthorized users doesn&#8217;t prevent them from accessing the URL.
+They could just type it into their browser directly, for example.
+As part of your testing process, you may want to reveal the hidden areas in order to check that links really are secured at the back end.
+If you set the system property <code class="literal">spring.security.disableUISecurity</code> to <code class="literal">true</code>, the <code class="literal">authorize</code> tag will still run but will not hide its contents.
+By default it will also surround the content with <code class="literal">&lt;span class="securityHiddenUI"&gt;&#8230;&#8203;&lt;/span&gt;</code> tags.
+This allows you to display "hidden" content with a particular CSS style such as a different background colour.
+Try running the "tutorial" sample application with this property enabled, for example.</p>
+<p>You can also set the properties <code class="literal">spring.security.securedUIPrefix</code> and <code class="literal">spring.security.securedUISuffix</code> if you want to change surrounding text from the default <code class="literal">span</code> tags (or use empty strings to remove it completely).</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="the-authentication-tag" href="#the-authentication-tag"></a>13.5.3&nbsp;The authentication Tag</h3></div></div></div>
+
+<p>This tag allows access to the current <code class="literal">Authentication</code> object stored in the security context.
+It renders a property of the object directly in the JSP.
+So, for example, if the <code class="literal">principal</code> property of the <code class="literal">Authentication</code> is an instance of Spring Security&#8217;s <code class="literal">UserDetails</code> object, then using <code class="literal">&lt;sec:authentication property="principal.username" /&gt;</code> will render the name of the current user.</p>
+<p>Of course, it isn&#8217;t necessary to use JSP tags for this kind of thing and some people prefer to keep as little logic as possible in the view.
+You can access the <code class="literal">Authentication</code> object in your MVC controller (by calling <code class="literal">SecurityContextHolder.getContext().getAuthentication()</code>) and add the data directly to your model for rendering by the view.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="the-accesscontrollist-tag" href="#the-accesscontrollist-tag"></a>13.5.4&nbsp;The accesscontrollist Tag</h3></div></div></div>
+
+<p>This tag is only valid when used with Spring Security&#8217;s ACL module.
+It checks a comma-separated list of required permissions for a specified domain object.
+If the current user has all of those permissions, then the tag body will be evaluated.
+If they don&#8217;t, it will be skipped.
+An example might be</p>
+<div class="caution" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Caution"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="images/caution.png"></td><th align="left">Caution</th></tr><tr><td align="left" valign="top">
+<p>In general this tag should be considered deprecated.
+Instead use the <a class="xref" href="servlet-webclient.html#taglibs-authorize" title="13.5.2&nbsp;The authorize Tag">Section&nbsp;13.5.2, &#8220;The authorize Tag&#8221;</a>.</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;sec:accesscontrollist</span> <span class="hl-attribute">hasPermission</span>=<span class="hl-value">"1,2"</span> <span class="hl-attribute">domainObject</span>=<span class="hl-value">"${someObject}"</span><span class="hl-tag">&gt;</span>
+
+This will be shown if the user has all of the permissions represented by the values "1" or "2" on the given object.
+
+<span class="hl-tag">&lt;/sec:accesscontrollist&gt;</span></pre>
+<p>The permissions are passed to the <code class="literal">PermissionFactory</code> defined in the application context, converting them to ACL <code class="literal">Permission</code> instances, so they may be any format which is supported by the factory - they don&#8217;t have to be integers, they could be strings like <code class="literal">READ</code> or <code class="literal">WRITE</code>.
+If no <code class="literal">PermissionFactory</code> is found, an instance of <code class="literal">DefaultPermissionFactory</code> will be used.
+The <code class="literal">AclService</code> from the application context will be used to load the <code class="literal">Acl</code> instance for the supplied object.
+The <code class="literal">Acl</code> will be invoked with the required permissions to check if all of them are granted.</p>
+<p>This tag also supports the <code class="literal">var</code> attribute, in the same way as the <code class="literal">authorize</code> tag.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="the-csrfinput-tag" href="#the-csrfinput-tag"></a>13.5.5&nbsp;The csrfInput Tag</h3></div></div></div>
+
+<p>If CSRF protection is enabled, this tag inserts a hidden form field with the correct name and value for the CSRF protection token.
+If CSRF protection is not enabled, this tag outputs nothing.</p>
+<p>Normally Spring Security automatically inserts a CSRF form field for any <code class="literal">&lt;form:form&gt;</code> tags you use, but if for some reason you cannot use <code class="literal">&lt;form:form&gt;</code>, <code class="literal">csrfInput</code> is a handy replacement.</p>
+<p>You should place this tag within an HTML <code class="literal">&lt;form&gt;&lt;/form&gt;</code> block, where you would normally place other input fields.
+Do NOT place this tag within a Spring <code class="literal">&lt;form:form&gt;&lt;/form:form&gt;</code> block.
+Spring Security handles Spring forms automatically.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;form</span> <span class="hl-attribute">method</span>=<span class="hl-value">"post"</span> <span class="hl-attribute">action</span>=<span class="hl-value">"/do/something"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;sec:csrfInput /&gt;</span>
+    Name:<span class="hl-tag">&lt;br /&gt;</span>
+    <span class="hl-tag">&lt;input</span> <span class="hl-attribute">type</span>=<span class="hl-value">"text"</span> <span class="hl-attribute">name</span>=<span class="hl-value">"name"</span><span class="hl-tag"> /&gt;</span>
+    ...
+<span class="hl-tag">&lt;/form&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="the-csrfmetatags-tag" href="#the-csrfmetatags-tag"></a>13.5.6&nbsp;The csrfMetaTags Tag</h3></div></div></div>
+
+<p>If CSRF protection is enabled, this tag inserts meta tags containing the CSRF protection token form field and header names and CSRF protection token value.
+These meta tags are useful for employing CSRF protection within JavaScript in your applications.</p>
+<p>You should place <code class="literal">csrfMetaTags</code> within an HTML <code class="literal">&lt;head&gt;&lt;/head&gt;</code> block, where you would normally place other meta tags.
+Once you use this tag, you can access the form field name, header name, and token value easily using JavaScript.
+JQuery is used in this example to make the task easier.</p>
+<pre class="programlisting"><strong class="hl-tag" style="color: blue">&lt;!DOCTYPE html&gt;</strong>
+<span class="hl-tag">&lt;html&gt;</span>
+    <span class="hl-tag">&lt;head&gt;</span>
+        <span class="hl-tag">&lt;title&gt;</span>CSRF Protected JavaScript Page<span class="hl-tag">&lt;/title&gt;</span>
+        <span class="hl-tag">&lt;meta</span> <span class="hl-attribute">name</span>=<span class="hl-value">"description"</span> <span class="hl-attribute">content</span>=<span class="hl-value">"This is the description for this page"</span><span class="hl-tag"> /&gt;</span>
+        <span class="hl-tag">&lt;sec:csrfMetaTags /&gt;</span>
+        <span class="hl-tag">&lt;script</span> <span class="hl-attribute">type</span>=<span class="hl-value">"text/javascript"</span> <span class="hl-attribute">language</span>=<span class="hl-value">"javascript"</span><span class="hl-tag">&gt;</span>
+
+            var csrfParameter = $("meta[name='_csrf_parameter']").attr("content");
+            var csrfHeader = $("meta[name='_csrf_header']").attr("content");
+            var csrfToken = $("meta[name='_csrf']").attr("content");
+
+            // using XMLHttpRequest directly to send an x-www-form-urlencoded request
+            var ajax = new XMLHttpRequest();
+            ajax.open("POST", "http://www.example.org/do/something", true);
+            ajax.setRequestHeader("Content-Type", "application/x-www-form-urlencoded data");
+            ajax.send(csrfParameter + "=" + csrfToken + "&amp;name=John&amp;...");
+
+            // using XMLHttpRequest directly to send a non-x-www-form-urlencoded request
+            var ajax = new XMLHttpRequest();
+            ajax.open("POST", "http://www.example.org/do/something", true);
+            ajax.setRequestHeader(csrfHeader, csrfToken);
+            ajax.send("...");
+
+            // using JQuery to send an x-www-form-urlencoded request
+            var data = {};
+            data[csrfParameter] = csrfToken;
+            data["name"] = "John";
+            ...
+            $.ajax({
+                url: "http://www.example.org/do/something",
+                type: "POST",
+                data: data,
+                ...
+            });
+
+            // using JQuery to send a non-x-www-form-urlencoded request
+            var headers = {};
+            headers[csrfHeader] = csrfToken;
+            $.ajax({
+                url: "http://www.example.org/do/something",
+                type: "POST",
+                headers: headers,
+                ...
+            });
+
+        <span class="hl-tag">&lt;script&gt;</span>
+    <span class="hl-tag">&lt;/head&gt;</span>
+    <span class="hl-tag">&lt;body&gt;</span>
+        ...
+    <span class="hl-tag">&lt;/body&gt;</span>
+<span class="hl-tag">&lt;/html&gt;</span></pre>
+<p>If CSRF protection is not enabled, <code class="literal">csrfMetaTags</code> outputs nothing.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jaas" href="#jaas"></a>13.6&nbsp;Java Authentication and Authorization Service (JAAS) Provider</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="overview-2" href="#overview-2"></a>13.6.1&nbsp;Overview</h3></div></div></div>
+
+<p>Spring Security provides a package able to delegate authentication requests to the Java Authentication and Authorization Service (JAAS).
+This package is discussed in detail below.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jaas-abstractjaasauthenticationprovider" href="#jaas-abstractjaasauthenticationprovider"></a>13.6.2&nbsp;AbstractJaasAuthenticationProvider</h3></div></div></div>
+
+<p>The <code class="literal">AbstractJaasAuthenticationProvider</code> is the basis for the provided JAAS <code class="literal">AuthenticationProvider</code> implementations.
+Subclasses must implement a method that creates the <code class="literal">LoginContext</code>.
+The <code class="literal">AbstractJaasAuthenticationProvider</code> has a number of dependencies that can be injected into it that are discussed below.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="jaas-callbackhandler" href="#jaas-callbackhandler"></a>JAAS CallbackHandler</h4></div></div></div>
+
+<p>Most JAAS <code class="literal">LoginModule</code> s require a callback of some sort.
+These callbacks are usually used to obtain the username and password from the user.</p>
+<p>In a Spring Security deployment, Spring Security is responsible for this user interaction (via the authentication mechanism).
+Thus, by the time the authentication request is delegated through to JAAS, Spring Security&#8217;s authentication mechanism will already have fully-populated an <code class="literal">Authentication</code> object containing all the information required by the JAAS <code class="literal">LoginModule</code>.</p>
+<p>Therefore, the JAAS package for Spring Security provides two default callback handlers, <code class="literal">JaasNameCallbackHandler</code> and <code class="literal">JaasPasswordCallbackHandler</code>.
+Each of these callback handlers implement <code class="literal">JaasAuthenticationCallbackHandler</code>.
+In most cases these callback handlers can simply be used without understanding the internal mechanics.</p>
+<p>For those needing full control over the callback behavior, internally <code class="literal">AbstractJaasAuthenticationProvider</code> wraps these <code class="literal">JaasAuthenticationCallbackHandler</code> s with an <code class="literal">InternalCallbackHandler</code>.
+The <code class="literal">InternalCallbackHandler</code> is the class that actually implements JAAS normal <code class="literal">CallbackHandler</code> interface.
+Any time that the JAAS <code class="literal">LoginModule</code> is used, it is passed a list of application context configured <code class="literal">InternalCallbackHandler</code> s.
+If the <code class="literal">LoginModule</code> requests a callback against the <code class="literal">InternalCallbackHandler</code> s, the callback is in-turn passed to the <code class="literal">JaasAuthenticationCallbackHandler</code> s being wrapped.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="jaas-authoritygranter" href="#jaas-authoritygranter"></a>JAAS AuthorityGranter</h4></div></div></div>
+
+<p>JAAS works with principals.
+Even "roles" are represented as principals in JAAS.
+Spring Security, on the other hand, works with <code class="literal">Authentication</code> objects.
+Each <code class="literal">Authentication</code> object contains a single principal, and multiple <code class="literal">GrantedAuthority</code> s.
+To facilitate mapping between these different concepts, Spring Security&#8217;s JAAS package includes an <code class="literal">AuthorityGranter</code> interface.</p>
+<p>An <code class="literal">AuthorityGranter</code> is responsible for inspecting a JAAS principal and returning a set of <code class="literal">String</code> s, representing the authorities assigned to the principal.
+For each returned authority string, the <code class="literal">AbstractJaasAuthenticationProvider</code> creates a <code class="literal">JaasGrantedAuthority</code> (which implements Spring Security&#8217;s <code class="literal">GrantedAuthority</code> interface) containing the authority string and the JAAS principal that the <code class="literal">AuthorityGranter</code> was passed.
+The <code class="literal">AbstractJaasAuthenticationProvider</code> obtains the JAAS principals by firstly successfully authenticating the user&#8217;s credentials using the JAAS <code class="literal">LoginModule</code>, and then accessing the <code class="literal">LoginContext</code> it returns.
+A call to <code class="literal">LoginContext.getSubject().getPrincipals()</code> is made, with each resulting principal passed to each <code class="literal">AuthorityGranter</code> defined against the <code class="literal">AbstractJaasAuthenticationProvider.setAuthorityGranters(List)</code> property.</p>
+<p>Spring Security does not include any production <code class="literal">AuthorityGranter</code> s given that every JAAS principal has an implementation-specific meaning.
+However, there is a <code class="literal">TestAuthorityGranter</code> in the unit tests that demonstrates a simple <code class="literal">AuthorityGranter</code> implementation.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jaas-defaultjaasauthenticationprovider" href="#jaas-defaultjaasauthenticationprovider"></a>13.6.3&nbsp;DefaultJaasAuthenticationProvider</h3></div></div></div>
+
+<p>The <code class="literal">DefaultJaasAuthenticationProvider</code> allows a JAAS <code class="literal">Configuration</code> object to be injected into it as a dependency.
+It then creates a <code class="literal">LoginContext</code> using the injected JAAS <code class="literal">Configuration</code>.
+This means that <code class="literal">DefaultJaasAuthenticationProvider</code> is not bound any particular implementation of <code class="literal">Configuration</code> as <code class="literal">JaasAuthenticationProvider</code> is.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="jaas-inmemoryconfiguration" href="#jaas-inmemoryconfiguration"></a>InMemoryConfiguration</h4></div></div></div>
+
+<p>In order to make it easy to inject a <code class="literal">Configuration</code> into <code class="literal">DefaultJaasAuthenticationProvider</code>, a default in-memory implementation named <code class="literal">InMemoryConfiguration</code> is provided.
+The implementation constructor accepts a <code class="literal">Map</code> where each key represents a login configuration name and the value represents an <code class="literal">Array</code> of <code class="literal">AppConfigurationEntry</code> s.
+<code class="literal">InMemoryConfiguration</code> also supports a default <code class="literal">Array</code> of <code class="literal">AppConfigurationEntry</code> objects that will be used if no mapping is found within the provided <code class="literal">Map</code>.
+For details, refer to the class level javadoc of <code class="literal">InMemoryConfiguration</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="jaas-djap-config" href="#jaas-djap-config"></a>DefaultJaasAuthenticationProvider Example Configuration</h4></div></div></div>
+
+<p>While the Spring configuration for <code class="literal">InMemoryConfiguration</code> can be more verbose than the standarad JAAS configuration files, using it in conjuction with <code class="literal">DefaultJaasAuthenticationProvider</code> is more flexible than <code class="literal">JaasAuthenticationProvider</code> since it not dependant on the default <code class="literal">Configuration</code> implementation.</p>
+<p>An example configuration of <code class="literal">DefaultJaasAuthenticationProvider</code> using <code class="literal">InMemoryConfiguration</code> is provided below.
+Note that custom implementations of <code class="literal">Configuration</code> can easily be injected into <code class="literal">DefaultJaasAuthenticationProvider</code> as well.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jaasAuthProvider"</span>
+<span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.authentication.jaas.DefaultJaasAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"configuration"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.authentication.jaas.memory.InMemoryConfiguration"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;constructor-arg&gt;</span>
+    <span class="hl-tag">&lt;map&gt;</span>
+    <span class="hl-comment">&lt;!--
+    SPRINGSECURITY is the default loginContextName
+    for AbstractJaasAuthenticationProvider
+    --&gt;</span>
+    <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"SPRINGSECURITY"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;array&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"javax.security.auth.login.AppConfigurationEntry"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"sample.SampleLoginModule"</span><span class="hl-tag"> /&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;util:constant</span> <span class="hl-attribute">static-field</span>=
+            <span class="hl-value">"javax.security.auth.login.AppConfigurationEntry$LoginModuleControlFlag.REQUIRED"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;map&gt;</span><span class="hl-tag">&lt;/map&gt;</span>
+        <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/array&gt;</span>
+    <span class="hl-tag">&lt;/entry&gt;</span>
+    <span class="hl-tag">&lt;/map&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"authorityGranters"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;list&gt;</span>
+    <span class="hl-comment">&lt;!-- You will need to write your own implementation of AuthorityGranter --&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.authentication.jaas.TestAuthorityGranter"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/list&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jaas-jaasauthenticationprovider" href="#jaas-jaasauthenticationprovider"></a>13.6.4&nbsp;JaasAuthenticationProvider</h3></div></div></div>
+
+<p>The <code class="literal">JaasAuthenticationProvider</code> assumes the default <code class="literal">Configuration</code> is an instance of <a class="ulink" href="http://download.oracle.com/javase/1.4.2/docs/guide/security/jaas/spec/com/sun/security/auth/login/ConfigFile.html" target="_top"> ConfigFile</a>.
+This assumption is made in order to attempt to update the <code class="literal">Configuration</code>.
+The <code class="literal">JaasAuthenticationProvider</code> then uses the default <code class="literal">Configuration</code> to create the <code class="literal">LoginContext</code>.</p>
+<p>Let&#8217;s assume we have a JAAS login configuration file, <code class="literal">/WEB-INF/login.conf</code>, with the following contents:</p>
+<pre class="programlisting">JAASTest {
+    sample.SampleLoginModule required;
+};</pre>
+<p>Like all Spring Security beans, the <code class="literal">JaasAuthenticationProvider</code> is configured via the application context.
+The following definitions would correspond to the above JAAS login configuration file:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jaasAuthenticationProvider"</span>
+<span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.authentication.jaas.JaasAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"loginConfig"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"/WEB-INF/login.conf"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"loginContextName"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"JAASTest"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"callbackHandlers"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;list&gt;</span>
+<span class="hl-tag">&lt;bean</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.authentication.jaas.JaasNameCallbackHandler"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;bean</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.authentication.jaas.JaasPasswordCallbackHandler"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/list&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"authorityGranters"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;list&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.authentication.jaas.TestAuthorityGranter"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/list&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jaas-apiprovision" href="#jaas-apiprovision"></a>13.6.5&nbsp;Running as a Subject</h3></div></div></div>
+
+<p>If configured, the <code class="literal">JaasApiIntegrationFilter</code> will attempt to run as the <code class="literal">Subject</code> on the <code class="literal">JaasAuthenticationToken</code>.
+This means that the <code class="literal">Subject</code> can be accessed using:</p>
+<pre class="programlisting">Subject subject = Subject.getSubject(AccessController.getContext());</pre>
+<p>This integration can easily be configured using the <a class="link" href="appendix.html#nsa-http-jaas-api-provision">jaas-api-provision</a> attribute.
+This feature is useful when integrating with legacy or external API&#8217;s that rely on the JAAS Subject being populated.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cas" href="#cas"></a>13.7&nbsp;CAS Authentication</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="cas-overview" href="#cas-overview"></a>13.7.1&nbsp;Overview</h3></div></div></div>
+
+<p>JA-SIG produces an enterprise-wide single sign on system known as CAS.
+Unlike other initiatives, JA-SIG&#8217;s Central Authentication Service is open source, widely used, simple to understand, platform independent, and supports proxy capabilities.
+Spring Security fully supports CAS, and provides an easy migration path from single-application deployments of Spring Security through to multiple-application deployments secured by an enterprise-wide CAS server.</p>
+<p>You can learn more about CAS at <a class="ulink" href="http://www.ja-sig.org/cas" target="_top">http://www.ja-sig.org/cas</a>.
+You will also need to visit this site to download the CAS Server files.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="cas-how-it-works" href="#cas-how-it-works"></a>13.7.2&nbsp;How CAS Works</h3></div></div></div>
+
+<p>Whilst the CAS web site contains documents that detail the architecture of CAS, we present the general overview again here within the context of Spring Security.
+Spring Security 3.x supports CAS 3.
+At the time of writing, the CAS server was at version 3.4.</p>
+<p>Somewhere in your enterprise you will need to setup a CAS server.
+The CAS server is simply a standard WAR file, so there isn&#8217;t anything difficult about setting up your server.
+Inside the WAR file you will customise the login and other single sign on pages displayed to users.</p>
+<p>When deploying a CAS 3.4 server, you will also need to specify an <code class="literal">AuthenticationHandler</code> in the <code class="literal">deployerConfigContext.xml</code> included with CAS.
+The <code class="literal">AuthenticationHandler</code> has a simple method that returns a boolean as to whether a given set of Credentials is valid.
+Your <code class="literal">AuthenticationHandler</code> implementation will need to link into some type of backend authentication repository, such as an LDAP server or database.
+CAS itself includes numerous <code class="literal">AuthenticationHandler</code> s out of the box to assist with this.
+When you download and deploy the server war file, it is set up to successfully authenticate users who enter a password matching their username, which is useful for testing.</p>
+<p>Apart from the CAS server itself, the other key players are of course the secure web applications deployed throughout your enterprise.
+These web applications are known as "services".
+There are three types of services.
+Those that authenticate service tickets, those that can obtain proxy tickets, and those that authenticate proxy tickets.
+Authenticating a proxy ticket differs because the list of proxies must be validated and often times a proxy ticket can be reused.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="cas-sequence" href="#cas-sequence"></a>Spring Security and CAS Interaction Sequence</h4></div></div></div>
+
+<p>The basic interaction between a web browser, CAS server and a Spring Security-secured service is as follows:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The web user is browsing the service&#8217;s public pages.
+CAS or Spring Security is not involved.
+</li><li class="listitem">
+The user eventually requests a page that is either secure or one of the beans it uses is secure.
+Spring Security&#8217;s <code class="literal">ExceptionTranslationFilter</code> will detect the <code class="literal">AccessDeniedException</code> or <code class="literal">AuthenticationException</code>.
+</li><li class="listitem">
+Because the user&#8217;s <code class="literal">Authentication</code> object (or lack thereof) caused an <code class="literal">AuthenticationException</code>, the <code class="literal">ExceptionTranslationFilter</code> will call the configured <code class="literal">AuthenticationEntryPoint</code>.
+If using CAS, this will be the <code class="literal">CasAuthenticationEntryPoint</code> class.
+</li><li class="listitem">
+The <code class="literal">CasAuthenticationEntryPoint</code> will redirect the user&#8217;s browser to the CAS server.
+It will also indicate a <code class="literal">service</code> parameter, which is the callback URL for the Spring Security service (your application).
+For example, the URL to which the browser is redirected might be <a class="ulink" href="https://my.company.com/cas/login?service=https%3A%2F%2Fserver3.company.com%2Fwebapp%2Flogin/cas" target="_top">https://my.company.com/cas/login?service=https%3A%2F%2Fserver3.company.com%2Fwebapp%2Flogin/cas</a>.
+</li><li class="listitem">
+After the user&#8217;s browser redirects to CAS, they will be prompted for their username and password.
+If the user presents a session cookie which indicates they&#8217;ve previously logged on, they will not be prompted to login again (there is an exception to this procedure, which we&#8217;ll cover later).
+CAS will use the <code class="literal">PasswordHandler</code> (or <code class="literal">AuthenticationHandler</code> if using CAS 3.0) discussed above to decide whether the username and password is valid.
+</li><li class="listitem">
+Upon successful login, CAS will redirect the user&#8217;s browser back to the original service.
+It will also include a <code class="literal">ticket</code> parameter, which is an opaque string representing the "service ticket".
+Continuing our earlier example, the URL the browser is redirected to might be <a class="ulink" href="https://server3.company.com/webapp/login/cas?ticket=ST-0-ER94xMJmn6pha35CQRoZ" target="_top">https://server3.company.com/webapp/login/cas?ticket=ST-0-ER94xMJmn6pha35CQRoZ</a>.
+</li><li class="listitem">
+Back in the service web application, the <code class="literal">CasAuthenticationFilter</code> is always listening for requests to <code class="literal">/login/cas</code> (this is configurable, but we&#8217;ll use the defaults in this introduction).
+The processing filter will construct a <code class="literal">UsernamePasswordAuthenticationToken</code> representing the service ticket.
+The principal will be equal to <code class="literal">CasAuthenticationFilter.CAS_STATEFUL_IDENTIFIER</code>, whilst the credentials will be the service ticket opaque value.
+This authentication request will then be handed to the configured <code class="literal">AuthenticationManager</code>.
+</li><li class="listitem">
+The <code class="literal">AuthenticationManager</code> implementation will be the <code class="literal">ProviderManager</code>, which is in turn configured with the <code class="literal">CasAuthenticationProvider</code>.
+The <code class="literal">CasAuthenticationProvider</code> only responds to <code class="literal">UsernamePasswordAuthenticationToken</code> s containing the CAS-specific principal (such as <code class="literal">CasAuthenticationFilter.CAS_STATEFUL_IDENTIFIER</code>) and <code class="literal">CasAuthenticationToken</code> s (discussed later).
+</li><li class="listitem">
+<code class="literal">CasAuthenticationProvider</code> will validate the service ticket using a <code class="literal">TicketValidator</code> implementation.
+This will typically be a <code class="literal">Cas20ServiceTicketValidator</code> which is one of the classes included in the CAS client library.
+In the event the application needs to validate proxy tickets, the <code class="literal">Cas20ProxyTicketValidator</code> is used.
+The <code class="literal">TicketValidator</code> makes an HTTPS request to the CAS server in order to validate the service ticket.
+It may also include a proxy callback URL, which is included in this example: <a class="ulink" href="https://my.company.com/cas/proxyValidate?service=https%3A%2F%2Fserver3.company.com%2Fwebapp%2Flogin/cas&amp;ticket=ST-0-ER94xMJmn6pha35CQRoZ&amp;pgtUrl=https://server3.company.com/webapp/login/cas/proxyreceptor" target="_top">https://my.company.com/cas/proxyValidate?service=https%3A%2F%2Fserver3.company.com%2Fwebapp%2Flogin/cas&amp;ticket=ST-0-ER94xMJmn6pha35CQRoZ&amp;pgtUrl=https://server3.company.com/webapp/login/cas/proxyreceptor</a>.
+</li><li class="listitem">
+Back on the CAS server, the validation request will be received.
+If the presented service ticket matches the service URL the ticket was issued to, CAS will provide an affirmative response in XML indicating the username.
+If any proxy was involved in the authentication (discussed below), the list of proxies is also included in the XML response.
+</li><li class="listitem">
+[OPTIONAL] If the request to the CAS validation service included the proxy callback URL (in the <code class="literal">pgtUrl</code> parameter), CAS will include a <code class="literal">pgtIou</code> string in the XML response.
+This <code class="literal">pgtIou</code> represents a proxy-granting ticket IOU.
+The CAS server will then create its own HTTPS connection back to the <code class="literal">pgtUrl</code>.
+This is to mutually authenticate the CAS server and the claimed service URL.
+The HTTPS connection will be used to send a proxy granting ticket to the original web application.
+For example, <a class="ulink" href="https://server3.company.com/webapp/login/cas/proxyreceptor?pgtIou=PGTIOU-0-R0zlgrl4pdAQwBvJWO3vnNpevwqStbSGcq3vKB2SqSFFRnjPHt&amp;pgtId=PGT-1-si9YkkHLrtACBo64rmsi3v2nf7cpCResXg5MpESZFArbaZiOKH" target="_top">https://server3.company.com/webapp/login/cas/proxyreceptor?pgtIou=PGTIOU-0-R0zlgrl4pdAQwBvJWO3vnNpevwqStbSGcq3vKB2SqSFFRnjPHt&amp;pgtId=PGT-1-si9YkkHLrtACBo64rmsi3v2nf7cpCResXg5MpESZFArbaZiOKH</a>.
+</li><li class="listitem">
+The <code class="literal">Cas20TicketValidator</code> will parse the XML received from the CAS server.
+It will return to the <code class="literal">CasAuthenticationProvider</code> a <code class="literal">TicketResponse</code>, which includes the username (mandatory), proxy list (if any were involved), and proxy-granting ticket IOU (if the proxy callback was requested).
+</li><li class="listitem">
+Next <code class="literal">CasAuthenticationProvider</code> will call a configured <code class="literal">CasProxyDecider</code>.
+The <code class="literal">CasProxyDecider</code> indicates whether the proxy list in the <code class="literal">TicketResponse</code> is acceptable to the service.
+Several implementations are provided with Spring Security: <code class="literal">RejectProxyTickets</code>, <code class="literal">AcceptAnyCasProxy</code> and <code class="literal">NamedCasProxyDecider</code>.
+These names are largely self-explanatory, except <code class="literal">NamedCasProxyDecider</code> which allows a <code class="literal">List</code> of trusted proxies to be provided.
+</li><li class="listitem">
+<code class="literal">CasAuthenticationProvider</code> will next request a <code class="literal">AuthenticationUserDetailsService</code> to load the <code class="literal">GrantedAuthority</code> objects that apply to the user contained in the <code class="literal">Assertion</code>.
+</li><li class="listitem">
+If there were no problems, <code class="literal">CasAuthenticationProvider</code> constructs a <code class="literal">CasAuthenticationToken</code> including the details contained in the <code class="literal">TicketResponse</code> and the <code class="literal">GrantedAuthority</code>s.
+</li><li class="listitem">
+Control then returns to <code class="literal">CasAuthenticationFilter</code>, which places the created <code class="literal">CasAuthenticationToken</code> in the security context.
+</li><li class="listitem">
+The user&#8217;s browser is redirected to the original page that caused the <code class="literal">AuthenticationException</code> (or a <a class="link" href="web-app-security.html#form-login-flow-handling" title="Application Flow on Authentication Success and Failure">custom destination</a> depending on the configuration).
+</li></ul></div>
+<p>It&#8217;s good that you&#8217;re still here!
+Let&#8217;s now look at how this is configured</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="cas-client" href="#cas-client"></a>13.7.3&nbsp;Configuration of CAS Client</h3></div></div></div>
+
+<p>The web application side of CAS is made easy due to Spring Security.
+It is assumed you already know the basics of using Spring Security, so these are not covered again below.
+We&#8217;ll assume a namespace based configuration is being used and add in the CAS beans as required.
+Each section builds upon the previous section.
+A full<a class="link" href="sample-apps.html#cas-sample" title="5.5&nbsp;CAS Sample">CAS sample application</a> can be found in the Spring Security Samples.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="cas-st" href="#cas-st"></a>Service Ticket Authentication</h4></div></div></div>
+
+<p>This section describes how to setup Spring Security to authenticate Service Tickets.
+Often times this is all a web application requires.
+You will need to add a <code class="literal">ServiceProperties</code> bean to your application context.
+This represents your CAS service:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"serviceProperties"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.ServiceProperties"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"service"</span>
+    <span class="hl-attribute">value</span>=<span class="hl-value">"https://localhost:8443/cas-sample/login/cas"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"sendRenew"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The <code class="literal">service</code> must equal a URL that will be monitored by the <code class="literal">CasAuthenticationFilter</code>.
+The <code class="literal">sendRenew</code> defaults to false, but should be set to true if your application is particularly sensitive.
+What this parameter does is tell the CAS login service that a single sign on login is unacceptable.
+Instead, the user will need to re-enter their username and password in order to gain access to the service.</p>
+<p>The following beans should be configured to commence the CAS authentication process (assuming you&#8217;re using a namespace configuration):</p>
+<pre class="programlisting"><span class="hl-tag">&lt;security:http</span> <span class="hl-attribute">entry-point-ref</span>=<span class="hl-value">"casEntryPoint"</span><span class="hl-tag">&gt;</span>
+...
+<span class="hl-tag">&lt;security:custom-filter</span> <span class="hl-attribute">position</span>=<span class="hl-value">"CAS_FILTER"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"casFilter"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/security:http&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"casFilter"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.web.CasAuthenticationFilter"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"authenticationManager"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"authenticationManager"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"casEntryPoint"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.web.CasAuthenticationEntryPoint"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"loginUrl"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"https://localhost:9443/cas/login"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"serviceProperties"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"serviceProperties"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>For CAS to operate, the <code class="literal">ExceptionTranslationFilter</code> must have its <code class="literal">authenticationEntryPoint</code> property set to the <code class="literal">CasAuthenticationEntryPoint</code> bean.
+This can easily be done using <a class="link" href="ns-config.html#ns-entry-point-ref" title="Setting a Custom AuthenticationEntryPoint">entry-point-ref</a> as is done in the example above.
+The <code class="literal">CasAuthenticationEntryPoint</code> must refer to the <code class="literal">ServiceProperties</code> bean (discussed above), which provides the URL to the enterprise&#8217;s CAS login server.
+This is where the user&#8217;s browser will be redirected.</p>
+<p>The <code class="literal">CasAuthenticationFilter</code> has very similar properties to the <code class="literal">UsernamePasswordAuthenticationFilter</code> (used for form-based logins).
+You can use these properties to customize things like behavior for authentication success and failure.</p>
+<p>Next you need to add a <code class="literal">CasAuthenticationProvider</code> and its collaborators:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;security:authentication-manager</span> <span class="hl-attribute">alias</span>=<span class="hl-value">"authenticationManager"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;security:authentication-provider</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"casAuthenticationProvider"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/security:authentication-manager&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"casAuthenticationProvider"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.authentication.CasAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"authenticationUserDetailsService"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.core.userdetails.UserDetailsByNameServiceWrapper"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"userService"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"serviceProperties"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"serviceProperties"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"ticketValidator"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.jasig.cas.client.validation.Cas20ServiceTicketValidator"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">index</span>=<span class="hl-value">"0"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"https://localhost:9443/cas"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"key"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"an_id_for_this_auth_provider_only"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;security:user-service</span> <span class="hl-attribute">id</span>=<span class="hl-value">"userService"</span><span class="hl-tag">&gt;</span>
+<span class="hl-comment">&lt;!-- Password is prefixed with {noop} to indicate to DelegatingPasswordEncoder that
+NoOpPasswordEncoder should be used.
+This is not safe for production, but makes reading
+in samples easier.
+Normally passwords should be hashed using BCrypt --&gt;</span>
+<span class="hl-tag">&lt;security:user</span> <span class="hl-attribute">name</span>=<span class="hl-value">"joe"</span> <span class="hl-attribute">password</span>=<span class="hl-value">"{noop}joe"</span> <span class="hl-attribute">authorities</span>=<span class="hl-value">"ROLE_USER"</span><span class="hl-tag"> /&gt;</span>
+...
+<span class="hl-tag">&lt;/security:user-service&gt;</span></pre>
+<p>The <code class="literal">CasAuthenticationProvider</code> uses a <code class="literal">UserDetailsService</code> instance to load the authorities for a user, once they have been authenticated by CAS.
+We&#8217;ve shown a simple in-memory setup here.
+Note that the <code class="literal">CasAuthenticationProvider</code> does not actually use the password for authentication, but it does use the authorities.</p>
+<p>The beans are all reasonably self-explanatory if you refer back to the <a class="link" href="servlet-webclient.html#cas-how-it-works" title="13.7.2&nbsp;How CAS Works">How CAS Works</a> section.</p>
+<p>This completes the most basic configuration for CAS.
+If you haven&#8217;t made any mistakes, your web application should happily work within the framework of CAS single sign on.
+No other parts of Spring Security need to be concerned about the fact CAS handled authentication.
+In the following sections we will discuss some (optional) more advanced configurations.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="cas-singlelogout" href="#cas-singlelogout"></a>Single Logout</h4></div></div></div>
+
+<p>The CAS protocol supports Single Logout and can be easily added to your Spring Security configuration.
+Below are updates to the Spring Security configuration that handle Single Logout</p>
+<pre class="programlisting"><span class="hl-tag">&lt;security:http</span> <span class="hl-attribute">entry-point-ref</span>=<span class="hl-value">"casEntryPoint"</span><span class="hl-tag">&gt;</span>
+...
+<span class="hl-tag">&lt;security:logout</span> <span class="hl-attribute">logout-success-url</span>=<span class="hl-value">"/cas-logout.jsp"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;security:custom-filter</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"requestSingleLogoutFilter"</span> <span class="hl-attribute">before</span>=<span class="hl-value">"LOGOUT_FILTER"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;security:custom-filter</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"singleLogoutFilter"</span> <span class="hl-attribute">before</span>=<span class="hl-value">"CAS_FILTER"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/security:http&gt;</span>
+
+<span class="hl-comment">&lt;!-- This filter handles a Single Logout Request from the CAS Server --&gt;</span>
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"singleLogoutFilter"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.jasig.cas.client.session.SingleSignOutFilter"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-comment">&lt;!-- This filter redirects to the CAS Server to signal Single Logout should be performed --&gt;</span>
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"requestSingleLogoutFilter"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.web.authentication.logout.LogoutFilter"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"https://localhost:9443/cas/logout"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;constructor-arg&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=
+        <span class="hl-value">"org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"filterProcessesUrl"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"/logout/cas"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The <code class="literal">logout</code> element logs the user out of the local application, but does not terminate the session with the CAS server or any other applications that have been logged into.
+The <code class="literal">requestSingleLogoutFilter</code> filter will allow the URL of <code class="literal">/spring_security_cas_logout</code> to be requested to redirect the application to the configured CAS Server logout URL.
+Then the CAS Server will send a Single Logout request to all the services that were signed into.
+The <code class="literal">singleLogoutFilter</code> handles the Single Logout request by looking up the <code class="literal">HttpSession</code> in a static <code class="literal">Map</code> and then invalidating it.</p>
+<p>It might be confusing why both the <code class="literal">logout</code> element and the <code class="literal">singleLogoutFilter</code> are needed.
+It is considered best practice to logout locally first since the <code class="literal">SingleSignOutFilter</code> just stores the <code class="literal">HttpSession</code> in a static <code class="literal">Map</code> in order to call invalidate on it.
+With the configuration above, the flow of logout would be:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The user requests <code class="literal">/logout</code> which would log the user out of the local application and send the user to the logout success page.
+</li><li class="listitem">
+The logout success page, <code class="literal">/cas-logout.jsp</code>, should instruct the user to click a link pointing to <code class="literal">/logout/cas</code> in order to logout out of all applications.
+</li><li class="listitem">
+When the user clicks the link, the user is redirected to the CAS single logout URL (<a class="ulink" href="https://localhost:9443/cas/logout" target="_top">https://localhost:9443/cas/logout</a>).
+</li><li class="listitem">
+On the CAS Server side, the CAS single logout URL then submits single logout requests to all the CAS Services.
+On the CAS Service side, JASIG&#8217;s <code class="literal">SingleSignOutFilter</code> processes the logout request by invaliditing the original session.
+</li></ul></div>
+<p>The next step is to add the following to your web.xml</p>
+<pre class="programlisting"><span class="hl-tag">&lt;filter&gt;</span>
+<span class="hl-tag">&lt;filter-name&gt;</span>characterEncodingFilter<span class="hl-tag">&lt;/filter-name&gt;</span>
+<span class="hl-tag">&lt;filter-class&gt;</span>
+    org.springframework.web.filter.CharacterEncodingFilter
+<span class="hl-tag">&lt;/filter-class&gt;</span>
+<span class="hl-tag">&lt;init-param&gt;</span>
+    <span class="hl-tag">&lt;param-name&gt;</span>encoding<span class="hl-tag">&lt;/param-name&gt;</span>
+    <span class="hl-tag">&lt;param-value&gt;</span>UTF-8<span class="hl-tag">&lt;/param-value&gt;</span>
+<span class="hl-tag">&lt;/init-param&gt;</span>
+<span class="hl-tag">&lt;/filter&gt;</span>
+<span class="hl-tag">&lt;filter-mapping&gt;</span>
+<span class="hl-tag">&lt;filter-name&gt;</span>characterEncodingFilter<span class="hl-tag">&lt;/filter-name&gt;</span>
+<span class="hl-tag">&lt;url-pattern&gt;</span>/*<span class="hl-tag">&lt;/url-pattern&gt;</span>
+<span class="hl-tag">&lt;/filter-mapping&gt;</span>
+<span class="hl-tag">&lt;listener&gt;</span>
+<span class="hl-tag">&lt;listener-class&gt;</span>
+    org.jasig.cas.client.session.SingleSignOutHttpSessionListener
+<span class="hl-tag">&lt;/listener-class&gt;</span>
+<span class="hl-tag">&lt;/listener&gt;</span></pre>
+<p>When using the SingleSignOutFilter you might encounter some encoding issues.
+Therefore it is recommended to add the <code class="literal">CharacterEncodingFilter</code> to ensure that the character encoding is correct when using the <code class="literal">SingleSignOutFilter</code>.
+Again, refer to JASIG&#8217;s documentation for details.
+The <code class="literal">SingleSignOutHttpSessionListener</code> ensures that when an <code class="literal">HttpSession</code> expires, the mapping used for single logout is removed.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="cas-pt-client" href="#cas-pt-client"></a>Authenticating to a Stateless Service with CAS</h4></div></div></div>
+
+<p>This section describes how to authenticate to a service using CAS.
+In other words, this section discusses how to setup a client that uses a service that authenticates with CAS.
+The next section describes how to setup a stateless service to Authenticate using CAS.</p>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="cas-pt-client-config" href="#cas-pt-client-config"></a>Configuring CAS to Obtain Proxy Granting Tickets</h5></div></div></div>
+
+<p>In order to authenticate to a stateless service, the application needs to obtain a proxy granting ticket (PGT).
+This section describes how to configure Spring Security to obtain a PGT building upon thencas-st[Service Ticket Authentication] configuration.</p>
+<p>The first step is to include a <code class="literal">ProxyGrantingTicketStorage</code> in your Spring Security configuration.
+This is used to store PGT&#8217;s that are obtained by the <code class="literal">CasAuthenticationFilter</code> so that they can be used to obtain proxy tickets.
+An example configuration is shown below</p>
+<pre class="programlisting"><span class="hl-comment">&lt;!--
+NOTE: In a real application you should not use an in memory implementation.
+You will also want to ensure to clean up expired tickets by calling
+ProxyGrantingTicketStorage.cleanup()
+--&gt;</span>
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"pgtStorage"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.jasig.cas.client.proxy.ProxyGrantingTicketStorageImpl"</span><span class="hl-tag">/&gt;</span></pre>
+<p>The next step is to update the <code class="literal">CasAuthenticationProvider</code> to be able to obtain proxy tickets.
+To do this replace the <code class="literal">Cas20ServiceTicketValidator</code> with a <code class="literal">Cas20ProxyTicketValidator</code>.
+The <code class="literal">proxyCallbackUrl</code> should be set to a URL that the application will receive PGT&#8217;s at.
+Last, the configuration should also reference the <code class="literal">ProxyGrantingTicketStorage</code> so it can use a PGT to obtain proxy tickets.
+You can find an example of the configuration changes that should be made below.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"casAuthenticationProvider"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.authentication.CasAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+...
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"ticketValidator"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.jasig.cas.client.validation.Cas20ProxyTicketValidator"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"https://localhost:9443/cas"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"proxyCallbackUrl"</span>
+        <span class="hl-attribute">value</span>=<span class="hl-value">"https://localhost:8443/cas-sample/login/cas/proxyreceptor"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"proxyGrantingTicketStorage"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"pgtStorage"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The last step is to update the <code class="literal">CasAuthenticationFilter</code> to accept PGT and to store them in the <code class="literal">ProxyGrantingTicketStorage</code>.
+It is important the <code class="literal">proxyReceptorUrl</code> matches the <code class="literal">proxyCallbackUrl</code> of the <code class="literal">Cas20ProxyTicketValidator</code>.
+An example configuration is shown below.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"casFilter"</span>
+        <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.web.CasAuthenticationFilter"</span><span class="hl-tag">&gt;</span>
+    ...
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"proxyGrantingTicketStorage"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"pgtStorage"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"proxyReceptorUrl"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"/login/cas/proxyreceptor"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="cas-pt-client-sample" href="#cas-pt-client-sample"></a>Calling a Stateless Service Using a Proxy Ticket</h5></div></div></div>
+
+<p>Now that Spring Security obtains PGTs, you can use them to create proxy tickets which can be used to authenticate to a stateless service.
+The <a class="link" href="sample-apps.html#cas-sample" title="5.5&nbsp;CAS Sample">CAS sample application</a> contains a working example in the <code class="literal">ProxyTicketSampleServlet</code>.
+Example code can be found below:</p>
+<pre class="programlisting"><span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> doGet(HttpServletRequest request, HttpServletResponse response)
+    <span class="hl-keyword">throws</span> ServletException, IOException {
+<span class="hl-comment">// NOTE: The CasAuthenticationToken can also be obtained using</span>
+<span class="hl-comment">// SecurityContextHolder.getContext().getAuthentication()</span>
+<span class="hl-keyword">final</span> CasAuthenticationToken token = (CasAuthenticationToken) request.getUserPrincipal();
+<span class="hl-comment">// proxyTicket could be reused to make calls to the CAS service even if the</span>
+<span class="hl-comment">// target url differs</span>
+<span class="hl-keyword">final</span> String proxyTicket = token.getAssertion().getPrincipal().getProxyTicketFor(targetUrl);
+
+<span class="hl-comment">// Make a remote call using the proxy ticket</span>
+<span class="hl-keyword">final</span> String serviceUrl = targetUrl+<span class="hl-string">"?ticket="</span>+URLEncoder.encode(proxyTicket, <span class="hl-string">"UTF-8"</span>);
+String proxyResponse = CommonUtils.getResponseFromServer(serviceUrl, <span class="hl-string">"UTF-8"</span>);
+...
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="cas-pt" href="#cas-pt"></a>Proxy Ticket Authentication</h4></div></div></div>
+
+<p>The <code class="literal">CasAuthenticationProvider</code> distinguishes between stateful and stateless clients.
+A stateful client is considered any that submits to the <code class="literal">filterProcessUrl</code> of the <code class="literal">CasAuthenticationFilter</code>.
+A stateless client is any that presents an authentication request to <code class="literal">CasAuthenticationFilter</code> on a URL other than the <code class="literal">filterProcessUrl</code>.</p>
+<p>Because remoting protocols have no way of presenting themselves within the context of an <code class="literal">HttpSession</code>, it isn&#8217;t possible to rely on the default practice of storing the security context in the session between requests.
+Furthermore, because the CAS server invalidates a ticket after it has been validated by the <code class="literal">TicketValidator</code>, presenting the same proxy ticket on subsequent requests will not work.</p>
+<p>One obvious option is to not use CAS at all for remoting protocol clients.
+However, this would eliminate many of the desirable features of CAS.
+As a middle-ground, the <code class="literal">CasAuthenticationProvider</code> uses a <code class="literal">StatelessTicketCache</code>.
+This is used solely for stateless clients which use a principal equal to <code class="literal">CasAuthenticationFilter.CAS_STATELESS_IDENTIFIER</code>.
+What happens is the <code class="literal">CasAuthenticationProvider</code> will store the resulting <code class="literal">CasAuthenticationToken</code> in the <code class="literal">StatelessTicketCache</code>, keyed on the proxy ticket.
+Accordingly, remoting protocol clients can present the same proxy ticket and the <code class="literal">CasAuthenticationProvider</code> will not need to contact the CAS server for validation (aside from the first request).
+Once authenticated, the proxy ticket could be used for URLs other than the original target service.</p>
+<p>This section builds upon the previous sections to accommodate proxy ticket authentication.
+The first step is to specify to authenticate all artifacts as shown below.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"serviceProperties"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.ServiceProperties"</span><span class="hl-tag">&gt;</span>
+...
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"authenticateAllArtifacts"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The next step is to specify <code class="literal">serviceProperties</code> and the <code class="literal">authenticationDetailsSource</code> for the <code class="literal">CasAuthenticationFilter</code>.
+The <code class="literal">serviceProperties</code> property instructs the <code class="literal">CasAuthenticationFilter</code> to attempt to authenticate all artifacts instead of only ones present on the <code class="literal">filterProcessUrl</code>.
+The <code class="literal">ServiceAuthenticationDetailsSource</code> creates a <code class="literal">ServiceAuthenticationDetails</code> that ensures the current URL, based upon the <code class="literal">HttpServletRequest</code>, is used as the service URL when validating the ticket.
+The method for generating the service URL can be customized by injecting a custom <code class="literal">AuthenticationDetailsSource</code> that returns a custom <code class="literal">ServiceAuthenticationDetails</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"casFilter"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.web.CasAuthenticationFilter"</span><span class="hl-tag">&gt;</span>
+...
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"serviceProperties"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"serviceProperties"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"authenticationDetailsSource"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=
+    <span class="hl-value">"org.springframework.security.cas.web.authentication.ServiceAuthenticationDetailsSource"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"serviceProperties"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>You will also need to update the <code class="literal">CasAuthenticationProvider</code> to handle proxy tickets.
+To do this replace the <code class="literal">Cas20ServiceTicketValidator</code> with a <code class="literal">Cas20ProxyTicketValidator</code>.
+You will need to configure the <code class="literal">statelessTicketCache</code> and which proxies you want to accept.
+You can find an example of the updates required to accept all proxies below.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"casAuthenticationProvider"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.authentication.CasAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+...
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"ticketValidator"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.jasig.cas.client.validation.Cas20ProxyTicketValidator"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"https://localhost:9443/cas"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"acceptAnyProxy"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"statelessTicketCache"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.cas.authentication.EhCacheBasedTicketCache"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"cache"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"net.sf.ehcache.Cache"</span>
+            <span class="hl-attribute">init-method</span>=<span class="hl-value">"initialise"</span> <span class="hl-attribute">destroy-method</span>=<span class="hl-value">"dispose"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"casTickets"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"50"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"3600"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"900"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+    <span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="x509" href="#x509"></a>13.8&nbsp;X.509 Authentication</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="x509-overview" href="#x509-overview"></a>13.8.1&nbsp;Overview</h3></div></div></div>
+
+<p>The most common use of X.509 certificate authentication is in verifying the identity of a server when using SSL, most commonly when using HTTPS from a browser.
+The browser will automatically check that the certificate presented by a server has been issued (ie digitally signed) by one of a list of trusted certificate authorities which it maintains.</p>
+<p>You can also use SSL with "mutual authentication"; the server will then request a valid certificate from the client as part of the SSL handshake.
+The server will authenticate the client by checking that its certificate is signed by an acceptable authority.
+If a valid certificate has been provided, it can be obtained through the servlet API in an application.
+Spring Security X.509 module extracts the certificate using a filter.
+It maps the certificate to an application user and loads that user&#8217;s set of granted authorities for use with the standard Spring Security infrastructure.</p>
+<p>You should be familiar with using certificates and setting up client authentication for your servlet container before attempting to use it with Spring Security.
+Most of the work is in creating and installing suitable certificates and keys.
+For example, if you&#8217;re using Tomcat then read the instructions here <a class="ulink" href="http://tomcat.apache.org/tomcat-6.0-doc/ssl-howto.html" target="_top">http://tomcat.apache.org/tomcat-6.0-doc/ssl-howto.html</a>.
+It&#8217;s important that you get this working before trying it out with Spring Security</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="adding-x-509-authentication-to-your-web-application" href="#adding-x-509-authentication-to-your-web-application"></a>13.8.2&nbsp;Adding X.509 Authentication to Your Web Application</h3></div></div></div>
+
+<p>Enabling X.509 client authentication is very straightforward.
+Just add the <code class="literal">&lt;x509/&gt;</code> element to your http security namespace configuration.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;http&gt;</span>
+...
+    <span class="hl-tag">&lt;x509</span> <span class="hl-attribute">subject-principal-regex</span>=<span class="hl-value">"CN=(.*?),"</span> <span class="hl-attribute">user-service-ref</span>=<span class="hl-value">"userService"</span><span class="hl-tag">/&gt;</span>;
+<span class="hl-tag">&lt;/http&gt;</span></pre>
+<p>The element has two optional attributes:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">subject-principal-regex</code>.
+The regular expression used to extract a username from the certificate&#8217;s subject name.
+The default value is shown above.
+This is the username which will be passed to the <code class="literal">UserDetailsService</code> to load the authorities for the user.
+</li><li class="listitem">
+<code class="literal">user-service-ref</code>.
+This is the bean Id of the <code class="literal">UserDetailsService</code> to be used with X.509.
+It isn&#8217;t needed if there is only one defined in your application context.
+</li></ul></div>
+<p>The <code class="literal">subject-principal-regex</code> should contain a single group.
+For example the default expression "CN=(.*?)," matches the common name field.
+So if the subject name in the certificate is "CN=Jimi Hendrix, OU=&#8230;&#8203;", this will give a user name of "Jimi Hendrix".
+The matches are case insensitive.
+So "emailAddress=(.?)," will match "EMAILADDRESS=<a class="ulink" href="mailto:jimi@hendrix.org" target="_top">jimi@hendrix.org</a>,CN=&#8230;&#8203;" giving a user name "<a class="ulink" href="mailto:jimi@hendrix.org" target="_top">jimi@hendrix.org</a>".
+If the client presents a certificate and a valid username is successfully extracted, then there should be a valid <code class="literal">Authentication</code> object in the security context.
+If no certificate is found, or no corresponding user could be found then the security context will remain empty.
+This means that you can easily use X.509 authentication with other options such as a form-based login.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="x509-ssl-config" href="#x509-ssl-config"></a>13.8.3&nbsp;Setting up SSL in Tomcat</h3></div></div></div>
+
+<p>There are some pre-generated certificates in the <code class="literal">samples/certificate</code> directory in the Spring Security project.
+You can use these to enable SSL for testing if you don&#8217;t want to generate your own.
+The file <code class="literal">server.jks</code> contains the server certificate, private key and the issuing certificate authority certificate.
+There are also some client certificate files for the users from the sample applications.
+You can install these in your browser to enable SSL client authentication.</p>
+<p>To run tomcat with SSL support, drop the <code class="literal">server.jks</code> file into the tomcat <code class="literal">conf</code> directory and add the following connector to the <code class="literal">server.xml</code> file</p>
+<pre class="programlisting"><span class="hl-tag">&lt;Connector</span> <span class="hl-attribute">port</span>=<span class="hl-value">"8443"</span> <span class="hl-attribute">protocol</span>=<span class="hl-value">"HTTP/1.1"</span> <span class="hl-attribute">SSLEnabled</span>=<span class="hl-value">"true"</span> <span class="hl-attribute">scheme</span>=<span class="hl-value">"https"</span> <span class="hl-attribute">secure</span>=<span class="hl-value">"true"</span>
+            <span class="hl-attribute">clientAuth</span>=<span class="hl-value">"true"</span> <span class="hl-attribute">sslProtocol</span>=<span class="hl-value">"TLS"</span>
+            <span class="hl-attribute">keystoreFile</span>=<span class="hl-value">"${catalina.home}/conf/server.jks"</span>
+            <span class="hl-attribute">keystoreType</span>=<span class="hl-value">"JKS"</span> <span class="hl-attribute">keystorePass</span>=<span class="hl-value">"password"</span>
+            <span class="hl-attribute">truststoreFile</span>=<span class="hl-value">"${catalina.home}/conf/server.jks"</span>
+            <span class="hl-attribute">truststoreType</span>=<span class="hl-value">"JKS"</span> <span class="hl-attribute">truststorePass</span>=<span class="hl-value">"password"</span><span class="hl-tag">
+/&gt;</span></pre>
+<p><code class="literal">clientAuth</code> can also be set to <code class="literal">want</code> if you still want SSL connections to succeed even if the client doesn&#8217;t provide a certificate.
+Clients which don&#8217;t present a certificate won&#8217;t be able to access any objects secured by Spring Security unless you use a non-X.509 authentication mechanism, such as form authentication.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="runas" href="#runas"></a>13.9&nbsp;Run-As Authentication Replacement</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="runas-overview" href="#runas-overview"></a>13.9.1&nbsp;Overview</h3></div></div></div>
+
+<p>The <code class="literal">AbstractSecurityInterceptor</code> is able to temporarily replace the <code class="literal">Authentication</code> object in the <code class="literal">SecurityContext</code> and <code class="literal">SecurityContextHolder</code> during the secure object callback phase.
+This only occurs if the original <code class="literal">Authentication</code> object was successfully processed by the <code class="literal">AuthenticationManager</code> and <code class="literal">AccessDecisionManager</code>.
+The <code class="literal">RunAsManager</code> will indicate the replacement <code class="literal">Authentication</code> object, if any, that should be used during the <code class="literal">SecurityInterceptorCallback</code>.</p>
+<p>By temporarily replacing the <code class="literal">Authentication</code> object during the secure object callback phase, the secured invocation will be able to call other objects which require different authentication and authorization credentials.
+It will also be able to perform any internal security checks for specific <code class="literal">GrantedAuthority</code> objects.
+Because Spring Security provides a number of helper classes that automatically configure remoting protocols based on the contents of the <code class="literal">SecurityContextHolder</code>, these run-as replacements are particularly useful when calling remote web services</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="runas-config" href="#runas-config"></a>13.9.2&nbsp;Configuration</h3></div></div></div>
+
+<p>A <code class="literal">RunAsManager</code> interface is provided by Spring Security:</p>
+<pre class="programlisting">Authentication buildRunAs(Authentication authentication, Object object,
+    List&lt;ConfigAttribute&gt; config);
+
+<span class="hl-keyword">boolean</span> supports(ConfigAttribute attribute);
+
+<span class="hl-keyword">boolean</span> supports(Class clazz);</pre>
+<p>The first method returns the <code class="literal">Authentication</code> object that should replace the existing <code class="literal">Authentication</code> object for the duration of the method invocation.
+If the method returns <code class="literal">null</code>, it indicates no replacement should be made.
+The second method is used by the <code class="literal">AbstractSecurityInterceptor</code> as part of its startup validation of configuration attributes.
+The <code class="literal">supports(Class)</code> method is called by a security interceptor implementation to ensure the configured <code class="literal">RunAsManager</code> supports the type of secure object that the security interceptor will present.</p>
+<p>One concrete implementation of a <code class="literal">RunAsManager</code> is provided with Spring Security.
+The <code class="literal">RunAsManagerImpl</code> class returns a replacement <code class="literal">RunAsUserToken</code> if any <code class="literal">ConfigAttribute</code> starts with <code class="literal">RUN_AS_</code>.
+If any such <code class="literal">ConfigAttribute</code> is found, the replacement <code class="literal">RunAsUserToken</code> will contain the same principal, credentials and granted authorities as the original <code class="literal">Authentication</code> object, along with a new <code class="literal">SimpleGrantedAuthority</code> for each <code class="literal">RUN_AS_</code> <code class="literal">ConfigAttribute</code>.
+Each new <code class="literal">SimpleGrantedAuthority</code> will be prefixed with <code class="literal">ROLE_</code>, followed by the <code class="literal">RUN_AS</code> <code class="literal">ConfigAttribute</code>.
+For example, a <code class="literal">RUN_AS_SERVER</code> will result in the replacement <code class="literal">RunAsUserToken</code> containing a <code class="literal">ROLE_RUN_AS_SERVER</code> granted authority.</p>
+<p>The replacement <code class="literal">RunAsUserToken</code> is just like any other <code class="literal">Authentication</code> object.
+It needs to be authenticated by the <code class="literal">AuthenticationManager</code>, probably via delegation to a suitable <code class="literal">AuthenticationProvider</code>.
+The <code class="literal">RunAsImplAuthenticationProvider</code> performs such authentication.
+It simply accepts as valid any <code class="literal">RunAsUserToken</code> presented.</p>
+<p>To ensure malicious code does not create a <code class="literal">RunAsUserToken</code> and present it for guaranteed acceptance by the <code class="literal">RunAsImplAuthenticationProvider</code>, the hash of a key is stored in all generated tokens.
+The <code class="literal">RunAsManagerImpl</code> and <code class="literal">RunAsImplAuthenticationProvider</code> is created in the bean context with the same key:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"runAsManager"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.access.intercept.RunAsManagerImpl"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"key"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"my_run_as_password"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"runAsAuthenticationProvider"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.access.intercept.RunAsImplAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"key"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"my_run_as_password"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>By using the same key, each <code class="literal">RunAsUserToken</code> can be validated it was created by an approved <code class="literal">RunAsManagerImpl</code>.
+The <code class="literal">RunAsUserToken</code> is immutable after creation for security reasons</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="crypto" href="#crypto"></a>13.10&nbsp;Spring Security Crypto Module</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="spring-security-crypto-introduction" href="#spring-security-crypto-introduction"></a>13.10.1&nbsp;Introduction</h3></div></div></div>
+
+<p>The Spring Security Crypto module provides support for symmetric encryption, key generation, and password encoding.
+The code is distributed as part of the core module but has no dependencies on any other Spring Security (or Spring) code.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="spring-security-crypto-encryption" href="#spring-security-crypto-encryption"></a>13.10.2&nbsp;Encryptors</h3></div></div></div>
+
+<p>The Encryptors class provides factory methods for constructing symmetric encryptors.
+Using this class, you can create ByteEncryptors to encrypt data in raw byte[] form.
+You can also construct TextEncryptors to encrypt text strings.
+Encryptors are thread-safe.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="spring-security-crypto-encryption-bytes" href="#spring-security-crypto-encryption-bytes"></a>BytesEncryptor</h4></div></div></div>
+
+<p>Use the Encryptors.standard factory method to construct a "standard" BytesEncryptor:</p>
+<pre class="programlisting">Encryptors.standard(<span class="hl-string">"password"</span>, <span class="hl-string">"salt"</span>);</pre>
+<p>The "standard" encryption method is 256-bit AES using PKCS #5&#8217;s PBKDF2 (Password-Based Key Derivation Function #2).
+This method requires Java 6.
+The password used to generate the SecretKey should be kept in a secure place and not be shared.
+The salt is used to prevent dictionary attacks against the key in the event your encrypted data is compromised.
+A 16-byte random initialization vector is also applied so each encrypted message is unique.</p>
+<p>The provided salt should be in hex-encoded String form, be random, and be at least 8 bytes in length.
+Such a salt may be generated using a KeyGenerator:</p>
+<pre class="programlisting">String salt = KeyGenerators.string().generateKey(); <span class="hl-comment">// generates a random 8-byte salt that is then hex-encoded</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="spring-security-crypto-encryption-text" href="#spring-security-crypto-encryption-text"></a>TextEncryptor</h4></div></div></div>
+
+<p>Use the Encryptors.text factory method to construct a standard TextEncryptor:</p>
+<pre class="programlisting">Encryptors.text(<span class="hl-string">"password"</span>, <span class="hl-string">"salt"</span>);</pre>
+<p>A TextEncryptor uses a standard BytesEncryptor to encrypt text data.
+Encrypted results are returned as hex-encoded strings for easy storage on the filesystem or in the database.</p>
+<p>Use the Encryptors.queryableText factory method to construct a "queryable" TextEncryptor:</p>
+<pre class="programlisting">Encryptors.queryableText(<span class="hl-string">"password"</span>, <span class="hl-string">"salt"</span>);</pre>
+<p>The difference between a queryable TextEncryptor and a standard TextEncryptor has to do with initialization vector (iv) handling.
+The iv used in a queryable TextEncryptor#encrypt operation is shared, or constant, and is not randomly generated.
+This means the same text encrypted multiple times will always produce the same encryption result.
+This is less secure, but necessary for encrypted data that needs to be queried against.
+An example of queryable encrypted text would be an OAuth apiKey.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="spring-security-crypto-keygenerators" href="#spring-security-crypto-keygenerators"></a>13.10.3&nbsp;Key Generators</h3></div></div></div>
+
+<p>The KeyGenerators class provides a number of convenience factory methods for constructing different types of key generators.
+Using this class, you can create a BytesKeyGenerator to generate byte[] keys.
+You can also construct a StringKeyGenerator to generate string keys.
+KeyGenerators are thread-safe.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="byteskeygenerator" href="#byteskeygenerator"></a>BytesKeyGenerator</h4></div></div></div>
+
+<p>Use the KeyGenerators.secureRandom factory methods to generate a BytesKeyGenerator backed by a SecureRandom instance:</p>
+<pre class="programlisting">BytesKeyGenerator generator = KeyGenerators.secureRandom();
+<span class="hl-keyword">byte</span>[] key = generator.generateKey();</pre>
+<p>The default key length is 8 bytes.
+There is also a KeyGenerators.secureRandom variant that provides control over the key length:</p>
+<pre class="programlisting">KeyGenerators.secureRandom(<span class="hl-number">16</span>);</pre>
+<p>Use the KeyGenerators.shared factory method to construct a BytesKeyGenerator that always returns the same key on every invocation:</p>
+<pre class="programlisting">KeyGenerators.shared(<span class="hl-number">16</span>);</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="stringkeygenerator" href="#stringkeygenerator"></a>StringKeyGenerator</h4></div></div></div>
+
+<p>Use the KeyGenerators.string factory method to construct a 8-byte, SecureRandom KeyGenerator that hex-encodes each key as a String:</p>
+<pre class="programlisting">KeyGenerators.string();</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="spring-security-crypto-passwordencoders" href="#spring-security-crypto-passwordencoders"></a>13.10.4&nbsp;Password Encoding</h3></div></div></div>
+
+<p>The password package of the spring-security-crypto module provides support for encoding passwords.
+<code class="literal">PasswordEncoder</code> is the central service interface and has the following signature:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> PasswordEncoder {
+
+String encode(String rawPassword);
+
+<span class="hl-keyword">boolean</span> matches(String rawPassword, String encodedPassword);
+}</pre>
+<p>The matches method returns true if the rawPassword, once encoded, equals the encodedPassword.
+This method is designed to support password-based authentication schemes.</p>
+<p>The <code class="literal">BCryptPasswordEncoder</code> implementation uses the widely supported "bcrypt" algorithm to hash the passwords.
+Bcrypt uses a random 16 byte salt value and is a deliberately slow algorithm, in order to hinder password crackers.
+The amount of work it does can be tuned using the "strength" parameter which takes values from 4 to 31.
+The higher the value, the more work has to be done to calculate the hash.
+The default value is 10.
+You can change this value in your deployed system without affecting existing passwords, as the value is also stored in the encoded hash.</p>
+<pre class="programlisting"><span class="hl-comment">// Create an encoder with strength 16</span>
+BCryptPasswordEncoder encoder = <span class="hl-keyword">new</span> BCryptPasswordEncoder(<span class="hl-number">16</span>);
+String result = encoder.encode(<span class="hl-string">"myPassword"</span>);
+assertTrue(encoder.matches(<span class="hl-string">"myPassword"</span>, result));</pre>
+<p>The <code class="literal">Pbkdf2PasswordEncoder</code> implementation uses PBKDF2 algorithm to hash the passwords.
+In order to defeat password cracking PBKDF2 is a deliberately slow algorithm and should be tuned to take about .5 seconds to verify a password on your system.</p>
+<pre class="programlisting"><span class="hl-comment">// Create an encoder with all the defaults</span>
+Pbkdf2PasswordEncoder encoder = <span class="hl-keyword">new</span> Pbkdf2PasswordEncoder();
+String result = encoder.encode(<span class="hl-string">"myPassword"</span>);
+assertTrue(encoder.matches(<span class="hl-string">"myPassword"</span>, result));</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="concurrency" href="#concurrency"></a>13.11&nbsp;Concurrency Support</h2></div></div></div>
+
+<p>In most environments, Security is stored on a per <code class="literal">Thread</code> basis.
+This means that when work is done on a new <code class="literal">Thread</code>, the <code class="literal">SecurityContext</code> is lost.
+Spring Security provides some infrastructure to help make this much easier for users.
+Spring Security provides low level abstractions for working with Spring Security in multi-threaded environments.
+In fact, this is what Spring Security builds on to integration with <a class="xref" href="web-app-security.html#servletapi-start-runnable" title="AsyncContext.start(Runnable)">the section called &#8220;AsyncContext.start(Runnable)&#8221;</a> and <a class="xref" href="servlet-webclient.html#mvc-async" title="13.12.4&nbsp;Spring MVC Async Integration">Section&nbsp;13.12.4, &#8220;Spring MVC Async Integration&#8221;</a>.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="delegatingsecuritycontextrunnable" href="#delegatingsecuritycontextrunnable"></a>13.11.1&nbsp;DelegatingSecurityContextRunnable</h3></div></div></div>
+
+<p>One of the most fundamental building blocks within Spring Security&#8217;s concurrency support is the <code class="literal">DelegatingSecurityContextRunnable</code>.
+It wraps a delegate <code class="literal">Runnable</code> in order to initialize the <code class="literal">SecurityContextHolder</code> with a specified <code class="literal">SecurityContext</code> for the delegate.
+It then invokes the delegate Runnable ensuring to clear the <code class="literal">SecurityContextHolder</code> afterwards.
+The <code class="literal">DelegatingSecurityContextRunnable</code> looks something like this:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">void</span> run() {
+<span class="hl-keyword">try</span> {
+    SecurityContextHolder.setContext(securityContext);
+    delegate.run();
+} <span class="hl-keyword">finally</span> {
+    SecurityContextHolder.clearContext();
+}
+}</pre>
+<p>While very simple, it makes it seamless to transfer the SecurityContext from one Thread to another.
+This is important since, in most cases, the SecurityContextHolder acts on a per Thread basis.
+For example, you might have used Spring Security&#8217;s <a class="xref" href="appendix.html#nsa-global-method-security" title="<global-method-security&gt;">the section called &#8220;&lt;global-method-security&gt;&#8221;</a> support to secure one of your services.
+You can now easily transfer the <code class="literal">SecurityContext</code> of the current <code class="literal">Thread</code> to the <code class="literal">Thread</code> that invokes the secured service.
+An example of how you might do this can be found below:</p>
+<pre class="programlisting">Runnable originalRunnable = <span class="hl-keyword">new</span> Runnable() {
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> run() {
+    <span class="hl-comment">// invoke secured service</span>
+}
+};
+
+SecurityContext context = SecurityContextHolder.getContext();
+DelegatingSecurityContextRunnable wrappedRunnable =
+    <span class="hl-keyword">new</span> DelegatingSecurityContextRunnable(originalRunnable, context);
+
+<span class="hl-keyword">new</span> Thread(wrappedRunnable).start();</pre>
+<p>The code above performs the following steps:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Creates a <code class="literal">Runnable</code> that will be invoking our secured service.
+Notice that it is not aware of Spring Security
+</li><li class="listitem">
+Obtains the <code class="literal">SecurityContext</code> that we wish to use from the <code class="literal">SecurityContextHolder</code> and initializes the <code class="literal">DelegatingSecurityContextRunnable</code>
+</li><li class="listitem">
+Use the <code class="literal">DelegatingSecurityContextRunnable</code> to create a Thread
+</li><li class="listitem">
+Start the Thread we created
+</li></ul></div>
+<p>Since it is quite common to create a <code class="literal">DelegatingSecurityContextRunnable</code> with the <code class="literal">SecurityContext</code> from the <code class="literal">SecurityContextHolder</code> there is a shortcut constructor for it.
+The following code is the same as the code above:</p>
+<pre class="programlisting">Runnable originalRunnable = <span class="hl-keyword">new</span> Runnable() {
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> run() {
+    <span class="hl-comment">// invoke secured service</span>
+}
+};
+
+DelegatingSecurityContextRunnable wrappedRunnable =
+    <span class="hl-keyword">new</span> DelegatingSecurityContextRunnable(originalRunnable);
+
+<span class="hl-keyword">new</span> Thread(wrappedRunnable).start();</pre>
+<p>The code we have is simple to use, but it still requires knowledge that we are using Spring Security.
+In the next section we will take a look at how we can utilize <code class="literal">DelegatingSecurityContextExecutor</code> to hide the fact that we are using Spring Security.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="delegatingsecuritycontextexecutor" href="#delegatingsecuritycontextexecutor"></a>13.11.2&nbsp;DelegatingSecurityContextExecutor</h3></div></div></div>
+
+<p>In the previous section we found that it was easy to use the <code class="literal">DelegatingSecurityContextRunnable</code>, but it was not ideal since we had to be aware of Spring Security in order to use it.
+Let&#8217;s take a look at how <code class="literal">DelegatingSecurityContextExecutor</code> can shield our code from any knowledge that we are using Spring Security.</p>
+<p>The design of <code class="literal">DelegatingSecurityContextExecutor</code> is very similar to that of <code class="literal">DelegatingSecurityContextRunnable</code> except it accepts a delegate <code class="literal">Executor</code> instead of a delegate <code class="literal">Runnable</code>.
+You can see an example of how it might be used below:</p>
+<pre class="programlisting">SecurityContext context = SecurityContextHolder.createEmptyContext();
+Authentication authentication =
+    <span class="hl-keyword">new</span> UsernamePasswordAuthenticationToken(<span class="hl-string">"user"</span>,<span class="hl-string">"doesnotmatter"</span>, AuthorityUtils.createAuthorityList(<span class="hl-string">"ROLE_USER"</span>));
+context.setAuthentication(authentication);
+
+SimpleAsyncTaskExecutor delegateExecutor =
+    <span class="hl-keyword">new</span> SimpleAsyncTaskExecutor();
+DelegatingSecurityContextExecutor executor =
+    <span class="hl-keyword">new</span> DelegatingSecurityContextExecutor(delegateExecutor, context);
+
+Runnable originalRunnable = <span class="hl-keyword">new</span> Runnable() {
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> run() {
+    <span class="hl-comment">// invoke secured service</span>
+}
+};
+
+executor.execute(originalRunnable);</pre>
+<p>The code performs the following steps:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Creates the <code class="literal">SecurityContext</code> to be used for our <code class="literal">DelegatingSecurityContextExecutor</code>.
+Note that in this example we simply create the <code class="literal">SecurityContext</code> by hand.
+However, it does not matter where or how we get the <code class="literal">SecurityContext</code> (i.e. we could obtain it from the <code class="literal">SecurityContextHolder</code> if we wanted).
+</li><li class="listitem">
+Creates a delegateExecutor that is in charge of executing submitted <code class="literal">Runnable</code>s
+</li><li class="listitem">
+Finally we create a <code class="literal">DelegatingSecurityContextExecutor</code> which is in charge of wrapping any Runnable that is passed into the execute method with a <code class="literal">DelegatingSecurityContextRunnable</code>.
+It then passes the wrapped Runnable to the delegateExecutor.
+In this instance, the same <code class="literal">SecurityContext</code> will be used for every Runnable submitted to our <code class="literal">DelegatingSecurityContextExecutor</code>.
+This is nice if we are running background tasks that need to be run by a user with elevated privileges.
+</li><li class="listitem">
+At this point you may be asking yourself "How does this shield my code of any knowledge of Spring Security?" Instead of creating the <code class="literal">SecurityContext</code> and the <code class="literal">DelegatingSecurityContextExecutor</code> in our own code, we can inject an already initialized instance of <code class="literal">DelegatingSecurityContextExecutor</code>.
+</li></ul></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<span class="hl-keyword">private</span> Executor executor; <span class="hl-comment">// becomes an instance of our DelegatingSecurityContextExecutor</span>
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> submitRunnable() {
+Runnable originalRunnable = <span class="hl-keyword">new</span> Runnable() {
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> run() {
+    <span class="hl-comment">// invoke secured service</span>
+    }
+};
+executor.execute(originalRunnable);
+}</pre>
+<p>Now our code is unaware that the <code class="literal">SecurityContext</code> is being propagated to the <code class="literal">Thread</code>, then the <code class="literal">originalRunnable</code> is executed, and then the <code class="literal">SecurityContextHolder</code> is cleared out.
+In this example, the same user is being used to execute each Thread.
+What if we wanted to use the user from <code class="literal">SecurityContextHolder</code> at the time we invoked <code class="literal">executor.execute(Runnable)</code> (i.e. the currently logged in user) to process <code class="literal">originalRunnable</code>?
+This can be done by removing the <code class="literal">SecurityContext</code> argument from our <code class="literal">DelegatingSecurityContextExecutor</code> constructor.
+For example:</p>
+<pre class="programlisting">SimpleAsyncTaskExecutor delegateExecutor = <span class="hl-keyword">new</span> SimpleAsyncTaskExecutor();
+DelegatingSecurityContextExecutor executor =
+    <span class="hl-keyword">new</span> DelegatingSecurityContextExecutor(delegateExecutor);</pre>
+<p>Now anytime <code class="literal">executor.execute(Runnable)</code> is executed the <code class="literal">SecurityContext</code> is first obtained by the <code class="literal">SecurityContextHolder</code> and then that <code class="literal">SecurityContext</code> is used to create our <code class="literal">DelegatingSecurityContextRunnable</code>.
+This means that we are executing our <code class="literal">Runnable</code> with the same user that was used to invoke the <code class="literal">executor.execute(Runnable)</code> code.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="spring-security-concurrency-classes" href="#spring-security-concurrency-classes"></a>13.11.3&nbsp;Spring Security Concurrency Classes</h3></div></div></div>
+
+<p>Refer to the Javadoc for additional integrations with both the Java concurrent APIs and the Spring Task abstractions.
+They are quite self-explanatory once you understand the previous code.</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+DelegatingSecurityContextCallable
+</li><li class="listitem">
+DelegatingSecurityContextExecutor
+</li><li class="listitem">
+DelegatingSecurityContextExecutorService
+</li><li class="listitem">
+DelegatingSecurityContextRunnable
+</li><li class="listitem">
+DelegatingSecurityContextScheduledExecutorService
+</li><li class="listitem">
+DelegatingSecurityContextSchedulingTaskExecutor
+</li><li class="listitem">
+DelegatingSecurityContextAsyncTaskExecutor
+</li><li class="listitem">
+DelegatingSecurityContextTaskExecutor
+</li></ul></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="mvc" href="#mvc"></a>13.12&nbsp;Spring MVC Integration</h2></div></div></div>
+
+<p>Spring Security provides a number of optional integrations with Spring MVC.
+This section covers the integration in further detail.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="mvc-enablewebmvcsecurity" href="#mvc-enablewebmvcsecurity"></a>13.12.1&nbsp;@EnableWebMvcSecurity</h3></div></div></div>
+
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>As of Spring Security 4.0, <code class="literal">@EnableWebMvcSecurity</code> is deprecated.
+The replacement is <code class="literal">@EnableWebSecurity</code> which will determine adding the Spring MVC features based upon the classpath.</p>
+</td></tr></table></div>
+<p>To enable Spring Security integration with Spring MVC add the <code class="literal">@EnableWebSecurity</code> annotation to your configuration.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Spring Security provides the configuration using Spring MVC&#8217;s <a class="ulink" href="https://docs.spring.io/spring/docs/5.0.0.RELEASE/spring-framework-reference/web.html#mvc-config-customize" target="_top">WebMvcConfigurer</a>.
+This means that if you are using more advanced options, like integrating with <code class="literal">WebMvcConfigurationSupport</code> directly, then you will need to manually provide the Spring Security configuration.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="mvc-requestmatcher" href="#mvc-requestmatcher"></a>13.12.2&nbsp;MvcRequestMatcher</h3></div></div></div>
+
+<p>Spring Security provides deep integration with how Spring MVC matches on URLs with <code class="literal">MvcRequestMatcher</code>.
+This is helpful to ensure your Security rules match the logic used to handle your requests.</p>
+<p>In order to use <code class="literal">MvcRequestMatcher</code> you must place the Spring Security Configuration in the same <code class="literal">ApplicationContext</code> as your <code class="literal">DispatcherServlet</code>.
+This is necessary because Spring Security&#8217;s <code class="literal">MvcRequestMatcher</code> expects a <code class="literal">HandlerMappingIntrospector</code> bean with the name of <code class="literal">mvcHandlerMappingIntrospector</code> to be registered by your Spring MVC configuration that is used to perform the matching.</p>
+<p>For a <code class="literal">web.xml</code> this means that you should place your configuration in the <code class="literal">DispatcherServlet.xml</code>.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;listener&gt;</span>
+  <span class="hl-tag">&lt;listener-class&gt;</span>org.springframework.web.context.ContextLoaderListener<span class="hl-tag">&lt;/listener-class&gt;</span>
+<span class="hl-tag">&lt;/listener&gt;</span>
+
+<span class="hl-comment">&lt;!-- All Spring Configuration (both MVC and Security) are in /WEB-INF/spring/ --&gt;</span>
+<span class="hl-tag">&lt;context-param&gt;</span>
+  <span class="hl-tag">&lt;param-name&gt;</span>contextConfigLocation<span class="hl-tag">&lt;/param-name&gt;</span>
+  <span class="hl-tag">&lt;param-value&gt;</span>/WEB-INF/spring/*.xml<span class="hl-tag">&lt;/param-value&gt;</span>
+<span class="hl-tag">&lt;/context-param&gt;</span>
+
+<span class="hl-tag">&lt;servlet&gt;</span>
+  <span class="hl-tag">&lt;servlet-name&gt;</span>spring<span class="hl-tag">&lt;/servlet-name&gt;</span>
+  <span class="hl-tag">&lt;servlet-class&gt;</span>org.springframework.web.servlet.DispatcherServlet<span class="hl-tag">&lt;/servlet-class&gt;</span>
+  <span class="hl-comment">&lt;!-- Load from the ContextLoaderListener --&gt;</span>
+  <span class="hl-tag">&lt;init-param&gt;</span>
+    <span class="hl-tag">&lt;param-name&gt;</span>contextConfigLocation<span class="hl-tag">&lt;/param-name&gt;</span>
+    <span class="hl-tag">&lt;param-value&gt;</span><span class="hl-tag">&lt;/param-value&gt;</span>
+  <span class="hl-tag">&lt;/init-param&gt;</span>
+<span class="hl-tag">&lt;/servlet&gt;</span>
+
+<span class="hl-tag">&lt;servlet-mapping&gt;</span>
+  <span class="hl-tag">&lt;servlet-name&gt;</span>spring<span class="hl-tag">&lt;/servlet-name&gt;</span>
+  <span class="hl-tag">&lt;url-pattern&gt;</span>/<span class="hl-tag">&lt;/url-pattern&gt;</span>
+<span class="hl-tag">&lt;/servlet-mapping&gt;</span></pre>
+<p>Below <code class="literal">WebSecurityConfiguration</code> in placed in the <code class="literal">DispatcherServlet</code>s <code class="literal">ApplicationContext</code>.</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SecurityInitializer <span class="hl-keyword">extends</span>
+    AbstractAnnotationConfigDispatcherServletInitializer {
+
+  <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+  <span class="hl-keyword">protected</span> Class&lt;?&gt;[] getRootConfigClasses() {
+    <span class="hl-keyword">return</span> null;
+  }
+
+  <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+  <span class="hl-keyword">protected</span> Class&lt;?&gt;[] getServletConfigClasses() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> Class[] { RootConfiguration.<span class="hl-keyword">class</span>,
+        WebMvcConfiguration.<span class="hl-keyword">class</span> };
+  }
+
+  <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+  <span class="hl-keyword">protected</span> String[] getServletMappings() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> String[] { <span class="hl-string">"/"</span> };
+  }
+}</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>It is always recommended to provide authorization rules by matching on the <code class="literal">HttpServletRequest</code> and method security.</p>
+<p>Providing authorization rules by matching on <code class="literal">HttpServletRequest</code> is good because it happens very early in the code path and helps reduce the <a class="ulink" href="https://en.wikipedia.org/wiki/Attack_surface" target="_top">attack surface</a>.
+Method security ensures that if someone has bypassed the web authorization rules, that your application is still secured.
+This is what is known as <a class="ulink" href="https://en.wikipedia.org/wiki/Defense_in_depth_(computing)" target="_top">Defence in Depth</a></p>
+</td></tr></table></div>
+<p>Consider a controller that is mapped as follows:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@RequestMapping("/admin")</span></em>
+<span class="hl-keyword">public</span> String admin() {</pre>
+<p>If we wanted to restrict access to this controller method to admin users, a developer can provide authorization rules by matching on the <code class="literal">HttpServletRequest</code> with the following:</p>
+<pre class="programlisting"><span class="hl-keyword">protected</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+    http
+        .authorizeRequests()
+            .antMatchers(<span class="hl-string">"/admin"</span>).hasRole(<span class="hl-string">"ADMIN"</span>);
+}</pre>
+<p>or in XML</p>
+<pre class="programlisting"><span class="hl-tag">&lt;http&gt;</span>
+    <span class="hl-tag">&lt;intercept-url</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"/admin"</span> <span class="hl-attribute">access</span>=<span class="hl-value">"hasRole('ADMIN')"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/http&gt;</span></pre>
+<p>With either configuration, the URL <code class="literal">/admin</code> will require the authenticated user to be an admin user.
+However, depending on our Spring MVC configuration, the URL <code class="literal">/admin.html</code> will also map to our <code class="literal">admin()</code> method.
+Additionally, depending on our Spring MVC configuration, the URL <code class="literal">/admin/</code> will also map to our <code class="literal">admin()</code> method.</p>
+<p>The problem is that our security rule is only protecting <code class="literal">/admin</code>.
+We could add additional rules for all the permutations of Spring MVC, but this would be quite verbose and tedious.</p>
+<p>Instead, we can leverage Spring Security&#8217;s <code class="literal">MvcRequestMatcher</code>.
+The following configuration will protect the same URLs that Spring MVC will match on by using Spring MVC to match on the URL.</p>
+<pre class="programlisting"><span class="hl-keyword">protected</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+    http
+        .authorizeRequests()
+            .mvcMatchers(<span class="hl-string">"/admin"</span>).hasRole(<span class="hl-string">"ADMIN"</span>);
+}</pre>
+<p>or in XML</p>
+<pre class="programlisting"><span class="hl-tag">&lt;http</span> <span class="hl-attribute">request-matcher</span>=<span class="hl-value">"mvc"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;intercept-url</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"/admin"</span> <span class="hl-attribute">access</span>=<span class="hl-value">"hasRole('ADMIN')"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/http&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="mvc-authentication-principal" href="#mvc-authentication-principal"></a>13.12.3&nbsp;@AuthenticationPrincipal</h3></div></div></div>
+
+<p>Spring Security provides <code class="literal">AuthenticationPrincipalArgumentResolver</code> which can automatically resolve the current <code class="literal">Authentication.getPrincipal()</code> for Spring MVC arguments.
+By using <code class="literal">@EnableWebSecurity</code> you will automatically have this added to your Spring MVC configuration.
+If you use XML based configuration, you must add this yourself.
+For example:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;mvc:annotation-driven&gt;</span>
+        <span class="hl-tag">&lt;mvc:argument-resolvers&gt;</span>
+                <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver"</span><span class="hl-tag"> /&gt;</span>
+        <span class="hl-tag">&lt;/mvc:argument-resolvers&gt;</span>
+<span class="hl-tag">&lt;/mvc:annotation-driven&gt;</span></pre>
+<p>Once <code class="literal">AuthenticationPrincipalArgumentResolver</code> is properly configured, you can be entirely decoupled from Spring Security in your Spring MVC layer.</p>
+<p>Consider a situation where a custom <code class="literal">UserDetailsService</code> that returns an <code class="literal">Object</code> that implements <code class="literal">UserDetails</code> and your own <code class="literal">CustomUser</code> <code class="literal">Object</code>. The <code class="literal">CustomUser</code> of the currently authenticated user could be accessed using the following code:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@RequestMapping("/messages/inbox")</span></em>
+<span class="hl-keyword">public</span> ModelAndView findMessagesForUser() {
+    Authentication authentication =
+    SecurityContextHolder.getContext().getAuthentication();
+    CustomUser custom = (CustomUser) authentication == null ? null : authentication.getPrincipal();
+
+    <span class="hl-comment">// .. find messages for this user and return them ...</span>
+}</pre>
+<p>As of Spring Security 3.2 we can resolve the argument more directly by adding an annotation. For example:</p>
+<pre class="programlisting"><span class="hl-keyword">import</span> org.springframework.security.core.annotation.AuthenticationPrincipal;
+
+<span class="hl-comment">// ...</span>
+
+<em><span class="hl-annotation" style="color: gray">@RequestMapping("/messages/inbox")</span></em>
+<span class="hl-keyword">public</span> ModelAndView findMessagesForUser(<em><span class="hl-annotation" style="color: gray">@AuthenticationPrincipal</span></em> CustomUser customUser) {
+
+    <span class="hl-comment">// .. find messages for this user and return them ...</span>
+}</pre>
+<p>Sometimes it may be necessary to transform the principal in some way.
+For example, if <code class="literal">CustomUser</code> needed to be final it could not be extended.
+In this situation the <code class="literal">UserDetailsService</code> might returns an <code class="literal">Object</code> that implements <code class="literal">UserDetails</code> and provides a method named <code class="literal">getCustomUser</code> to access <code class="literal">CustomUser</code>.
+For example, it might look like:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> CustomUserUserDetails <span class="hl-keyword">extends</span> User {
+        <span class="hl-comment">// ...</span>
+        <span class="hl-keyword">public</span> CustomUser getCustomUser() {
+                <span class="hl-keyword">return</span> customUser;
+        }
+}</pre>
+<p>We could then access the <code class="literal">CustomUser</code> using a <a class="ulink" href="https://docs.spring.io/spring/docs/current/spring-framework-reference/html/expressions.html" target="_top">SpEL expression</a> that uses <code class="literal">Authentication.getPrincipal()</code> as the root object:</p>
+<pre class="programlisting"><span class="hl-keyword">import</span> org.springframework.security.core.annotation.AuthenticationPrincipal;
+
+<span class="hl-comment">// ...</span>
+
+<em><span class="hl-annotation" style="color: gray">@RequestMapping("/messages/inbox")</span></em>
+<span class="hl-keyword">public</span> ModelAndView findMessagesForUser(<em><span class="hl-annotation" style="color: gray">@AuthenticationPrincipal(expression = "customUser")</span></em> CustomUser customUser) {
+
+    <span class="hl-comment">// .. find messags for this user and return them ...</span>
+}</pre>
+<p>We can also refer to Beans in our SpEL expressions.
+For example, the following could be used if we were using JPA to manage our Users and we wanted to modify and save a property on the current user.</p>
+<pre class="programlisting"><span class="hl-keyword">import</span> org.springframework.security.core.annotation.AuthenticationPrincipal;
+
+<span class="hl-comment">// ...</span>
+
+<em><span class="hl-annotation" style="color: gray">@PutMapping("/users/self")</span></em>
+<span class="hl-keyword">public</span> ModelAndView updateName(<em><span class="hl-annotation" style="color: gray">@AuthenticationPrincipal(expression = "@jpaEntityManager.merge(#this)")</span></em> CustomUser attachedCustomUser,
+        <em><span class="hl-annotation" style="color: gray">@RequestParam</span></em> String firstName) {
+
+    <span class="hl-comment">// change the firstName on an attached instance which will be persisted to the database</span>
+    attachedCustomUser.setFirstName(firstName);
+
+    <span class="hl-comment">// ...</span>
+}</pre>
+<p>We can further remove our dependency on Spring Security by making <code class="literal">@AuthenticationPrincipal</code> a meta annotation on our own annotation.
+Below we demonstrate how we could do this on an annotation named <code class="literal">@CurrentUser</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>It is important to realize that in order to remove the dependency on Spring Security, it is the consuming application that would create <code class="literal">@CurrentUser</code>.
+This step is not strictly required, but assists in isolating your dependency to Spring Security to a more central location.</p>
+</td></tr></table></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Target({ElementType.PARAMETER, ElementType.TYPE})</span></em>
+<em><span class="hl-annotation" style="color: gray">@Retention(RetentionPolicy.RUNTIME)</span></em>
+<em><span class="hl-annotation" style="color: gray">@Documented</span></em>
+<em><span class="hl-annotation" style="color: gray">@AuthenticationPrincipal</span></em>
+<span class="hl-keyword">public</span> <em><span class="hl-annotation" style="color: gray">@interface</span></em> CurrentUser {}</pre>
+<p>Now that <code class="literal">@CurrentUser</code> has been specified, we can use it to signal to resolve our <code class="literal">CustomUser</code> of the currently authenticated user.
+We have also isolated our dependency on Spring Security to a single file.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@RequestMapping("/messages/inbox")</span></em>
+<span class="hl-keyword">public</span> ModelAndView findMessagesForUser(<em><span class="hl-annotation" style="color: gray">@CurrentUser</span></em> CustomUser customUser) {
+
+    <span class="hl-comment">// .. find messages for this user and return them ...</span>
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="mvc-async" href="#mvc-async"></a>13.12.4&nbsp;Spring MVC Async Integration</h3></div></div></div>
+
+<p>Spring Web MVC 3.2+ has excellent support for <a class="ulink" href="http://docs.spring.io/spring/docs/3.2.x/spring-framework-reference/html/mvc.html#mvc-ann-async" target="_top">Asynchronous Request Processing</a>.
+With no additional configuration, Spring Security will automatically setup the <code class="literal">SecurityContext</code> to the <code class="literal">Thread</code> that executes a <code class="literal">Callable</code> returned by your controllers.
+For example, the following method will automatically have its <code class="literal">Callable</code> executed with the <code class="literal">SecurityContext</code> that was available when the <code class="literal">Callable</code> was created:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@RequestMapping(method=RequestMethod.POST)</span></em>
+<span class="hl-keyword">public</span> Callable&lt;String&gt; processUpload(<span class="hl-keyword">final</span> MultipartFile file) {
+
+<span class="hl-keyword">return</span> <span class="hl-keyword">new</span> Callable&lt;String&gt;() {
+    <span class="hl-keyword">public</span> Object call() <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-comment">// ...</span>
+    <span class="hl-keyword">return</span> <span class="hl-string">"someView"</span>;
+    }
+};
+}</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note: Associating SecurityContext to Callable&#8217;s"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Associating SecurityContext to Callable&#8217;s</th></tr><tr><td align="left" valign="top">
+
+<p>More technically speaking, Spring Security integrates with <code class="literal">WebAsyncManager</code>.
+The <code class="literal">SecurityContext</code> that is used to process the <code class="literal">Callable</code> is the <code class="literal">SecurityContext</code> that exists on the <code class="literal">SecurityContextHolder</code> at the time <code class="literal">startCallableProcessing</code> is invoked.</p>
+</td></tr></table></div>
+<p>There is no automatic integration with a <code class="literal">DeferredResult</code> that is returned by controllers.
+This is because <code class="literal">DeferredResult</code> is processed by the users and thus there is no way of automatically integrating with it.
+However, you can still use <a class="link" href="servlet-webclient.html#concurrency" title="13.11&nbsp;Concurrency Support">Concurrency Support</a> to provide transparent integration with Spring Security.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="mvc-csrf" href="#mvc-csrf"></a>13.12.5&nbsp;Spring MVC and CSRF Integration</h3></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="automatic-token-inclusion" href="#automatic-token-inclusion"></a>Automatic Token Inclusion</h4></div></div></div>
+
+<p>Spring Security will automatically <a class="link" href="web-app-security.html#csrf-include-csrf-token" title="Include the CSRF Token">include the CSRF Token</a> within forms that use the <a class="ulink" href="http://docs.spring.io/spring/docs/3.2.x/spring-framework-reference/html/view.html#view-jsp-formtaglib-formtag" target="_top">Spring MVC form tag</a>.
+For example, the following JSP:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;jsp:root</span> <span class="hl-attribute">xmlns:jsp</span>=<span class="hl-value">"http://java.sun.com/JSP/Page"</span>
+    <span class="hl-attribute">xmlns:c</span>=<span class="hl-value">"http://java.sun.com/jsp/jstl/core"</span>
+    <span class="hl-attribute">xmlns:form</span>=<span class="hl-value">"http://www.springframework.org/tags/form"</span> <span class="hl-attribute">version</span>=<span class="hl-value">"2.0"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;jsp:directive.page</span> <span class="hl-attribute">language</span>=<span class="hl-value">"java"</span> <span class="hl-attribute">contentType</span>=<span class="hl-value">"text/html"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;html</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://www.w3.org/1999/xhtml"</span> <span class="hl-attribute">lang</span>=<span class="hl-value">"en"</span> <span class="hl-attribute">xml:lang</span>=<span class="hl-value">"en"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-comment">&lt;!-- ... --&gt;</span>
+
+    <span class="hl-tag">&lt;c:url</span> <span class="hl-attribute">var</span>=<span class="hl-value">"logoutUrl"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"/logout"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;form:form</span> <span class="hl-attribute">action</span>=<span class="hl-value">"${logoutUrl}"</span>
+        <span class="hl-attribute">method</span>=<span class="hl-value">"post"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;input</span> <span class="hl-attribute">type</span>=<span class="hl-value">"submit"</span>
+        <span class="hl-attribute">value</span>=<span class="hl-value">"Log out"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;input</span> <span class="hl-attribute">type</span>=<span class="hl-value">"hidden"</span>
+        <span class="hl-attribute">name</span>=<span class="hl-value">"${_csrf.parameterName}"</span>
+        <span class="hl-attribute">value</span>=<span class="hl-value">"${_csrf.token}"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/form:form&gt;</span>
+
+    <span class="hl-comment">&lt;!-- ... --&gt;</span>
+<span class="hl-tag">&lt;/html&gt;</span>
+<span class="hl-tag">&lt;/jsp:root&gt;</span></pre>
+<p>Will output HTML that is similar to the following:</p>
+<pre class="programlisting"><span class="hl-comment">&lt;!-- ... --&gt;</span>
+
+<span class="hl-tag">&lt;form</span> <span class="hl-attribute">action</span>=<span class="hl-value">"/context/logout"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"post"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;input</span> <span class="hl-attribute">type</span>=<span class="hl-value">"submit"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"Log out"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;input</span> <span class="hl-attribute">type</span>=<span class="hl-value">"hidden"</span> <span class="hl-attribute">name</span>=<span class="hl-value">"_csrf"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"f81d4fae-7dec-11d0-a765-00a0c91e6bf6"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/form&gt;</span>
+
+<span class="hl-comment">&lt;!-- ... --&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="mvc-csrf-resolver" href="#mvc-csrf-resolver"></a>Resolving the CsrfToken</h4></div></div></div>
+
+<p>Spring Security provides <code class="literal">CsrfTokenArgumentResolver</code> which can automatically resolve the current <code class="literal">CsrfToken</code> for Spring MVC arguments.
+By using <a class="link" href="jc.html#jc-hello-wsca">@EnableWebSecurity</a> you will automatically have this added to your Spring MVC configuration.
+If you use XML based configuraiton, you must add this yourself.</p>
+<p>Once <code class="literal">CsrfTokenArgumentResolver</code> is properly configured, you can expose the <code class="literal">CsrfToken</code> to your static HTML based application.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@RestController</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> CsrfController {
+
+    <em><span class="hl-annotation" style="color: gray">@RequestMapping("/csrf")</span></em>
+    <span class="hl-keyword">public</span> CsrfToken csrf(CsrfToken token) {
+        <span class="hl-keyword">return</span> token;
+    }
+}</pre>
+<p>It is important to keep the <code class="literal">CsrfToken</code> a secret from other domains.
+This means if you are using <a class="ulink" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS" target="_top">Cross Origin Sharing (CORS)</a>, you should <span class="strong"><strong>NOT</strong></span> expose the <code class="literal">CsrfToken</code> to any external domains.</p>
+</div>
+</div>
+</div>
+<div class="footnotes"><br><hr style="width:100; text-align:left;margin-left: 0"><div id="ftn.d5e6267" class="footnote"><p><a href="#d5e6267" class="simpara"><sup class="simpara">[21] </sup></a>The legacy options from Spring Security 2.0 are also supported, but discouraged.</p></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="advanced-topics.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="servlet-applications.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="data.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">12.&nbsp;Additional Topics&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;14.&nbsp;Spring Data Integration</td></tr></table></div></body></html>

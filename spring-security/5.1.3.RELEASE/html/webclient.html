@@ -1,0 +1,81 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>21.&nbsp;WebClient</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="reactive-applications.html" title="Part&nbsp;III.&nbsp;Reactive Applications"><link rel="prev" href="webflux-roac.html" title="20.&nbsp;@RegisteredOAuth2AuthorizedClient"><link rel="next" href="jc-erms.html" title="22.&nbsp;EnableReactiveMethodSecurity"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">21.&nbsp;WebClient</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="webflux-roac.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;III.&nbsp;Reactive Applications</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="jc-erms.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="webclient" href="#webclient"></a>21.&nbsp;WebClient</h2></div></div></div>
+
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The following documentation is for use within Reactive environments.
+For Servlet environments, refer to <a class="link" href="servlet-webclient.html" title="13.&nbsp;WebClient for Servlet Environments">WebClient for Servlet</a> environments.</p>
+</td></tr></table></div>
+<p>Spring Framework has built in support for setting a Bearer token.</p>
+<pre class="programlisting">webClient.get()
+    .headers(h -&gt; h.setBearerAuth(token))
+    ...</pre>
+<p>Spring Security builds on this support to provide additional benefits:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Spring Security will automatically refresh expired tokens (if a refresh token is present)
+</li><li class="listitem">
+<p class="simpara">If an access token is requested and not present, Spring Security will automatically request the access token.</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+For authorization_code this involves performing the redirect and then replaying the original request
+</li><li class="listitem">
+For client_credentials the token is simply requested and saved
+</li></ul></div>
+</li><li class="listitem">
+Support for the ability to transparently include the current OAuth token or explicitly select which token should be used.
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webclient-setup" href="#webclient-setup"></a>21.1&nbsp;WebClient OAuth2 Setup</h2></div></div></div>
+
+<p>The first step is ensuring to setup the <code class="literal">WebClient</code> correctly.
+An example of setting up <code class="literal">WebClient</code> in a fully reactive environment can be found below:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+WebClient webClient(ReactiveClientRegistrationRepository clientRegistrations,
+        ServerOAuth2AuthorizedClientRepository authorizedClients) {
+    ServerOAuth2AuthorizedClientExchangeFilterFunction oauth =
+            <span class="hl-keyword">new</span> ServerOAuth2AuthorizedClientExchangeFilterFunction(clientRegistrations, authorizedClients);
+    <span class="hl-comment">// (optional) explicitly opt into using the oauth2Login to provide an access token implicitly</span>
+    <span class="hl-comment">// oauth.setDefaultOAuth2AuthorizedClient(true);</span>
+    <span class="hl-comment">// (optional) set a default ClientRegistration.registrationId</span>
+    <span class="hl-comment">// oauth.setDefaultClientRegistrationId("client-registration-id");</span>
+    <span class="hl-keyword">return</span> WebClient.builder()
+            .filter(oauth)
+            .build();
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webclient-implicit" href="#webclient-implicit"></a>21.2&nbsp;Implicit OAuth2AuthorizedClient</h2></div></div></div>
+
+<p>If we set <code class="literal">defaultOAuth2AuthorizedClient</code> to <code class="literal">true`in our setup and the user authenticated with oauth2Login (i.e. OIDC), then the current authentication is used to automatically provide the access token.
+Alternatively,  if we set `defaultClientRegistrationId</code> to a valid <code class="literal">ClientRegistration</code> id, that registration is used to provide the access token.
+This is convenient, but in environments where not all endpoints should get the access token, it is dangerous (you might provide the wrong access token to an endpoint).</p>
+<pre class="programlisting">Mono&lt;String&gt; body = <span class="hl-keyword">this</span>.webClient
+        .get()
+        .uri(<span class="hl-keyword">this</span>.uri)
+        .retrieve()
+        .bodyToMono(String.<span class="hl-keyword">class</span>);</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webclient-explicit" href="#webclient-explicit"></a>21.3&nbsp;Explicit OAuth2AuthorizedClient</h2></div></div></div>
+
+<p>The <code class="literal">OAuth2AuthorizedClient</code> can be explicitly provided by setting it on the requests attributes.
+In the example below we resolve the <code class="literal">OAuth2AuthorizedClient</code> using Spring WebFlux or Spring MVC argument resolver support.
+However, it does not matter how the <code class="literal">OAuth2AuthorizedClient</code> is resolved.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@GetMapping("/explicit")</span></em>
+Mono&lt;String&gt; explicit(<em><span class="hl-annotation" style="color: gray">@RegisteredOAuth2AuthorizedClient("client-id")</span></em> OAuth2AuthorizedClient authorizedClient) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.webClient
+            .get()
+            .uri(<span class="hl-keyword">this</span>.uri)
+            .attributes(oauth2AuthorizedClient(authorizedClient))
+            .retrieve()
+            .bodyToMono(String.<span class="hl-keyword">class</span>);
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webclient-clientregistrationid" href="#webclient-clientregistrationid"></a>21.4&nbsp;clientRegistrationId</h2></div></div></div>
+
+<p>Alternatively, it is possible to specify the <code class="literal">clientRegistrationId</code> on the request attributes and the <code class="literal">WebClient</code> will attempt to lookup the <code class="literal">OAuth2AuthorizedClient</code>.
+If it is not found, one will automatically be acquired.</p>
+<pre class="programlisting">Mono&lt;String&gt; body = <span class="hl-keyword">this</span>.webClient
+        .get()
+        .uri(<span class="hl-keyword">this</span>.uri)
+        .attributes(clientRegistrationId(<span class="hl-string">"client-id"</span>))
+        .retrieve()
+        .bodyToMono(String.<span class="hl-keyword">class</span>);</pre>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="webflux-roac.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="reactive-applications.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="jc-erms.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">20.&nbsp;@RegisteredOAuth2AuthorizedClient&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;22.&nbsp;EnableReactiveMethodSecurity</td></tr></table></div></body></html>

@@ -1,0 +1,780 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>8.&nbsp;Architecture and Implementation</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="servlet-applications.html" title="Part&nbsp;II.&nbsp;Servlet Applications"><link rel="prev" href="ns-config.html" title="7.&nbsp;Security Namespace Configuration"><link rel="next" href="test.html" title="9.&nbsp;Testing"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">8.&nbsp;Architecture and Implementation</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ns-config.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;II.&nbsp;Servlet Applications</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="test.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="overall-architecture" href="#overall-architecture"></a>8.&nbsp;Architecture and Implementation</h2></div></div></div>
+
+<p>Once you are familiar with setting up and running some namespace-configuration based applications, you may wish to develop more of an understanding of how the framework actually works behind the namespace facade.
+Like most software, Spring Security has certain central interfaces, classes and conceptual abstractions that are commonly used throughout the framework.
+In this part of the reference guide we will look at some of these and see how they work together to support authentication and access-control within Spring Security.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="technical-overview" href="#technical-overview"></a>8.1&nbsp;Technical Overview</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="runtime-environment" href="#runtime-environment"></a>8.1.1&nbsp;Runtime Environment</h3></div></div></div>
+
+<p>Spring Security 3.0 requires a Java 5.0 Runtime Environment or higher.
+As Spring Security aims to operate in a self-contained manner, there is no need to place any special configuration files into your Java Runtime Environment.
+In particular, there is no need to configure a special Java Authentication and Authorization Service (JAAS) policy file or place Spring Security into common classpath locations.</p>
+<p>Similarly, if you are using an EJB Container or Servlet Container there is no need to put any special configuration files anywhere, nor include Spring Security in a server classloader.
+All the required files will be contained within your application.</p>
+<p>This design offers maximum deployment time flexibility, as you can simply copy your target artifact (be it a JAR, WAR or EAR) from one system to another and it will immediately work.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="core-components" href="#core-components"></a>8.1.2&nbsp;Core Components</h3></div></div></div>
+
+<p>In Spring Security 3.0, the contents of the <code class="literal">spring-security-core</code> jar were stripped down to the bare minimum.
+It no longer contains any code related to web-application security, LDAP or namespace configuration.
+We&#8217;ll take a look here at some of the Java types that you&#8217;ll find in the core module.
+They represent the building blocks of the framework, so if you ever need to go beyond a simple namespace configuration then it&#8217;s important that you understand what they are, even if you don&#8217;t actually need to interact with them directly.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="securitycontextholder-securitycontext-and-authentication-objects" href="#securitycontextholder-securitycontext-and-authentication-objects"></a>SecurityContextHolder, SecurityContext and Authentication Objects</h4></div></div></div>
+
+<p>The most fundamental object is <code class="literal">SecurityContextHolder</code>.
+This is where we store details of the present security context of the application, which includes details of the principal currently using the application.
+By default the <code class="literal">SecurityContextHolder</code> uses a <code class="literal">ThreadLocal</code> to store these details, which means that the security context is always available to methods in the same thread of execution, even if the security context is not explicitly passed around as an argument to those methods.
+Using a <code class="literal">ThreadLocal</code> in this way is quite safe if care is taken to clear the thread after the present principal&#8217;s request is processed.
+Of course, Spring Security takes care of this for you automatically so there is no need to worry about it.</p>
+<p>Some applications aren&#8217;t entirely suitable for using a <code class="literal">ThreadLocal</code>, because of the specific way they work with threads.
+For example, a Swing client might want all threads in a Java Virtual Machine to use the same security context.
+<code class="literal">SecurityContextHolder</code> can be configured with a strategy on startup to specify how you would like the context to be stored.
+For a standalone application you would use the <code class="literal">SecurityContextHolder.MODE_GLOBAL</code> strategy.
+Other applications might want to have threads spawned by the secure thread also assume the same security identity.
+This is achieved by using <code class="literal">SecurityContextHolder.MODE_INHERITABLETHREADLOCAL</code>.
+You can change the mode from the default <code class="literal">SecurityContextHolder.MODE_THREADLOCAL</code> in two ways.
+The first is to set a system property, the second is to call a static method on <code class="literal">SecurityContextHolder</code>.
+Most applications won&#8217;t need to change from the default, but if you do, take a look at the JavaDoc for <code class="literal">SecurityContextHolder</code> to learn more.</p>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="obtaining-information-about-the-current-user" href="#obtaining-information-about-the-current-user"></a>Obtaining information about the current user</h5></div></div></div>
+
+<p>Inside the <code class="literal">SecurityContextHolder</code> we store details of the principal currently interacting with the application.
+Spring Security uses an <code class="literal">Authentication</code> object to represent this information.
+You won&#8217;t normally need to create an <code class="literal">Authentication</code> object yourself, but it is fairly common for users to query the <code class="literal">Authentication</code> object.
+You can use the following code block - from anywhere in your application - to obtain the name of the currently authenticated user, for example:</p>
+<pre class="programlisting">Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+<span class="hl-keyword">if</span> (principal <span class="hl-keyword">instanceof</span> UserDetails) {
+String username = ((UserDetails)principal).getUsername();
+} <span class="hl-keyword">else</span> {
+String username = principal.toString();
+}</pre>
+<p>The object returned by the call to <code class="literal">getContext()</code> is an instance of the <code class="literal">SecurityContext</code> interface.
+This is the object that is kept in thread-local storage.
+As we&#8217;ll see below, most authentication mechanisms within Spring Security return an instance of <code class="literal">UserDetails</code> as the principal.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="tech-userdetailsservice" href="#tech-userdetailsservice"></a>The UserDetailsService</h4></div></div></div>
+
+<p>Another item to note from the above code fragment is that you can obtain a principal from the <code class="literal">Authentication</code> object.
+The principal is just an <code class="literal">Object</code>.
+Most of the time this can be cast into a <code class="literal">UserDetails</code> object.
+<code class="literal">UserDetails</code> is a core interface in Spring Security.
+It represents a principal, but in an extensible and application-specific way.
+Think of <code class="literal">UserDetails</code> as the adapter between your own user database and what Spring Security needs inside the <code class="literal">SecurityContextHolder</code>.
+Being a representation of something from your own user database, quite often you will cast the <code class="literal">UserDetails</code> to the original object that your application provided, so you can call business-specific methods (like <code class="literal">getEmail()</code>, <code class="literal">getEmployeeNumber()</code> and so on).</p>
+<p>By now you&#8217;re probably wondering, so when do I provide a <code class="literal">UserDetails</code> object? How do I do that? I thought you said this thing was declarative and I didn&#8217;t need to write any Java code - what gives? The short answer is that there is a special interface called <code class="literal">UserDetailsService</code>.
+The only method on this interface accepts a <code class="literal">String</code>-based username argument and returns a <code class="literal">UserDetails</code>:</p>
+<pre class="programlisting">UserDetails loadUserByUsername(String username) <span class="hl-keyword">throws</span> UsernameNotFoundException;</pre>
+<p>This is the most common approach to loading information for a user within Spring Security and you will see it used throughout the framework whenever information on a user is required.</p>
+<p>On successful authentication, <code class="literal">UserDetails</code> is used to build the <code class="literal">Authentication</code> object that is stored in the <code class="literal">SecurityContextHolder</code> (more on this <a class="link" href="overall-architecture.html#tech-intro-authentication" title="8.1.3&nbsp;Authentication">below</a>).
+The good news is that we provide a number of <code class="literal">UserDetailsService</code> implementations, including one that uses an in-memory map (<code class="literal">InMemoryDaoImpl</code>) and another that uses JDBC (<code class="literal">JdbcDaoImpl</code>).
+Most users tend to write their own, though, with their implementations often simply sitting on top of an existing Data Access Object (DAO) that represents their employees, customers, or other users of the application.
+Remember the advantage that whatever your <code class="literal">UserDetailsService</code> returns can always be obtained from the <code class="literal">SecurityContextHolder</code> using the above code fragment.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>There is often some confusion about <code class="literal">UserDetailsService</code>.
+It is purely a DAO for user data and performs no other function other than to supply that data to other components within the framework.
+In particular, it <span class="emphasis"><em>does not</em></span> authenticate the user, which is done by the <code class="literal">AuthenticationManager</code>.
+In many cases it makes more sense to <a class="link" href="overall-architecture.html#core-services-authentication-manager" title="8.2.1&nbsp;The AuthenticationManager, ProviderManager and AuthenticationProvider">implement <code class="literal">AuthenticationProvider</code></a> directly if you require a custom authentication process.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="tech-granted-authority" href="#tech-granted-authority"></a>GrantedAuthority</h4></div></div></div>
+
+<p>Besides the principal, another important method provided by <code class="literal">Authentication</code> is <code class="literal">getAuthorities()</code>.
+This method provides an array of <code class="literal">GrantedAuthority</code> objects.
+A <code class="literal">GrantedAuthority</code> is, not surprisingly, an authority that is granted to the principal.
+Such authorities are usually "roles", such as <code class="literal">ROLE_ADMINISTRATOR</code> or <code class="literal">ROLE_HR_SUPERVISOR</code>.
+These roles are later on configured for web authorization, method authorization and domain object authorization.
+Other parts of Spring Security are capable of interpreting these authorities, and expect them to be present.
+<code class="literal">GrantedAuthority</code> objects are usually loaded by the <code class="literal">UserDetailsService</code>.</p>
+<p>Usually the <code class="literal">GrantedAuthority</code> objects are application-wide permissions.
+They are not specific to a given domain object.
+Thus, you wouldn&#8217;t likely have a <code class="literal">GrantedAuthority</code> to represent a permission to <code class="literal">Employee</code> object number 54, because if there are thousands of such authorities you would quickly run out of memory (or, at the very least, cause the application to take a long time to authenticate a user).
+Of course, Spring Security is expressly designed to handle this common requirement, but you&#8217;d instead use the project&#8217;s domain object security capabilities for this purpose.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="summary" href="#summary"></a>Summary</h4></div></div></div>
+
+<p>Just to recap, the major building blocks of Spring Security that we&#8217;ve seen so far are:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">SecurityContextHolder</code>, to provide access to the <code class="literal">SecurityContext</code>.
+</li><li class="listitem">
+<code class="literal">SecurityContext</code>, to hold the <code class="literal">Authentication</code> and possibly request-specific security information.
+</li><li class="listitem">
+<code class="literal">Authentication</code>, to represent the principal in a Spring Security-specific manner.
+</li><li class="listitem">
+<code class="literal">GrantedAuthority</code>, to reflect the application-wide permissions granted to a principal.
+</li><li class="listitem">
+<code class="literal">UserDetails</code>, to provide the necessary information to build an Authentication object from your application&#8217;s DAOs or other source of security data.
+</li><li class="listitem">
+<code class="literal">UserDetailsService</code>, to create a <code class="literal">UserDetails</code> when passed in a <code class="literal">String</code>-based username (or certificate ID or the like).
+</li></ul></div>
+<p>Now that you&#8217;ve gained an understanding of these repeatedly-used components, let&#8217;s take a closer look at the process of authentication.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="tech-intro-authentication" href="#tech-intro-authentication"></a>8.1.3&nbsp;Authentication</h3></div></div></div>
+
+<p>Spring Security can participate in many different authentication environments.
+While we recommend people use Spring Security for authentication and not integrate with existing Container Managed Authentication, it is nevertheless supported - as is integrating with your own proprietary authentication system.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="what-is-authentication-in-spring-security" href="#what-is-authentication-in-spring-security"></a>What is authentication in Spring Security?</h4></div></div></div>
+
+<p>Let&#8217;s consider a standard authentication scenario that everyone is familiar with.</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+A user is prompted to log in with a username and password.
+</li><li class="listitem">
+The system (successfully) verifies that the password is correct for the username.
+</li><li class="listitem">
+The context information for that user is obtained (their list of roles and so on).
+</li><li class="listitem">
+A security context is established for the user
+</li><li class="listitem">
+The user proceeds, potentially to perform some operation which is potentially protected by an access control mechanism which checks the required permissions for the operation against the current security context information.
+</li></ol></div>
+<p>The first three items constitute the authentication process so we&#8217;ll take a look at how these take place within Spring Security.</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+The username and password are obtained and combined into an instance of <code class="literal">UsernamePasswordAuthenticationToken</code> (an instance of the <code class="literal">Authentication</code> interface, which we saw earlier).
+</li><li class="listitem">
+The token is passed to an instance of <code class="literal">AuthenticationManager</code> for validation.
+</li><li class="listitem">
+The <code class="literal">AuthenticationManager</code> returns a fully populated <code class="literal">Authentication</code> instance on successful authentication.
+</li><li class="listitem">
+The security context is established by calling <code class="literal">SecurityContextHolder.getContext().setAuthentication(&#8230;&#8203;)</code>, passing in the returned authentication object.
+</li></ol></div>
+<p>From that point on, the user is considered to be authenticated.
+Let&#8217;s look at some code as an example.</p>
+<pre class="programlisting"><span class="hl-keyword">import</span> org.springframework.security.authentication.*;
+<span class="hl-keyword">import</span> org.springframework.security.core.*;
+<span class="hl-keyword">import</span> org.springframework.security.core.authority.SimpleGrantedAuthority;
+<span class="hl-keyword">import</span> org.springframework.security.core.context.SecurityContextHolder;
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AuthenticationExample {
+<span class="hl-keyword">private</span> <span class="hl-keyword">static</span> AuthenticationManager am = <span class="hl-keyword">new</span> SampleAuthenticationManager();
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) <span class="hl-keyword">throws</span> Exception {
+    BufferedReader in = <span class="hl-keyword">new</span> BufferedReader(<span class="hl-keyword">new</span> InputStreamReader(System.in));
+
+    <span class="hl-keyword">while</span>(true) {
+    System.out.println(<span class="hl-string">"Please enter your username:"</span>);
+    String name = in.readLine();
+    System.out.println(<span class="hl-string">"Please enter your password:"</span>);
+    String password = in.readLine();
+    <span class="hl-keyword">try</span> {
+        Authentication request = <span class="hl-keyword">new</span> UsernamePasswordAuthenticationToken(name, password);
+        Authentication result = am.authenticate(request);
+        SecurityContextHolder.getContext().setAuthentication(result);
+        <span class="hl-keyword">break</span>;
+    } <span class="hl-keyword">catch</span>(AuthenticationException e) {
+        System.out.println(<span class="hl-string">"Authentication failed: "</span> + e.getMessage());
+    }
+    }
+    System.out.println(<span class="hl-string">"Successfully authenticated. Security context contains: "</span> +
+            SecurityContextHolder.getContext().getAuthentication());
+}
+}
+
+<span class="hl-keyword">class</span> SampleAuthenticationManager <span class="hl-keyword">implements</span> AuthenticationManager {
+<span class="hl-keyword">static</span> <span class="hl-keyword">final</span> List&lt;GrantedAuthority&gt; AUTHORITIES = <span class="hl-keyword">new</span> ArrayList&lt;GrantedAuthority&gt;();
+
+<span class="hl-keyword">static</span> {
+    AUTHORITIES.add(<span class="hl-keyword">new</span> SimpleGrantedAuthority(<span class="hl-string">"ROLE_USER"</span>));
+}
+
+<span class="hl-keyword">public</span> Authentication authenticate(Authentication auth) <span class="hl-keyword">throws</span> AuthenticationException {
+    <span class="hl-keyword">if</span> (auth.getName().equals(auth.getCredentials())) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> UsernamePasswordAuthenticationToken(auth.getName(),
+        auth.getCredentials(), AUTHORITIES);
+    }
+    <span class="hl-keyword">throw</span> <span class="hl-keyword">new</span> BadCredentialsException(<span class="hl-string">"Bad Credentials"</span>);
+}
+}</pre>
+<p>Here we have written a little program that asks the user to enter a username and password and performs the above sequence.
+The <code class="literal">AuthenticationManager</code> which we&#8217;ve implemented here will authenticate any user whose username and password are the same.
+It assigns a single role to every user.
+The output from the above will be something like:</p>
+<pre class="programlisting">Please enter your username:
+bob
+Please enter your password:
+password
+Authentication failed: Bad Credentials
+Please enter your username:
+bob
+Please enter your password:
+bob
+Successfully authenticated. Security context contains: \
+org.springframework.security.authentication.UsernamePasswordAuthenticationToken@441d0230: \
+Principal: bob; Password: [PROTECTED]; \
+Authenticated: true; Details: null; \
+Granted Authorities: ROLE_USER</pre>
+<p>Note that you don&#8217;t normally need to write any code like this.
+The process will normally occur internally, in a web authentication filter for example.
+We&#8217;ve just included the code here to show that the question of what actually constitutes authentication in Spring Security has quite a simple answer.
+A user is authenticated when the <code class="literal">SecurityContextHolder</code> contains a fully populated <code class="literal">Authentication</code> object.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="setting-the-securitycontextholder-contents-directly" href="#setting-the-securitycontextholder-contents-directly"></a>Setting the SecurityContextHolder Contents Directly</h4></div></div></div>
+
+<p>In fact, Spring Security doesn&#8217;t mind how you put the <code class="literal">Authentication</code> object inside the <code class="literal">SecurityContextHolder</code>.
+The only critical requirement is that the <code class="literal">SecurityContextHolder</code> contains an <code class="literal">Authentication</code> which represents a principal before the <code class="literal">AbstractSecurityInterceptor</code> (which we&#8217;ll see more about later) needs to authorize a user operation.</p>
+<p>You can (and many users do) write their own filters or MVC controllers to provide interoperability with authentication systems that are not based on Spring Security.
+For example, you might be using Container-Managed Authentication which makes the current user available from a ThreadLocal or JNDI location.
+Or you might work for a company that has a legacy proprietary authentication system, which is a corporate "standard" over which you have little control.
+In situations like this it&#8217;s quite easy to get Spring Security to work, and still provide authorization capabilities.
+All you need to do is write a filter (or equivalent) that reads the third-party user information from a location, build a Spring Security-specific <code class="literal">Authentication</code> object, and put it into the <code class="literal">SecurityContextHolder</code>.
+In this case you also need to think about things which are normally taken care of automatically by the built-in authentication infrastructure.
+For example, you might need to pre-emptively create an HTTP session to <a class="link" href="overall-architecture.html#tech-intro-sec-context-persistence" title="Storing the SecurityContext between requests">cache the context between requests</a>, before you write the response to the client footnote:[It isn&#8217;t possible to create a session once the response has been committed.</p>
+<p>If you&#8217;re wondering how the <code class="literal">AuthenticationManager</code> is implemented in a real world example, we&#8217;ll look at that in the <a class="link" href="overall-architecture.html#core-services-authentication-manager" title="8.2.1&nbsp;The AuthenticationManager, ProviderManager and AuthenticationProvider">core services chapter</a>.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="tech-intro-web-authentication" href="#tech-intro-web-authentication"></a>8.1.4&nbsp;Authentication in a Web Application</h3></div></div></div>
+
+<p>Now let&#8217;s explore the situation where you are using Spring Security in a web application (without <code class="literal">web.xml</code> security enabled).
+How is a user authenticated and the security context established?</p>
+<p>Consider a typical web application&#8217;s authentication process:</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+You visit the home page, and click on a link.
+</li><li class="listitem">
+A request goes to the server, and the server decides that you&#8217;ve asked for a protected resource.
+</li><li class="listitem">
+As you&#8217;re not presently authenticated, the server sends back a response indicating that you must authenticate.
+The response will either be an HTTP response code, or a redirect to a particular web page.
+</li><li class="listitem">
+Depending on the authentication mechanism, your browser will either redirect to the specific web page so that you can fill out the form, or the browser will somehow retrieve your identity (via a BASIC authentication dialogue box, a cookie, a X.509 certificate etc.).
+</li><li class="listitem">
+The browser will send back a response to the server.
+This will either be an HTTP POST containing the contents of the form that you filled out, or an HTTP header containing your authentication details.
+</li><li class="listitem">
+Next the server will decide whether or not the presented credentials are valid.
+If they&#8217;re valid, the next step will happen.
+If they&#8217;re invalid, usually your browser will be asked to try again (so you return to step two above).
+</li><li class="listitem">
+The original request that you made to cause the authentication process will be retried.
+Hopefully you&#8217;ve authenticated with sufficient granted authorities to access the protected resource.
+If you have sufficient access, the request will be successful.
+Otherwise, you&#8217;ll receive back an HTTP error code 403, which means "forbidden".
+</li></ol></div>
+<p>Spring Security has distinct classes responsible for most of the steps described above.
+The main participants (in the order that they are used) are the <code class="literal">ExceptionTranslationFilter</code>, an <code class="literal">AuthenticationEntryPoint</code> and an "authentication mechanism", which is responsible for calling the <code class="literal">AuthenticationManager</code> which we saw in the previous section.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="exceptiontranslationfilter" href="#exceptiontranslationfilter"></a>ExceptionTranslationFilter</h4></div></div></div>
+
+<p><code class="literal">ExceptionTranslationFilter</code> is a Spring Security filter that has responsibility for detecting any Spring Security exceptions that are thrown.
+Such exceptions will generally be thrown by an <code class="literal">AbstractSecurityInterceptor</code>, which is the main provider of authorization services.
+We will discuss <code class="literal">AbstractSecurityInterceptor</code> in the next section, but for now we just need to know that it produces Java exceptions and knows nothing about HTTP or how to go about authenticating a principal.
+Instead the <code class="literal">ExceptionTranslationFilter</code> offers this service, with specific responsibility for either returning error code 403 (if the principal has been authenticated and therefore simply lacks sufficient access - as per step seven above), or launching an <code class="literal">AuthenticationEntryPoint</code> (if the principal has not been authenticated and therefore we need to go commence step three).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="tech-intro-auth-entry-point" href="#tech-intro-auth-entry-point"></a>AuthenticationEntryPoint</h4></div></div></div>
+
+<p>The <code class="literal">AuthenticationEntryPoint</code> is responsible for step three in the above list.
+As you can imagine, each web application will have a default authentication strategy (well, this can be configured like nearly everything else in Spring Security, but let&#8217;s keep it simple for now).
+Each major authentication system will have its own <code class="literal">AuthenticationEntryPoint</code> implementation, which typically performs one of the actions described in step 3.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="authentication-mechanism" href="#authentication-mechanism"></a>Authentication Mechanism</h4></div></div></div>
+
+<p>Once your browser submits your authentication credentials (either as an HTTP form post or HTTP header) there needs to be something on the server that "collects" these authentication details.
+By now we&#8217;re at step six in the above list.
+In Spring Security we have a special name for the function of collecting authentication details from a user agent (usually a web browser), referring to it as the "authentication mechanism".
+Examples are form-base login and Basic authentication.
+Once the authentication details have been collected from the user agent, an <code class="literal">Authentication</code> "request" object is built and then presented to the <code class="literal">AuthenticationManager</code>.</p>
+<p>After the authentication mechanism receives back the fully-populated <code class="literal">Authentication</code> object, it will deem the request valid, put the <code class="literal">Authentication</code> into the <code class="literal">SecurityContextHolder</code>, and cause the original request to be retried (step seven above).
+If, on the other hand, the <code class="literal">AuthenticationManager</code> rejected the request, the authentication mechanism will ask the user agent to retry (step two above).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="tech-intro-sec-context-persistence" href="#tech-intro-sec-context-persistence"></a>Storing the SecurityContext between requests</h4></div></div></div>
+
+<p>Depending on the type of application, there may need to be a strategy in place to store the security context between user operations.
+In a typical web application, a user logs in once and is subsequently identified by their session Id.
+The server caches the principal information for the duration session.
+In Spring Security, the responsibility for storing the <code class="literal">SecurityContext</code> between requests falls to the <code class="literal">SecurityContextPersistenceFilter</code>, which by default stores the context as an <code class="literal">HttpSession</code> attribute between HTTP requests.
+It restores the context to the <code class="literal">SecurityContextHolder</code> for each request and, crucially, clears the <code class="literal">SecurityContextHolder</code> when the request completes.
+You shouldn&#8217;t interact directly with the <code class="literal">HttpSession</code> for security purposes.
+There is simply no justification for doing so - always use the <code class="literal">SecurityContextHolder</code> instead.</p>
+<p>Many other types of application (for example, a stateless RESTful web service) do not use HTTP sessions and will re-authenticate on every request.
+However, it is still important that the <code class="literal">SecurityContextPersistenceFilter</code> is included in the chain to make sure that the <code class="literal">SecurityContextHolder</code> is cleared after each request.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>In an application which receives concurrent requests in a single session, the same <code class="literal">SecurityContext</code> instance will be shared between threads.
+Even though a <code class="literal">ThreadLocal</code> is being used, it is the same instance that is retrieved from the <code class="literal">HttpSession</code> for each thread.
+This has implications if you wish to temporarily change the context under which a thread is running.
+If you just use <code class="literal">SecurityContextHolder.getContext()</code>, and call <code class="literal">setAuthentication(anAuthentication)</code> on the returned context object, then the <code class="literal">Authentication</code> object will change in <span class="emphasis"><em>all</em></span> concurrent threads which share the same <code class="literal">SecurityContext</code> instance.
+You can customize the behaviour of <code class="literal">SecurityContextPersistenceFilter</code> to create a completely new <code class="literal">SecurityContext</code> for each request, preventing changes in one thread from affecting another.
+Alternatively you can create a new instance just at the point where you temporarily change the context.
+The method <code class="literal">SecurityContextHolder.createEmptyContext()</code> always returns a new context instance.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="tech-intro-access-control" href="#tech-intro-access-control"></a>8.1.5&nbsp;Access-Control (Authorization) in Spring Security</h3></div></div></div>
+
+<p>The main interface responsible for making access-control decisions in Spring Security is the <code class="literal">AccessDecisionManager</code>.
+It has a <code class="literal">decide</code> method which takes an <code class="literal">Authentication</code> object representing the principal requesting access, a "secure object" (see below) and a list of security metadata attributes which apply for the object (such as a list of roles which are required for access to be granted).</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="security-and-aop-advice" href="#security-and-aop-advice"></a>Security and AOP Advice</h4></div></div></div>
+
+<p>If you&#8217;re familiar with AOP, you&#8217;d be aware there are different types of advice available: before, after, throws and around.
+An around advice is very useful, because an advisor can elect whether or not to proceed with a method invocation, whether or not to modify the response, and whether or not to throw an exception.
+Spring Security provides an around advice for method invocations as well as web requests.
+We achieve an around advice for method invocations using Spring&#8217;s standard AOP support and we achieve an around advice for web requests using a standard Filter.</p>
+<p>For those not familiar with AOP, the key point to understand is that Spring Security can help you protect method invocations as well as web requests.
+Most people are interested in securing method invocations on their services layer.
+This is because the services layer is where most business logic resides in current-generation Java EE applications.
+If you just need to secure method invocations in the services layer, Spring&#8217;s standard AOP will be adequate.
+If you need to secure domain objects directly, you will likely find that AspectJ is worth considering.</p>
+<p>You can elect to perform method authorization using AspectJ or Spring AOP, or you can elect to perform web request authorization using filters.
+You can use zero, one, two or three of these approaches together.
+The mainstream usage pattern is to perform some web request authorization, coupled with some Spring AOP method invocation authorization on the services layer.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="secure-objects" href="#secure-objects"></a>Secure Objects and the AbstractSecurityInterceptor</h4></div></div></div>
+
+<p>So what <span class="emphasis"><em>is</em></span> a "secure object" anyway? Spring Security uses the term to refer to any object that can have security (such as an authorization decision) applied to it.
+The most common examples are method invocations and web requests.</p>
+<p>Each supported secure object type has its own interceptor class, which is a subclass of <code class="literal">AbstractSecurityInterceptor</code>.
+Importantly, by the time the <code class="literal">AbstractSecurityInterceptor</code> is called, the <code class="literal">SecurityContextHolder</code> will contain a valid <code class="literal">Authentication</code> if the principal has been authenticated.</p>
+<p><code class="literal">AbstractSecurityInterceptor</code> provides a consistent workflow for handling secure object requests, typically:</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+Look up the "configuration attributes" associated with the present request
+</li><li class="listitem">
+Submitting the secure object, current <code class="literal">Authentication</code> and configuration attributes to the <code class="literal">AccessDecisionManager</code> for an authorization decision
+</li><li class="listitem">
+Optionally change the <code class="literal">Authentication</code> under which the invocation takes place
+</li><li class="listitem">
+Allow the secure object invocation to proceed (assuming access was granted)
+</li><li class="listitem">
+Call the <code class="literal">AfterInvocationManager</code> if configured, once the invocation has returned.
+If the invocation raised an exception, the <code class="literal">AfterInvocationManager</code> will not be invoked.
+</li></ol></div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="tech-intro-config-attributes" href="#tech-intro-config-attributes"></a>What are Configuration Attributes?</h5></div></div></div>
+
+<p>A "configuration attribute" can be thought of as a String that has special meaning to the classes used by <code class="literal">AbstractSecurityInterceptor</code>.
+They are represented by the interface <code class="literal">ConfigAttribute</code> within the framework.
+They may be simple role names or have more complex meaning, depending on the how sophisticated the <code class="literal">AccessDecisionManager</code> implementation is.
+The <code class="literal">AbstractSecurityInterceptor</code> is configured with a <code class="literal">SecurityMetadataSource</code> which it uses to look up the attributes for a secure object.
+Usually this configuration will be hidden from the user.
+Configuration attributes will be entered as annotations on secured methods or as access attributes on secured URLs.
+For example, when we saw something like <code class="literal">&lt;intercept-url pattern='/secure/**' access='ROLE_A,ROLE_B'/&gt;</code> in the namespace introduction, this is saying that the configuration attributes <code class="literal">ROLE_A</code> and <code class="literal">ROLE_B</code> apply to web requests matching the given pattern.
+In practice, with the default <code class="literal">AccessDecisionManager</code> configuration, this means that anyone who has a <code class="literal">GrantedAuthority</code> matching either of these two attributes will be allowed access.
+Strictly speaking though, they are just attributes and the interpretation is dependent on the <code class="literal">AccessDecisionManager</code> implementation.
+The use of the prefix <code class="literal">ROLE_</code> is a marker to indicate that these attributes are roles and should be consumed by Spring Security&#8217;s <code class="literal">RoleVoter</code>.
+This is only relevant when a voter-based <code class="literal">AccessDecisionManager</code> is in use.
+We&#8217;ll see how the <code class="literal">AccessDecisionManager</code> is implemented in the <a class="link" href="authorization.html#authz-arch" title="11.1&nbsp;Authorization Architecture">authorization chapter</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="runasmanager" href="#runasmanager"></a>RunAsManager</h5></div></div></div>
+
+<p>Assuming <code class="literal">AccessDecisionManager</code> decides to allow the request, the <code class="literal">AbstractSecurityInterceptor</code> will normally just proceed with the request.
+Having said that, on rare occasions users may want to replace the <code class="literal">Authentication</code> inside the <code class="literal">SecurityContext</code> with a different <code class="literal">Authentication</code>, which is handled by the <code class="literal">AccessDecisionManager</code> calling a <code class="literal">RunAsManager</code>.
+This might be useful in reasonably unusual situations, such as if a services layer method needs to call a remote system and present a different identity.
+Because Spring Security automatically propagates security identity from one server to another (assuming you&#8217;re using a properly-configured RMI or HttpInvoker remoting protocol client), this may be useful.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="afterinvocationmanager" href="#afterinvocationmanager"></a>AfterInvocationManager</h5></div></div></div>
+
+<p>Following the secure object invocation proceeding and then returning - which may mean a method invocation completing or a filter chain proceeding - the <code class="literal">AbstractSecurityInterceptor</code> gets one final chance to handle the invocation.
+At this stage the <code class="literal">AbstractSecurityInterceptor</code> is interested in possibly modifying the return object.
+We might want this to happen because an authorization decision couldn&#8217;t be made "on the way in" to a secure object invocation.
+Being highly pluggable, <code class="literal">AbstractSecurityInterceptor</code> will pass control to an <code class="literal">AfterInvocationManager</code> to actually modify the object if needed.
+This class can even entirely replace the object, or throw an exception, or not change it in any way as it chooses.
+The after-invocation checks will only be executed if the invocation is successful.
+If an exception occurs, the additional checks will be skipped.</p>
+<p><code class="literal">AbstractSecurityInterceptor</code> and its related objects are shown in <a class="xref" href="overall-architecture.html#abstract-security-interceptor" title="Figure&nbsp;8.1.&nbsp;Security interceptors and the &#34;secure object&#34; model">Figure&nbsp;8.1, &#8220;Security interceptors and the "secure object" model&#8221;</a></p>
+<div class="figure"><a name="abstract-security-interceptor" href="#abstract-security-interceptor"></a><p class="title"><b>Figure&nbsp;8.1.&nbsp;Security interceptors and the "secure object" model</b></p><div class="figure-contents">
+
+<div class="mediaobject"><img src="images/security-interception.png" alt="Abstract Security Interceptor"></div>
+</div></div><br class="figure-break">
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="extending-the-secure-object-model" href="#extending-the-secure-object-model"></a>Extending the Secure Object Model</h5></div></div></div>
+
+<p>Only developers contemplating an entirely new way of intercepting and authorizing requests would need to use secure objects directly.
+For example, it would be possible to build a new secure object to secure calls to a messaging system.
+Anything that requires security and also provides a way of intercepting a call (like the AOP around advice semantics) is capable of being made into a secure object.
+Having said that, most Spring applications will simply use the three currently supported secure object types (AOP Alliance <code class="literal">MethodInvocation</code>, AspectJ <code class="literal">JoinPoint</code> and web request <code class="literal">FilterInvocation</code>) with complete transparency.</p>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="localization" href="#localization"></a>8.1.6&nbsp;Localization</h3></div></div></div>
+
+<p>Spring Security supports localization of exception messages that end users are likely to see.
+If your application is designed for English-speaking users, you don&#8217;t need to do anything as by default all Security messages are in English.
+If you need to support other locales, everything you need to know is contained in this section.</p>
+<p>All exception messages can be localized, including messages related to authentication failures and access being denied (authorization failures).
+Exceptions and logging messages that are focused on developers or system deployers (including incorrect attributes, interface contract violations, using incorrect constructors, startup time validation, debug-level logging) are not localized and instead are hard-coded in English within Spring Security&#8217;s code.</p>
+<p>Shipping in the <code class="literal">spring-security-core-xx.jar</code> you will find an <code class="literal">org.springframework.security</code> package that in turn contains a <code class="literal">messages.properties</code> file, as well as localized versions for some common languages.
+This should be referred to by your <code class="literal">ApplicationContext</code>, as Spring Security classes implement Spring&#8217;s <code class="literal">MessageSourceAware</code> interface and expect the message resolver to be dependency injected at application context startup time.
+Usually all you need to do is register a bean inside your application context to refer to the messages.
+An example is shown below:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"messageSource"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.context.support.ReloadableResourceBundleMessageSource"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"basename"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"classpath:org/springframework/security/messages"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The <code class="literal">messages.properties</code> is named in accordance with standard resource bundles and represents the default language supported by Spring Security messages.
+This default file is in English.</p>
+<p>If you wish to customize the <code class="literal">messages.properties</code> file, or support other languages, you should copy the file, rename it accordingly, and register it inside the above bean definition.
+There are not a large number of message keys inside this file, so localization should not be considered a major initiative.
+If you do perform localization of this file, please consider sharing your work with the community by logging a JIRA task and attaching your appropriately-named localized version of <code class="literal">messages.properties</code>.</p>
+<p>Spring Security relies on Spring&#8217;s localization support in order to actually lookup the appropriate message.
+In order for this to work, you have to make sure that the locale from the incoming request is stored in Spring&#8217;s <code class="literal">org.springframework.context.i18n.LocaleContextHolder</code>.
+Spring MVC&#8217;s <code class="literal">DispatcherServlet</code> does this for your application automatically, but since Spring Security&#8217;s filters are invoked before this, the <code class="literal">LocaleContextHolder</code> needs to be set up to contain the correct <code class="literal">Locale</code> before the filters are called.
+You can either do this in a filter yourself (which must come before the Spring Security filters in <code class="literal">web.xml</code>) or you can use Spring&#8217;s <code class="literal">RequestContextFilter</code>.
+Please refer to the Spring Framework documentation for further details on using localization with Spring.</p>
+<p>The "contacts" sample application is set up to use localized messages.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="core-services" href="#core-services"></a>8.2&nbsp;Core Services</h2></div></div></div>
+
+<p>Now that we have a high-level overview of the Spring Security architecture and its core classes, let&#8217;s take a closer look at one or two of the core interfaces and their implementations, in particular the <code class="literal">AuthenticationManager</code>, <code class="literal">UserDetailsService</code> and the <code class="literal">AccessDecisionManager</code>.
+These crop up regularly throughout the remainder of this document so it&#8217;s important you know how they are configured and how they operate.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="core-services-authentication-manager" href="#core-services-authentication-manager"></a>8.2.1&nbsp;The AuthenticationManager, ProviderManager and AuthenticationProvider</h3></div></div></div>
+
+<p>The <code class="literal">AuthenticationManager</code> is just an interface, so the implementation can be anything we choose, but how does it work in practice? What if we need to check multiple authentication databases or a combination of different authentication services such as a database and an LDAP server?</p>
+<p>The default implementation in Spring Security is called <code class="literal">ProviderManager</code> and rather than handling the authentication request itself, it delegates to a list of configured <code class="literal">AuthenticationProvider</code> s, each of which is queried in turn to see if it can perform the authentication.
+Each provider will either throw an exception or return a fully populated <code class="literal">Authentication</code> object.
+Remember our good friends, <code class="literal">UserDetails</code> and <code class="literal">UserDetailsService</code>? If not, head back to the previous chapter and refresh your memory.
+The most common approach to verifying an authentication request is to load the corresponding <code class="literal">UserDetails</code> and check the loaded password against the one that has been entered by the user.
+This is the approach used by the <code class="literal">DaoAuthenticationProvider</code> (see below).
+The loaded <code class="literal">UserDetails</code> object - and particularly the <code class="literal">GrantedAuthority</code> s it contains - will be used when building the fully populated <code class="literal">Authentication</code> object which is returned from a successful authentication and stored in the <code class="literal">SecurityContext</code>.</p>
+<p>If you are using the namespace, an instance of <code class="literal">ProviderManager</code> is created and maintained internally, and you add providers to it by using the namespace authentication provider elements (see <a class="link" href="ns-config.html#ns-auth-manager" title="7.6&nbsp;The Authentication Manager and the Namespace">the namespace chapter</a>).
+In this case, you should not declare a <code class="literal">ProviderManager</code> bean in your application context.
+However, if you are not using the namespace then you would declare it like so:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"authenticationManager"</span>
+        <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.authentication.ProviderManager"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;list&gt;</span>
+            <span class="hl-tag">&lt;ref</span> <span class="hl-attribute">local</span>=<span class="hl-value">"daoAuthenticationProvider"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;ref</span> <span class="hl-attribute">local</span>=<span class="hl-value">"anonymousAuthenticationProvider"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;ref</span> <span class="hl-attribute">local</span>=<span class="hl-value">"ldapAuthenticationProvider"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/list&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>In the above example we have three providers.
+They are tried in the order shown (which is implied by the use of a <code class="literal">List</code>), with each provider able to attempt authentication, or skip authentication by simply returning <code class="literal">null</code>.
+If all implementations return null, the <code class="literal">ProviderManager</code> will throw a <code class="literal">ProviderNotFoundException</code>.
+If you&#8217;re interested in learning more about chaining providers, please refer to the <code class="literal">ProviderManager</code> Javadoc.</p>
+<p>Authentication mechanisms such as a web form-login processing filter are injected with a reference to the <code class="literal">ProviderManager</code> and will call it to handle their authentication requests.
+The providers you require will sometimes be interchangeable with the authentication mechanisms, while at other times they will depend on a specific authentication mechanism.
+For example, <code class="literal">DaoAuthenticationProvider</code> and <code class="literal">LdapAuthenticationProvider</code> are compatible with any mechanism which submits a simple username/password authentication request and so will work with form-based logins or HTTP Basic authentication.
+On the other hand, some authentication mechanisms create an authentication request object which can only be interpreted by a single type of <code class="literal">AuthenticationProvider</code>.
+An example of this would be JA-SIG CAS, which uses the notion of a service ticket and so can therefore only be authenticated by a <code class="literal">CasAuthenticationProvider</code>.
+You needn&#8217;t be too concerned about this, because if you forget to register a suitable provider, you&#8217;ll simply receive a <code class="literal">ProviderNotFoundException</code> when an attempt to authenticate is made.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="core-services-erasing-credentials" href="#core-services-erasing-credentials"></a>Erasing Credentials on Successful Authentication</h4></div></div></div>
+
+<p>By default (from Spring Security 3.1 onwards) the <code class="literal">ProviderManager</code> will attempt to clear any sensitive credentials information from the <code class="literal">Authentication</code> object which is returned by a successful authentication request.
+This prevents information like passwords being retained longer than necessary.</p>
+<p>This may cause issues when you are using a cache of user objects, for example, to improve performance in a stateless application.
+If the <code class="literal">Authentication</code> contains a reference to an object in the cache (such as a <code class="literal">UserDetails</code> instance) and this has its credentials removed, then it will no longer be possible to authenticate against the cached value.
+You need to take this into account if you are using a cache.
+An obvious solution is to make a copy of the object first, either in the cache implementation or in the <code class="literal">AuthenticationProvider</code> which creates the returned <code class="literal">Authentication</code> object.
+Alternatively, you can disable the <code class="literal">eraseCredentialsAfterAuthentication</code> property on <code class="literal">ProviderManager</code>.
+See the Javadoc for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="core-services-dao-provider" href="#core-services-dao-provider"></a>DaoAuthenticationProvider</h4></div></div></div>
+
+<p>The simplest <code class="literal">AuthenticationProvider</code> implemented by Spring Security is <code class="literal">DaoAuthenticationProvider</code>, which is also one of the earliest supported by the framework.
+It leverages a <code class="literal">UserDetailsService</code> (as a DAO) in order to lookup the username, password and <code class="literal">GrantedAuthority</code> s.
+It authenticates the user simply by comparing the password submitted in a <code class="literal">UsernamePasswordAuthenticationToken</code> against the one loaded by the <code class="literal">UserDetailsService</code>.
+Configuring the provider is quite simple:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"daoAuthenticationProvider"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.authentication.dao.DaoAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"userDetailsService"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"inMemoryDaoImpl"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"passwordEncoder"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"passwordEncoder"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The <code class="literal">PasswordEncoder</code> is optional.
+A <code class="literal">PasswordEncoder</code> provides encoding and decoding of passwords presented in the <code class="literal">UserDetails</code> object that is returned from the configured <code class="literal">UserDetailsService</code>.
+This will be discussed in more detail <a class="link" href="overall-architecture.html#core-services-password-encoding" title="8.2.3&nbsp;Password Encoding">below</a>.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="userdetailsservice-implementations" href="#userdetailsservice-implementations"></a>8.2.2&nbsp;UserDetailsService Implementations</h3></div></div></div>
+
+<p>As mentioned in the earlier in this reference guide, most authentication providers take advantage of the <code class="literal">UserDetails</code> and <code class="literal">UserDetailsService</code> interfaces.
+Recall that the contract for <code class="literal">UserDetailsService</code> is a single method:</p>
+<pre class="programlisting">UserDetails loadUserByUsername(String username) <span class="hl-keyword">throws</span> UsernameNotFoundException;</pre>
+<p>The returned <code class="literal">UserDetails</code> is an interface that provides getters that guarantee non-null provision of authentication information such as the username, password, granted authorities and whether the user account is enabled or disabled.
+Most authentication providers will use a <code class="literal">UserDetailsService</code>, even if the username and password are not actually used as part of the authentication decision.
+They may use the returned <code class="literal">UserDetails</code> object just for its <code class="literal">GrantedAuthority</code> information, because some other system (like LDAP or X.509 or CAS etc) has undertaken the responsibility of actually validating the credentials.</p>
+<p>Given <code class="literal">UserDetailsService</code> is so simple to implement, it should be easy for users to retrieve authentication information using a persistence strategy of their choice.
+Having said that, Spring Security does include a couple of useful base implementations, which we&#8217;ll look at below.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="core-services-in-memory-service" href="#core-services-in-memory-service"></a>In-Memory Authentication</h4></div></div></div>
+
+<p>Is easy to use create a custom <code class="literal">UserDetailsService</code> implementation that extracts information from a persistence engine of choice, but many applications do not require such complexity.
+This is particularly true if you&#8217;re building a prototype application or just starting integrating Spring Security, when you don&#8217;t really want to spend time configuring databases or writing <code class="literal">UserDetailsService</code> implementations.
+For this sort of situation, a simple option is to use the <code class="literal">user-service</code> element from the security <a class="link" href="ns-config.html#ns-minimal" title="7.2.2&nbsp;A Minimal <http&gt; Configuration">namespace</a>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;user-service</span> <span class="hl-attribute">id</span>=<span class="hl-value">"userDetailsService"</span><span class="hl-tag">&gt;</span>
+<span class="hl-comment">&lt;!-- Password is prefixed with {noop} to indicate to DelegatingPasswordEncoder that
+NoOpPasswordEncoder should be used. This is not safe for production, but makes reading
+in samples easier. Normally passwords should be hashed using BCrypt --&gt;</span>
+<span class="hl-tag">&lt;user</span> <span class="hl-attribute">name</span>=<span class="hl-value">"jimi"</span> <span class="hl-attribute">password</span>=<span class="hl-value">"{noop}jimispassword"</span> <span class="hl-attribute">authorities</span>=<span class="hl-value">"ROLE_USER, ROLE_ADMIN"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;user</span> <span class="hl-attribute">name</span>=<span class="hl-value">"bob"</span> <span class="hl-attribute">password</span>=<span class="hl-value">"{noop}bobspassword"</span> <span class="hl-attribute">authorities</span>=<span class="hl-value">"ROLE_USER"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/user-service&gt;</span></pre>
+<p>This also supports the use of an external properties file:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;user-service</span> <span class="hl-attribute">id</span>=<span class="hl-value">"userDetailsService"</span> <span class="hl-attribute">properties</span>=<span class="hl-value">"users.properties"</span><span class="hl-tag">/&gt;</span></pre>
+<p>The properties file should contain entries in the form</p>
+<pre class="programlisting">username=password,grantedAuthority[,grantedAuthority][,enabled|disabled]</pre>
+<p>For example</p>
+<pre class="programlisting">jimi=jimispassword,ROLE_USER,ROLE_ADMIN,enabled
+bob=bobspassword,ROLE_USER,enabled</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="core-services-jdbc-user-service" href="#core-services-jdbc-user-service"></a>JdbcDaoImpl</h4></div></div></div>
+
+<p>Spring Security also includes a <code class="literal">UserDetailsService</code> that can obtain authentication information from a JDBC data source.
+Internally Spring JDBC is used, so it avoids the complexity of a fully-featured object relational mapper (ORM) just to store user details.
+If your application does use an ORM tool, you might prefer to write a custom <code class="literal">UserDetailsService</code> to reuse the mapping files you&#8217;ve probably already created.
+Returning to <code class="literal">JdbcDaoImpl</code>, an example configuration is shown below:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"dataSource"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.jdbc.datasource.DriverManagerDataSource"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"driverClassName"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"org.hsqldb.jdbcDriver"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"url"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"jdbc:hsqldb:hsql://localhost:9001"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"username"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"sa"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"password"</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"userDetailsService"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"dataSource"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"dataSource"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>You can use different relational database management systems by modifying the <code class="literal">DriverManagerDataSource</code> shown above.
+You can also use a global data source obtained from JNDI, as with any other Spring configuration.</p>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="authority-groups" href="#authority-groups"></a>Authority Groups</h5></div></div></div>
+
+<p>By default, <code class="literal">JdbcDaoImpl</code> loads the authorities for a single user with the assumption that the authorities are mapped directly to users (see the <a class="link" href="appendix.html#appendix-schema" title="15.1&nbsp;Security Database Schema">database schema appendix</a>).
+An alternative approach is to partition the authorities into groups and assign groups to the user.
+Some people prefer this approach as a means of administering user rights.
+See the <code class="literal">JdbcDaoImpl</code> Javadoc for more information on how to enable the use of group authorities.
+The group schema is also included in the appendix.</p>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="core-services-password-encoding" href="#core-services-password-encoding"></a>8.2.3&nbsp;Password Encoding</h3></div></div></div>
+
+<p>Spring Security&#8217;s <code class="literal">PasswordEncoder</code> interface is used to perform a one way transformation of a password to allow the password to be stored securely.
+Given <code class="literal">PasswordEncoder</code> is a one way transformation, it is not intended when the password transformation needs to be two way (i.e. storing credentials used to authenticate to a database).
+Typically <code class="literal">PasswordEncoder</code> is used for storing a password that needs to be compared to a user provided password at the time of authentication.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="pe-history" href="#pe-history"></a>Password History</h4></div></div></div>
+
+<p>Throughout the years the standard mechanism for storing passwords has evolved.
+In the beginning passwords were stored in plain text.
+The passwords were assumed to be safe because the data store the passwords were saved in required credentials to access it.
+However, malicious users were able to find ways to get large "data dumps" of usernames and passwords using attacks like SQL Injection.
+As more and more user credentials became public security experts realized we needed to do more to protect users passwords.</p>
+<p>Developers were then encouraged to store passwords after running them through a one way hash such as SHA-256.
+When a user tried to authenticate, the hashed password would be compared to the hash of the password that they typed.
+This meant that the system only needed to store the one way hash of the password.
+If a breach occurred, then only the one way hashes of the passwords were exposed.
+Since the hashes were one way and it was computationally difficult to guess the passwords given the hash, it would not be worth the effort to figure out each password in the system.
+To defeat this new system malicious users decided to create lookup tables known as <a class="ulink" href="https://en.wikipedia.org/wiki/Rainbow_table" target="_top">Rainbow Tables</a>.
+Rather than doing the work of guessing each password every time, they computed the password once and stored it in a lookup table.</p>
+<p>To mitigate the effectiveness of Rainbow Tables, developers were encouraged to use salted passwords.
+Instead of using just the password as input to the hash function, random bytes (known as salt) would be generated for every users' password.
+The salt and the user&#8217;s password would be ran through the hash function which produced a unique hash.
+The salt would be stored alongside the user&#8217;s password in clear text.
+Then when a user tried to authenticate, the hashed password would be compared to the hash of the stored salt and the password that they typed.
+The unique salt meant that Rainbow Tables were no longer effective because the hash was different for every salt and password combination.</p>
+<p>In modern times we realize that cryptographic hashes (like SHA-256) are no longer secure.
+The reason is that with modern hardware we can perform billions of hash calculations a second.
+This means that we can crack each password individually with ease.</p>
+<p>Developers are now encouraged to leverage adaptive one-way functions to store a password.
+Validation of passwords with adaptive one-way functions are intentionally resource (i.e. CPU, memory, etc) intensive.
+An adaptive one-way function allows configuring a "work factor" which can grow as hardware gets better.
+It is recommended that the "work factor" be tuned to take about 1 second to verify a password on your system.
+This trade off is to make it difficult for attackers to crack the password, but not so costly it puts excessive burden on your own system.
+Spring Security has attempted to provide a good starting point for the "work factor", but users are encouraged to customize the "work factor" for their own system since the performance will vary drastically from system to system.
+Examples of adaptive one-way functions that should be used include
+<a class="ulink" href="https://en.wikipedia.org/wiki/Bcrypt" target="_top">bcrypt</a>,
+<a class="ulink" href="https://en.wikipedia.org/wiki/PBKDF2" target="_top">PBKDF2</a>,
+<a class="ulink" href="https://en.wikipedia.org/wiki/Scrypt" target="_top">scrypt</a>,
+and <a class="ulink" href="https://en.wikipedia.org/wiki/Argon2" target="_top">Argon2</a>.</p>
+<p>Because adaptive one-way functions are intentionally resource intensive, validating a username and password for every request will degrade performance of an application significantly.
+There is nothing Spring Security (or any other library) can do to speed up the validation of the password since security is gained by making the validation resource intensive.
+Users are encouraged to exchange the long term credentials (i.e. username and password) for a short term credential (i.e. session, OAuth Token, etc).
+The short term credential can be validated quickly without any loss in security.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="pe-dpe" href="#pe-dpe"></a>DelegatingPasswordEncoder</h4></div></div></div>
+
+<p>Prior to Spring Security 5.0 the default <code class="literal">PasswordEncoder</code> was <code class="literal">NoOpPasswordEncoder</code> which required plain text passwords.
+Based upon the <a class="link" href="">Password History</a> section you might expect that the default <code class="literal">PasswordEncoder</code> is now something like <code class="literal">BCryptPasswordEncoder</code>.
+However, this ignores three real world problems:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+There are many applications using old password encodings that cannot easily migrate
+</li><li class="listitem">
+The best practice for password storage will change again.
+</li><li class="listitem">
+As a framework Spring Security cannot make breaking changes frequently
+</li></ul></div>
+<p>Instead Spring Security introduces <code class="literal">DelegatingPasswordEncoder</code> which solves all of the problems by:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Ensuring that passwords are encoded using the current password storage recommendations
+</li><li class="listitem">
+Allowing for validating passwords in modern and legacy formats
+</li><li class="listitem">
+Allowing for upgrading the encoding in the future
+</li></ul></div>
+<p>You can easily construct an instance of <code class="literal">DelegatingPasswordEncoder</code>  using <code class="literal">PasswordEncoderFactories</code>.</p>
+<pre class="programlisting">PasswordEncoder passwordEncoder =
+    PasswordEncoderFactories.createDelegatingPasswordEncoder();</pre>
+<p>Alternatively, you may create your own custom instance. For example:</p>
+<pre class="programlisting">String idForEncode = <span class="hl-string">"bcrypt"</span>;
+Map encoders = <span class="hl-keyword">new</span> HashMap&lt;&gt;();
+encoders.put(idForEncode, <span class="hl-keyword">new</span> BCryptPasswordEncoder());
+encoders.put(<span class="hl-string">"noop"</span>, NoOpPasswordEncoder.getInstance());
+encoders.put(<span class="hl-string">"pbkdf2"</span>, <span class="hl-keyword">new</span> Pbkdf2PasswordEncoder());
+encoders.put(<span class="hl-string">"scrypt"</span>, <span class="hl-keyword">new</span> SCryptPasswordEncoder());
+encoders.put(<span class="hl-string">"sha256"</span>, <span class="hl-keyword">new</span> StandardPasswordEncoder());
+
+PasswordEncoder passwordEncoder =
+    <span class="hl-keyword">new</span> DelegatingPasswordEncoder(idForEncode, encoders);</pre>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="pe-dpe-format" href="#pe-dpe-format"></a>Password Storage Format</h5></div></div></div>
+
+<p>The general format for a password is:</p>
+<pre class="programlisting">{id}encodedPassword</pre>
+<p>Such that <code class="literal">id</code> is an identifier used to look up which <code class="literal">PasswordEncoder</code> should be used and <code class="literal">encodedPassword</code> is the original encoded password for the selected <code class="literal">PasswordEncoder</code>.
+The <code class="literal">id</code> must be at the beginning of the password, start with <code class="literal">{</code> and end with <code class="literal">}</code>.
+If the <code class="literal">id</code> cannot be found, the <code class="literal">id</code> will be null.
+For example, the following might be a list of passwords encoded using different <code class="literal">id</code>.
+All of the original passwords are "password".</p>
+<pre class="programlisting">{bcrypt}$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG <a name="CO11-1" href="#CO11-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+{noop}password <a name="CO11-2" href="#CO11-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+{pbkdf2}5d923b44a6d129f3ddf3e3c8d29412723dcbde72445e8ef6bf3b508fbf17fa4ed4d6b99ca763d8dc <a name="CO11-3" href="#CO11-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+{scrypt}$e0801$8bWJaSu2IKSn9Z9kM+TPXfOc/9bdYSrN1oD9qfVThWEwdRTnO7re7Ei+fUZRJ68k9lTyuTeUp4of4g24hHnazw==$OAOec05+bXxvuu/1qZ6NUR+xQYvYv7BeL1QxwRpY5Pc=  <a name="CO11-4" href="#CO11-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+{sha256}97cde38028ad898ebc02e690819fa220e88c62e0699403e94fff291cfffaf8410849f27605abcbc0 <a name="CO11-5" href="#CO11-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO11-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The first password would have a <code class="literal">PasswordEncoder</code> id of <code class="literal">bcrypt</code> and encodedPassword of <code class="literal">$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG</code>.
+When matching it would delegate to <code class="literal">BCryptPasswordEncoder</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO11-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The second password would have a <code class="literal">PasswordEncoder</code> id of <code class="literal">noop</code> and encodedPassword of <code class="literal">password</code>.
+When matching it would delegate to <code class="literal">NoOpPasswordEncoder</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO11-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The third password would have a <code class="literal">PasswordEncoder</code> id of <code class="literal">pbkdf2</code> and encodedPassword of <code class="literal">5d923b44a6d129f3ddf3e3c8d29412723dcbde72445e8ef6bf3b508fbf17fa4ed4d6b99ca763d8dc</code>.
+When matching it would delegate to <code class="literal">Pbkdf2PasswordEncoder</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO11-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The fourth password would have a <code class="literal">PasswordEncoder</code> id of <code class="literal">scrypt</code> and encodedPassword of <code class="literal">$e0801$8bWJaSu2IKSn9Z9kM+TPXfOc/9bdYSrN1oD9qfVThWEwdRTnO7re7Ei+fUZRJ68k9lTyuTeUp4of4g24hHnazw==$OAOec05+bXxvuu/1qZ6NUR+xQYvYv7BeL1QxwRpY5Pc=</code>
+When matching it would delegate to <code class="literal">SCryptPasswordEncoder</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO11-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The final password would have a <code class="literal">PasswordEncoder</code> id of <code class="literal">sha256</code> and encodedPassword of <code class="literal">97cde38028ad898ebc02e690819fa220e88c62e0699403e94fff291cfffaf8410849f27605abcbc0</code>.
+When matching it would delegate to <code class="literal">StandardPasswordEncoder</code></p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Some users might be concerned that the storage format is provided for a potential hacker.
+This is not a concern because the storage of the password does not rely on the algorithm being a secret.
+Additionally, most formats are easy for an attacker to figure out without the prefix.
+For example, BCrypt passwords often start with <code class="literal">$2a$</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="password-encoding" href="#password-encoding"></a>Password Encoding</h5></div></div></div>
+
+<p>The <code class="literal">idForEncode</code> passed into the constructor determines which <code class="literal">PasswordEncoder</code> will be used for encoding passwords.
+In the <code class="literal">DelegatingPasswordEncoder</code> we constructed above, that means that the result of encoding <code class="literal">password</code> would be delegated to <code class="literal">BCryptPasswordEncoder</code> and be prefixed with <code class="literal">{bcrypt}</code>.
+The end result would look like:</p>
+<pre class="programlisting">{bcrypt}$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="password-matching" href="#password-matching"></a>Password Matching</h5></div></div></div>
+
+<p>Matching is done based upon the <code class="literal">{id}</code> and the mapping of the <code class="literal">id</code> to the <code class="literal">PasswordEncoder</code> provided in the constructor.
+Our example in <a class="xref" href="overall-architecture.html#pe-dpe-format" title="Password Storage Format">the section called &#8220;Password Storage Format&#8221;</a> provides a working example of how this is done.
+By default, the result of invoking <code class="literal">matches(CharSequence, String)</code> with a password and an <code class="literal">id</code> that is not mapped (including a null id) will result in an <code class="literal">IllegalArgumentException</code>.
+This behavior can be customized using <code class="literal">DelegatingPasswordEncoder.setDefaultPasswordEncoderForMatches(PasswordEncoder)</code>.</p>
+<p>By using the <code class="literal">id</code> we can match on any password encoding, but encode passwords using the most modern password encoding.
+This is important, because unlike encryption, password hashes are designed so that there is no simple way to recover the plaintext.
+Since there is no way to recover the plaintext, it makes it difficult to migrate the passwords.
+While it is simple for users to migrate <code class="literal">NoOpPasswordEncoder</code>, we chose to include it by default to make it simple for the getting started experience.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="getting-started-experience" href="#getting-started-experience"></a>Getting Started Experience</h5></div></div></div>
+
+<p>If you are putting together a demo or a sample, it is a bit cumbersome to take time to hash the passwords of your users.
+There are convenience mechanisms to make this easier, but this is still not intended for production.</p>
+<pre class="programlisting">User user = User.withDefaultPasswordEncoder()
+  .username(<span class="hl-string">"user"</span>)
+  .password(<span class="hl-string">"password"</span>)
+  .roles(<span class="hl-string">"user"</span>)
+  .build();
+System.out.println(user.getPassword());
+<span class="hl-comment">// {bcrypt}$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG</span></pre>
+<p>If you are creating multiple users, you can also reuse the builder.</p>
+<pre class="programlisting">UserBuilder users = User.withDefaultPasswordEncoder();
+User user = users
+  .username(<span class="hl-string">"user"</span>)
+  .password(<span class="hl-string">"password"</span>)
+  .roles(<span class="hl-string">"USER"</span>)
+  .build();
+User admin = users
+  .username(<span class="hl-string">"admin"</span>)
+  .password(<span class="hl-string">"password"</span>)
+  .roles(<span class="hl-string">"USER"</span>,<span class="hl-string">"ADMIN"</span>)
+  .build();</pre>
+<p>This does hash the password that is stored, but the passwords are still exposed in memory and in the compiled source code.
+Therefore, it is still not considered secure for a production environment.
+For production, you should hash your passwords externally.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="troubleshooting" href="#troubleshooting"></a>Troubleshooting</h5></div></div></div>
+
+<p>The following error occurs when one of the passwords that are stored has no id as described in <a class="xref" href="overall-architecture.html#pe-dpe-format" title="Password Storage Format">the section called &#8220;Password Storage Format&#8221;</a>.</p>
+<pre class="screen">java.lang.IllegalArgumentException: There is no PasswordEncoder mapped for the id "null"
+    at org.springframework.security.crypto.password.DelegatingPasswordEncoder$UnmappedIdPasswordEncoder.matches(DelegatingPasswordEncoder.java:233)
+    at org.springframework.security.crypto.password.DelegatingPasswordEncoder.matches(DelegatingPasswordEncoder.java:196)</pre>
+<p>The easiest way to resolve the error is to switch to explicitly provide the <code class="literal">PasswordEncoder</code> that you passwords are encoded with.
+The easiest way to resolve it is to figure out how your passwords are currently being stored and explicitly provide the correct <code class="literal">PasswordEncoder</code>.
+If you are migrating from Spring Security 4.2.x you can revert to the previous behavior by exposing a <code class="literal">NoOpPasswordEncoder</code> bean.
+For example, if you are using Java Configuration, you can create a configuration that looks like:</p>
+<div class="warning" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Warning"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="images/warning.png"></td><th align="left">Warning</th></tr><tr><td align="left" valign="top">
+<p>Reverting to <code class="literal">NoOpPasswordEncoder</code> is not considered to be secure.
+You should instead migrate to using <code class="literal">DelegatingPasswordEncoder</code> to support secure password encoding.</p>
+</td></tr></table></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">static</span> NoOpPasswordEncoder passwordEncoder() {
+    <span class="hl-keyword">return</span> NoOpPasswordEncoder.getInstance();
+}</pre>
+<p>if you are using XML configuration, you can expose a <code class="literal">PasswordEncoder</code> with the id <code class="literal">passwordEncoder</code>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;b:bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"passwordEncoder"</span>
+        <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.crypto.password.NoOpPasswordEncoder"</span> <span class="hl-attribute">factory-method</span>=<span class="hl-value">"getInstance"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Alternatively, you can prefix all of your passwords with the correct id and continue to use <code class="literal">DelegatingPasswordEncoder</code>.
+For example, if you are using BCrypt, you would migrate your password from something like:</p>
+<pre class="screen">$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG</pre>
+<p>to</p>
+<pre class="screen">{bcrypt}$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG</pre>
+<p>For a complete listing of the mappings refer to the Javadoc on
+<a class="ulink" href="https://docs.spring.io/spring-security/site/docs/5.0.x/api/org/springframework/security/crypto/factory/PasswordEncoderFactories.html" target="_top">PasswordEncoderFactories</a>.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="pe-bcpe" href="#pe-bcpe"></a>BCryptPasswordEncoder</h4></div></div></div>
+
+<p>The <code class="literal">BCryptPasswordEncoder</code> implementation uses the widely supported <a class="ulink" href="https://en.wikipedia.org/wiki/Bcrypt" target="_top">bcrypt</a> algorithm to hash the passwords.
+In order to make it more resistent to password cracking, bcrypt is deliberately slow.
+Like other adaptive one-way functions, it should be tuned to take about 1 second to verify a password on your system.</p>
+<pre class="programlisting"><span class="hl-comment">// Create an encoder with strength 16</span>
+BCryptPasswordEncoder encoder = <span class="hl-keyword">new</span> BCryptPasswordEncoder(<span class="hl-number">16</span>);
+String result = encoder.encode(<span class="hl-string">"myPassword"</span>);
+assertTrue(encoder.matches(<span class="hl-string">"myPassword"</span>, result));</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="pe-pbkdf2pe" href="#pe-pbkdf2pe"></a>Pbkdf2PasswordEncoder</h4></div></div></div>
+
+<p>The <code class="literal">Pbkdf2PasswordEncoder</code> implementation uses the <a class="ulink" href="https://en.wikipedia.org/wiki/PBKDF2" target="_top">PBKDF2</a> algorithm to hash the passwords.
+In order to defeat password cracking PBKDF2 is a deliberately slow algorithm.
+Like other adaptive one-way functions, it should be tuned to take about 1 second to verify a password on your system.
+This algorithm is a good choice when FIPS certification is required.</p>
+<pre class="programlisting"><span class="hl-comment">// Create an encoder with all the defaults</span>
+Pbkdf2PasswordEncoder encoder = <span class="hl-keyword">new</span> Pbkdf2PasswordEncoder();
+String result = encoder.encode(<span class="hl-string">"myPassword"</span>);
+assertTrue(encoder.matches(<span class="hl-string">"myPassword"</span>, result));</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="pe-scpe" href="#pe-scpe"></a>SCryptPasswordEncoder</h4></div></div></div>
+
+<p>The <code class="literal">SCryptPasswordEncoder</code> implementation uses <a class="ulink" href="https://en.wikipedia.org/wiki/Scrypt" target="_top">scrypt</a> algorithm to hash the passwords.
+In order to defeat password cracking on custom hardware scrypt is a deliberately slow algorithm that requires large amounts of memory.
+Like other adaptive one-way functions, it should be tuned to take about 1 second to verify a password on your system.</p>
+<pre class="programlisting"><span class="hl-comment">// Create an encoder with all the defaults</span>
+SCryptPasswordEncoder encoder = <span class="hl-keyword">new</span> SCryptPasswordEncoder();
+String result = encoder.encode(<span class="hl-string">"myPassword"</span>);
+assertTrue(encoder.matches(<span class="hl-string">"myPassword"</span>, result));</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="other-passwordencoders" href="#other-passwordencoders"></a>Other PasswordEncoders</h4></div></div></div>
+
+<p>There are a significant number of other <code class="literal">PasswordEncoder</code> implementations that exist entirely for backward compatibility.
+They are all deprecated to indicate that they are no longer considered secure.
+However, there are no plans to remove them since it is difficult to migrate existing legacy systems.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jackson" href="#jackson"></a>8.2.4&nbsp;Jackson Support</h3></div></div></div>
+
+<p>Spring Security has added Jackson Support for persisting Spring Security related classes.
+This can improve the performance of serializing Spring Security related classes when working with distributed sessions (i.e. session replication, Spring Session, etc).</p>
+<p>To use it, register the <code class="literal">SecurityJackson2Modules.getModules(ClassLoader)</code> as <a class="ulink" href="http://wiki.fasterxml.com/JacksonFeatureModules" target="_top">Jackson Modules</a>.</p>
+<pre class="programlisting">ObjectMapper mapper = <span class="hl-keyword">new</span> ObjectMapper();
+ClassLoader loader = getClass().getClassLoader();
+List&lt;Module&gt; modules = SecurityJackson2Modules.getModules(loader);
+mapper.registerModules(modules);
+
+<span class="hl-comment">// ... use ObjectMapper as normally ...</span>
+SecurityContext context = <span class="hl-keyword">new</span> SecurityContextImpl();
+<span class="hl-comment">// ...</span>
+String json = mapper.writeValueAsString(context);</pre>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ns-config.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="servlet-applications.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="test.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">7.&nbsp;Security Namespace Configuration&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;9.&nbsp;Testing</td></tr></table></div></body></html>

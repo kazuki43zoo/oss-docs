@@ -1,0 +1,134 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>23.&nbsp;Reactive Test Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="reactive-applications.html" title="Part&nbsp;III.&nbsp;Reactive Applications"><link rel="prev" href="jc-erms.html" title="22.&nbsp;EnableReactiveMethodSecurity"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">23.&nbsp;Reactive Test Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="jc-erms.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;III.&nbsp;Reactive Applications</th><td width="20%" align="right">&nbsp;</td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="test-webflux" href="#test-webflux"></a>23.&nbsp;Reactive Test Support</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="test-erms" href="#test-erms"></a>23.1&nbsp;Testing Reactive Method Security</h2></div></div></div>
+
+<p>For example, we can test our example from <a class="xref" href="jc-erms.html" title="22.&nbsp;EnableReactiveMethodSecurity">Chapter&nbsp;22, <i>EnableReactiveMethodSecurity</i></a> using the same setup and annotations we did in <a class="xref" href="test.html#test-method" title="9.1&nbsp;Testing Method Security">Section&nbsp;9.1, &#8220;Testing Method Security&#8221;</a>.
+Here is a minimal sample of what we can do:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@RunWith(SpringRunner.class)</span></em>
+<em><span class="hl-annotation" style="color: gray">@ContextConfiguration(classes = HelloWebfluxMethodApplication.class)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> HelloWorldMessageServiceTests {
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    HelloWorldMessageService messages;
+
+    <em><span class="hl-annotation" style="color: gray">@Test</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> messagesWhenNotAuthenticatedThenDenied() {
+        StepVerifier.create(<span class="hl-keyword">this</span>.messages.findMessage())
+            .expectError(AccessDeniedException.<span class="hl-keyword">class</span>)
+            .verify();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Test</span></em>
+    <em><span class="hl-annotation" style="color: gray">@WithMockUser</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> messagesWhenUserThenDenied() {
+        StepVerifier.create(<span class="hl-keyword">this</span>.messages.findMessage())
+            .expectError(AccessDeniedException.<span class="hl-keyword">class</span>)
+            .verify();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Test</span></em>
+    <em><span class="hl-annotation" style="color: gray">@WithMockUser(roles = "ADMIN")</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> messagesWhenAdminThenOk() {
+        StepVerifier.create(<span class="hl-keyword">this</span>.messages.findMessage())
+            .expectNext(<span class="hl-string">"Hello World!"</span>)
+            .verifyComplete();
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="test-webtestclient" href="#test-webtestclient"></a>23.2&nbsp;WebTestClientSupport</h2></div></div></div>
+
+<p>Spring Security provides integration with <code class="literal">WebTestClient</code>.
+The basic setup looks like this:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@RunWith(SpringRunner.class)</span></em>
+<em><span class="hl-annotation" style="color: gray">@ContextConfiguration(classes = HelloWebfluxMethodApplication.class)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> HelloWebfluxMethodApplicationTests {
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    ApplicationContext context;
+
+    WebTestClient rest;
+
+    <em><span class="hl-annotation" style="color: gray">@Before</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> setup() {
+        <span class="hl-keyword">this</span>.rest = WebTestClient
+            .bindToApplicationContext(<span class="hl-keyword">this</span>.context)
+            <span class="hl-comment">// add Spring Security test Support</span>
+            .apply(springSecurity())
+            .configureClient()
+            .filter(basicAuthentication())
+            .build();
+    }
+    <span class="hl-comment">// ...</span>
+}</pre>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="authentication" href="#authentication"></a>23.2.1&nbsp;Authentication</h3></div></div></div>
+
+<p>After applying the Spring Security support to <code class="literal">WebTestClient</code> we can use either annotations or <code class="literal">mutateWith</code> support.
+For example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> messageWhenNotAuthenticated() <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-keyword">this</span>.rest
+        .get()
+        .uri(<span class="hl-string">"/message"</span>)
+        .exchange()
+        .expectStatus().isUnauthorized();
+}
+
+<span class="hl-comment">// --- WithMockUser ---</span>
+
+<em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<em><span class="hl-annotation" style="color: gray">@WithMockUser</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> messageWhenWithMockUserThenForbidden() <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-keyword">this</span>.rest
+        .get()
+        .uri(<span class="hl-string">"/message"</span>)
+        .exchange()
+        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+}
+
+<em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<em><span class="hl-annotation" style="color: gray">@WithMockUser(roles = "ADMIN")</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> messageWhenWithMockAdminThenOk() <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-keyword">this</span>.rest
+        .get()
+        .uri(<span class="hl-string">"/message"</span>)
+        .exchange()
+        .expectStatus().isOk()
+        .expectBody(String.<span class="hl-keyword">class</span>).isEqualTo(<span class="hl-string">"Hello World!"</span>);
+}
+
+<span class="hl-comment">// --- mutateWith mockUser ---</span>
+
+<em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> messageWhenMutateWithMockUserThenForbidden() <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-keyword">this</span>.rest
+        .mutateWith(mockUser())
+        .get()
+        .uri(<span class="hl-string">"/message"</span>)
+        .exchange()
+        .expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+}
+
+<em><span class="hl-annotation" style="color: gray">@Test</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> messageWhenMutateWithMockAdminThenOk() <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-keyword">this</span>.rest
+        .mutateWith(mockUser().roles(<span class="hl-string">"ADMIN"</span>))
+        .get()
+        .uri(<span class="hl-string">"/message"</span>)
+        .exchange()
+        .expectStatus().isOk()
+        .expectBody(String.<span class="hl-keyword">class</span>).isEqualTo(<span class="hl-string">"Hello World!"</span>);
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="csrf-support" href="#csrf-support"></a>23.2.2&nbsp;CSRF Support</h3></div></div></div>
+
+<p>Spring Security also provides support for CSRF testing with <code class="literal">WebTestClient</code>.
+For example:</p>
+<pre class="programlisting"><span class="hl-keyword">this</span>.rest
+    <span class="hl-comment">// provide a valid CSRF token</span>
+    .mutateWith(csrf())
+    .post()
+    .uri(<span class="hl-string">"/login"</span>)
+    ...</pre>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="jc-erms.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="reactive-applications.html">Up</a></td><td width="40%" align="right">&nbsp;</td></tr><tr><td width="40%" align="left" valign="top">22.&nbsp;EnableReactiveMethodSecurity&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;</td></tr></table></div></body></html>

@@ -1,0 +1,1813 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>6.&nbsp;Java Configuration</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="servlet-applications.html" title="Part&nbsp;II.&nbsp;Servlet Applications"><link rel="prev" href="servlet-applications.html" title="Part&nbsp;II.&nbsp;Servlet Applications"><link rel="next" href="ns-config.html" title="7.&nbsp;Security Namespace Configuration"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">6.&nbsp;Java Configuration</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="servlet-applications.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;II.&nbsp;Servlet Applications</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ns-config.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="jc" href="#jc"></a>6.&nbsp;Java Configuration</h2></div></div></div>
+
+<p>General support for <a class="ulink" href="http://docs.spring.io/spring/docs/3.1.x/spring-framework-reference/html/beans.html#beans-java" target="_top">Java Configuration</a> was added to Spring Framework in Spring 3.1.
+Since Spring Security 3.2 there has been Spring Security Java Configuration support which enables users to easily configure Spring Security without the use of any XML.</p>
+<p>If you are familiar with the <a class="xref" href="ns-config.html" title="7.&nbsp;Security Namespace Configuration">Chapter&nbsp;7, <i>Security Namespace Configuration</i></a> then you should find quite a few similarities between it and the Security Java Configuration support.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Spring Security provides <a class="ulink" href="https://github.com/spring-projects/spring-security/tree/master/samples/javaconfig" target="_top">lots of sample applications</a> which demonstrate the use of Spring Security Java Configuration.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="hello-web-security-java-configuration" href="#hello-web-security-java-configuration"></a>6.1&nbsp;Hello Web Security Java Configuration</h2></div></div></div>
+
+<p>The first step is to create our Spring Security Java Configuration.
+The configuration creates a Servlet Filter known as the <code class="literal">springSecurityFilterChain</code> which is responsible for all the security (protecting the application URLs, validating submitted username and passwords, redirecting to the log in form, etc) within your application.
+You can find the most basic example of a Spring Security Java Configuration below:</p>
+<a name="jc-hello-wsca" href="#jc-hello-wsca"></a><pre class="programlisting"><span class="hl-keyword">import</span> org.springframework.beans.factory.annotation.Autowired;
+
+<span class="hl-keyword">import</span> org.springframework.context.annotation.*;
+<span class="hl-keyword">import</span> org.springframework.security.config.annotation.authentication.builders.*;
+<span class="hl-keyword">import</span> org.springframework.security.config.annotation.web.configuration.*;
+
+<em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> WebSecurityConfig <span class="hl-keyword">implements</span> WebMvcConfigurer {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> UserDetailsService userDetailsService() <span class="hl-keyword">throws</span> Exception {
+        InMemoryUserDetailsManager manager = <span class="hl-keyword">new</span> InMemoryUserDetailsManager();
+        manager.createUser(User.withDefaultPasswordEncoder().username(<span class="hl-string">"user"</span>).password(<span class="hl-string">"password"</span>).roles(<span class="hl-string">"USER"</span>).build());
+        <span class="hl-keyword">return</span> manager;
+    }
+}</pre>
+<p>There really isn&#8217;t much to this configuration, but it does a lot.
+You can find a summary of the features below:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Require authentication to every URL in your application
+</li><li class="listitem">
+Generate a login form for you
+</li><li class="listitem">
+Allow the user with the <span class="strong"><strong>Username</strong></span> <span class="emphasis"><em>user</em></span> and the <span class="strong"><strong>Password</strong></span> <span class="emphasis"><em>password</em></span> to authenticate with form based authentication
+</li><li class="listitem">
+Allow the user to logout
+</li><li class="listitem">
+<a class="ulink" href="http://en.wikipedia.org/wiki/Cross-site_request_forgery" target="_top">CSRF attack</a> prevention
+</li><li class="listitem">
+<a class="ulink" href="http://en.wikipedia.org/wiki/Session_fixation" target="_top">Session Fixation</a> protection
+</li><li class="listitem">
+<p class="simpara">Security Header integration</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+<a class="ulink" href="http://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security" target="_top">HTTP Strict Transport Security</a> for secure requests
+</li><li class="listitem">
+<a class="ulink" href="http://msdn.microsoft.com/en-us/library/ie/gg622941(v=vs.85).aspx" target="_top">X-Content-Type-Options</a> integration
+</li><li class="listitem">
+Cache Control (can be overridden later by your application to allow caching of your static resources)
+</li><li class="listitem">
+<a class="ulink" href="http://msdn.microsoft.com/en-us/library/dd565647(v=vs.85).aspx" target="_top">X-XSS-Protection</a> integration
+</li><li class="listitem">
+X-Frame-Options integration to help prevent <a class="ulink" href="http://en.wikipedia.org/wiki/Clickjacking" target="_top">Clickjacking</a>
+</li></ul></div>
+</li><li class="listitem">
+<p class="simpara">Integrate with the following Servlet API methods</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+<a class="ulink" href="http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getRemoteUser()" target="_top">HttpServletRequest#getRemoteUser()</a>
+</li><li class="listitem">
+<a class="ulink" href="http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#getUserPrincipal()" target="_top">HttpServletRequest.html#getUserPrincipal()</a>
+</li><li class="listitem">
+<a class="ulink" href="http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#isUserInRole(java.lang.String)" target="_top">HttpServletRequest.html#isUserInRole(java.lang.String)</a>
+</li><li class="listitem">
+<a class="ulink" href="http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#login(java.lang.String,%20java.lang.String)" target="_top">HttpServletRequest.html#login(java.lang.String, java.lang.String)</a>
+</li><li class="listitem">
+<a class="ulink" href="http://docs.oracle.com/javaee/6/api/javax/servlet/http/HttpServletRequest.html#logout()" target="_top">HttpServletRequest.html#logout()</a>
+</li></ul></div>
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="abstractsecuritywebapplicationinitializer" href="#abstractsecuritywebapplicationinitializer"></a>6.1.1&nbsp;AbstractSecurityWebApplicationInitializer</h3></div></div></div>
+
+<p>The next step is to register the <code class="literal">springSecurityFilterChain</code> with the war.
+This can be done in Java Configuration with <a class="ulink" href="http://docs.spring.io/spring/docs/3.2.x/spring-framework-reference/html/mvc.html#mvc-container-config" target="_top">Spring&#8217;s WebApplicationInitializer support</a> in a Servlet 3.0+ environment.
+Not suprisingly, Spring Security provides a base class <code class="literal">AbstractSecurityWebApplicationInitializer</code> that will ensure the <code class="literal">springSecurityFilterChain</code> gets registered for you.
+The way in which we use <code class="literal">AbstractSecurityWebApplicationInitializer</code> differs depending on if we are already using Spring or if Spring Security is the only Spring component in our application.</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="xref" href="jc.html#abstractsecuritywebapplicationinitializer-without-existing-spring" title="6.1.2&nbsp;AbstractSecurityWebApplicationInitializer without Existing Spring">Section&nbsp;6.1.2, &#8220;AbstractSecurityWebApplicationInitializer without Existing Spring&#8221;</a> - Use these instructions if you are not using Spring already
+</li><li class="listitem">
+<a class="xref" href="jc.html#abstractsecuritywebapplicationinitializer-with-spring-mvc" title="6.1.3&nbsp;AbstractSecurityWebApplicationInitializer with Spring MVC">Section&nbsp;6.1.3, &#8220;AbstractSecurityWebApplicationInitializer with Spring MVC&#8221;</a> - Use these instructions if you are already using Spring
+</li></ul></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="abstractsecuritywebapplicationinitializer-without-existing-spring" href="#abstractsecuritywebapplicationinitializer-without-existing-spring"></a>6.1.2&nbsp;AbstractSecurityWebApplicationInitializer without Existing Spring</h3></div></div></div>
+
+<p>If you are not using Spring or Spring MVC, you will need to pass in the <code class="literal">WebSecurityConfig</code> into the superclass to ensure the configuration is picked up.
+You can find an example below:</p>
+<pre class="programlisting"><span class="hl-keyword">import</span> org.springframework.security.web.context.*;
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SecurityWebApplicationInitializer
+    <span class="hl-keyword">extends</span> AbstractSecurityWebApplicationInitializer {
+
+    <span class="hl-keyword">public</span> SecurityWebApplicationInitializer() {
+        <span class="hl-keyword">super</span>(WebSecurityConfig.<span class="hl-keyword">class</span>);
+    }
+}</pre>
+<p>The <code class="literal">SecurityWebApplicationInitializer</code> will do the following things:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Automatically register the springSecurityFilterChain Filter for every URL in your application
+</li><li class="listitem">
+Add a ContextLoaderListener that loads the <a class="link" href="jc.html#jc-hello-wsca">WebSecurityConfig</a>.
+</li></ul></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="abstractsecuritywebapplicationinitializer-with-spring-mvc" href="#abstractsecuritywebapplicationinitializer-with-spring-mvc"></a>6.1.3&nbsp;AbstractSecurityWebApplicationInitializer with Spring MVC</h3></div></div></div>
+
+<p>If we were using Spring elsewhere in our application we probably already had a <code class="literal">WebApplicationInitializer</code> that is loading our Spring Configuration.
+If we use the previous configuration we would get an error.
+Instead, we should register Spring Security with the existing <code class="literal">ApplicationContext</code>.
+For example, if we were using Spring MVC our <code class="literal">SecurityWebApplicationInitializer</code> would look something like the following:</p>
+<pre class="programlisting"><span class="hl-keyword">import</span> org.springframework.security.web.context.*;
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SecurityWebApplicationInitializer
+    <span class="hl-keyword">extends</span> AbstractSecurityWebApplicationInitializer {
+
+}</pre>
+<p>This would simply only register the springSecurityFilterChain Filter for every URL in your application.
+After that we would ensure that <code class="literal">WebSecurityConfig</code> was loaded in our existing ApplicationInitializer.
+For example, if we were using Spring MVC it would be added in the <code class="literal">getRootConfigClasses()</code></p>
+<a name="message-web-application-inititializer-java" href="#message-web-application-inititializer-java"></a><pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MvcWebApplicationInitializer <span class="hl-keyword">extends</span>
+        AbstractAnnotationConfigDispatcherServletInitializer {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> Class&lt;?&gt;[] getRootConfigClasses() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> Class[] { WebSecurityConfig.<span class="hl-keyword">class</span> };
+    }
+
+    <span class="hl-comment">// ... other overrides ...</span>
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jc-httpsecurity" href="#jc-httpsecurity"></a>6.2&nbsp;HttpSecurity</h2></div></div></div>
+
+<p>Thus far our <a class="link" href="jc.html#jc-hello-wsca">WebSecurityConfig</a> only contains information about how to authenticate our users.
+How does Spring Security know that we want to require all users to be authenticated? How does Spring Security know we want to support form based authentication? The reason for this is that the <code class="literal">WebSecurityConfigurerAdapter</code> provides a default configuration in the <code class="literal">configure(HttpSecurity http)</code> method that looks like:</p>
+<pre class="programlisting"><span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+    http
+        .authorizeRequests()
+            .anyRequest().authenticated()
+            .and()
+        .formLogin()
+            .and()
+        .httpBasic();
+}</pre>
+<p>The default configuration above:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Ensures that any request to our application requires the user to be authenticated
+</li><li class="listitem">
+Allows users to authenticate with form based login
+</li><li class="listitem">
+Allows users to authenticate with HTTP Basic authentication
+</li></ul></div>
+<p>You will notice that this configuration is quite similar the XML Namespace configuration:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;http&gt;</span>
+    <span class="hl-tag">&lt;intercept-url</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"/**"</span> <span class="hl-attribute">access</span>=<span class="hl-value">"authenticated"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;form-login /&gt;</span>
+    <span class="hl-tag">&lt;http-basic /&gt;</span>
+<span class="hl-tag">&lt;/http&gt;</span></pre>
+<p>The Java Configuration equivalent of closing an XML tag is expressed using the <code class="literal">and()</code> method which allows us to continue configuring the parent.
+If you read the code it also makes sense.
+I want to configure authorized requests <span class="emphasis"><em>and</em></span> configure form login <span class="emphasis"><em>and</em></span> configure HTTP Basic authentication.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jc-form" href="#jc-form"></a>6.3&nbsp;Java Configuration and Form Login</h2></div></div></div>
+
+<p>You might be wondering where the login form came from when you were prompted to log in, since we made no mention of any HTML files or JSPs.
+Since Spring Security&#8217;s default configuration does not explicitly set a URL for the login page, Spring Security generates one automatically, based on the features that are enabled and using standard values for the URL which processes the submitted login, the default target URL the user will be sent to after logging in and so on.</p>
+<p>While the automatically generated log in page is convenient to get up and running quickly, most applications will want to provide their own log in page.
+To do so we can update our configuration as seen below:</p>
+<pre class="programlisting"><span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+    http
+        .authorizeRequests()
+            .anyRequest().authenticated()
+            .and()
+        .formLogin()
+            .loginPage(<span class="hl-string">"/login"</span>) <a name="CO1-1" href="#CO1-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+            .permitAll();        <a name="CO1-2" href="#CO1-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+}</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO1-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The updated configuration specifies the location of the log in page.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO1-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>We must grant all users (i.e. unauthenticated users) access to our log in page.
+The <code class="literal">formLogin().permitAll()</code> method allows granting access to all users for all URLs associated with form based log in.</p>
+</td></tr></table></div>
+<p>An example log in page implemented with JSPs for our current configuration can be seen below:</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The login page below represents our current configuration.
+We could easily update our configuration if some of the defaults do not meet our needs.</p>
+</td></tr></table></div>
+<pre class="programlisting"><span class="hl-tag">&lt;c:url</span> <span class="hl-attribute">value</span>=<span class="hl-value">"/login"</span> <span class="hl-attribute">var</span>=<span class="hl-value">"loginUrl"</span><span class="hl-tag">/&gt;</span>
+&lt;form <span class="hl-attribute">action</span>=<span class="hl-value">"${loginUrl}"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"post"</span>&gt;       <a name="CO2-1" href="#CO2-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    <span class="hl-tag">&lt;c:if</span> <span class="hl-attribute">test</span>=<span class="hl-value">"${param.error != null}"</span><span class="hl-tag">&gt;</span>        <a name="CO2-2" href="#CO2-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+        &lt;p&gt;
+            Invalid username and password.
+        &lt;/p&gt;
+    <span class="hl-tag">&lt;/c:if&gt;</span>
+    <span class="hl-tag">&lt;c:if</span> <span class="hl-attribute">test</span>=<span class="hl-value">"${param.logout != null}"</span><span class="hl-tag">&gt;</span>       <a name="CO2-3" href="#CO2-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+        &lt;p&gt;
+            You have been logged out.
+        &lt;/p&gt;
+    <span class="hl-tag">&lt;/c:if&gt;</span>
+    &lt;p&gt;
+        &lt;label <span class="hl-attribute">for</span>=<span class="hl-value">"username"</span>&gt;Username&lt;/label&gt;
+        &lt;input <span class="hl-attribute">type</span>=<span class="hl-value">"text"</span> <span class="hl-attribute">id</span>=<span class="hl-value">"username"</span> <span class="hl-attribute">name</span>=<span class="hl-value">"username"</span>/&gt;  <a name="CO2-4" href="#CO2-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    &lt;/p&gt;
+    &lt;p&gt;
+        &lt;label <span class="hl-attribute">for</span>=<span class="hl-value">"password"</span>&gt;Password&lt;/label&gt;
+        &lt;input <span class="hl-attribute">type</span>=<span class="hl-value">"password"</span> <span class="hl-attribute">id</span>=<span class="hl-value">"password"</span> <span class="hl-attribute">name</span>=<span class="hl-value">"password"</span>/&gt;  <a name="CO2-5" href="#CO2-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    &lt;/p&gt;
+    &lt;input <span class="hl-attribute">type</span>=<span class="hl-value">"hidden"</span>                        <a name="CO2-6" href="#CO2-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+        name="${_csrf.parameterName}"
+        value="${_csrf.token}"/&gt;
+    &lt;button <span class="hl-attribute">type</span>=<span class="hl-value">"submit"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"btn"</span>&gt;Log in&lt;/button&gt;
+&lt;/form&gt;</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO2-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A POST to the <code class="literal">/login</code> URL will attempt to authenticate the user</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO2-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>If the query parameter <code class="literal">error</code> exists, authentication was attempted and failed</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO2-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>If the query parameter <code class="literal">logout</code> exists, the user was successfully logged out</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO2-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The username must be present as the HTTP parameter named <span class="emphasis"><em>username</em></span></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO2-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The password must be present as the HTTP parameter named <span class="emphasis"><em>password</em></span></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO2-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>We must <a class="xref" href="web-app-security.html#csrf-include-csrf-token" title="Include the CSRF Token">the section called &#8220;Include the CSRF Token&#8221;</a> To learn more read the <a class="xref" href="web-app-security.html#csrf" title="10.6&nbsp;Cross Site Request Forgery (CSRF)">Section&nbsp;10.6, &#8220;Cross Site Request Forgery (CSRF)&#8221;</a> section of the reference</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jc-authorize-requests" href="#jc-authorize-requests"></a>6.4&nbsp;Authorize Requests</h2></div></div></div>
+
+<p>Our examples have only required users to be authenticated and have done so for every URL in our application.
+We can specify custom requirements for our URLs by adding multiple children to our <code class="literal">http.authorizeRequests()</code> method.
+For example:</p>
+<pre class="programlisting"><span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+    http
+        .authorizeRequests()                                                                <a name="CO3-1" href="#CO3-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+            .antMatchers(<span class="hl-string">"/resources/**"</span>, <span class="hl-string">"/signup"</span>, <span class="hl-string">"/about"</span>).permitAll()                  <a name="CO3-2" href="#CO3-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+            .antMatchers(<span class="hl-string">"/admin/**"</span>).hasRole(<span class="hl-string">"ADMIN"</span>)                                      <a name="CO3-3" href="#CO3-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+            .antMatchers(<span class="hl-string">"/db/**"</span>).access(<span class="hl-string">"hasRole('ADMIN') and hasRole('DBA')"</span>)            <a name="CO3-4" href="#CO3-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+            .anyRequest().authenticated()                                                   <a name="CO3-5" href="#CO3-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+            .and()
+        <span class="hl-comment">// ...</span>
+        .formLogin();
+}</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO3-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>There are multiple children to the <code class="literal">http.authorizeRequests()</code> method each matcher is considered in the order they were declared.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO3-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>We specified multiple URL patterns that any user can access.
+Specifically, any user can access a request if the URL starts with "/resources/", equals "/signup", or equals "/about".</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO3-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Any URL that starts with "/admin/" will be restricted to users who have the role "ROLE_ADMIN".
+You will notice that since we are invoking the <code class="literal">hasRole</code> method we do not need to specify the "ROLE_" prefix.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO3-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Any URL that starts with "/db/" requires the user to have both "ROLE_ADMIN" and "ROLE_DBA".
+You will notice that since we are using the <code class="literal">hasRole</code> expression we do not need to specify the "ROLE_" prefix.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO3-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Any URL that has not already been matched on only requires that the user be authenticated</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jc-logout" href="#jc-logout"></a>6.5&nbsp;Handling Logouts</h2></div></div></div>
+
+<p>When using the <code class="literal"><a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/config/annotation/web/configuration/WebSecurityConfigurerAdapter.html" target="_top">WebSecurityConfigurerAdapter</a></code>, logout capabilities are automatically applied.
+The default is that accessing the URL <code class="literal">/logout</code> will log the user out by:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Invalidating the HTTP Session
+</li><li class="listitem">
+Cleaning up any RememberMe authentication that was configured
+</li><li class="listitem">
+Clearing the <code class="literal">SecurityContextHolder</code>
+</li><li class="listitem">
+Redirect to <code class="literal">/login?logout</code>
+</li></ul></div>
+<p>Similar to configuring login capabilities, however, you also have various options to further customize your logout requirements:</p>
+<pre class="programlisting"><span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+    http
+        .logout()                                                                <a name="CO4-1" href="#CO4-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+            .logoutUrl(<span class="hl-string">"/my/logout"</span>)                                                 <a name="CO4-2" href="#CO4-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+            .logoutSuccessUrl(<span class="hl-string">"/my/index"</span>)                                           <a name="CO4-3" href="#CO4-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+            .logoutSuccessHandler(logoutSuccessHandler)                              <a name="CO4-4" href="#CO4-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+            .invalidateHttpSession(true)                                             <a name="CO4-5" href="#CO4-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+            .addLogoutHandler(logoutHandler)                                         <a name="CO4-6" href="#CO4-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+            .deleteCookies(cookieNamesToClear)                                       <a name="CO4-7" href="#CO4-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+            .and()
+        ...
+}</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO4-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Provides logout support.
+This is automatically applied when using <code class="literal">WebSecurityConfigurerAdapter</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO4-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The URL that triggers log out to occur (default is <code class="literal">/logout</code>).
+If CSRF protection is enabled (default), then the request must also be a POST.
+For more information, please consult the <a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/config/annotation/web/configurers/LogoutConfigurer.html#logoutUrl-java.lang.String-" target="_top">JavaDoc</a>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO4-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The URL to redirect to after logout has occurred.
+The default is <code class="literal">/login?logout</code>.
+For more information, please consult the <a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/config/annotation/web/configurers/LogoutConfigurer.html#logoutSuccessUrl-java.lang.String-" target="_top">JavaDoc</a>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO4-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Let&#8217;s you specify a custom <code class="literal">LogoutSuccessHandler</code>.
+If this is specified, <code class="literal">logoutSuccessUrl()</code> is ignored.
+For more information, please consult the <a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/config/annotation/web/configurers/LogoutConfigurer.html#logoutSuccessHandler-org.springframework.security.web.authentication.logout.LogoutSuccessHandler-" target="_top">JavaDoc</a>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO4-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify whether to invalidate the <code class="literal">HttpSession</code> at the time of logout.
+This is <span class="strong"><strong>true</strong></span> by default.
+Configures the <code class="literal">SecurityContextLogoutHandler</code> under the covers.
+For more information, please consult the <a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/config/annotation/web/configurers/LogoutConfigurer.html#invalidateHttpSession-boolean-" target="_top">JavaDoc</a>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO4-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Adds a <code class="literal">LogoutHandler</code>.
+<code class="literal">SecurityContextLogoutHandler</code> is added as the last <code class="literal">LogoutHandler</code> by default.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO4-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Allows specifying the names of cookies to be removed on logout success.
+This is a shortcut for adding a <code class="literal">CookieClearingLogoutHandler</code> explicitly.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>===
+Logouts can of course also be configured using the XML Namespace notation.
+Please see the documentation for the <a class="link" href="appendix.html#nsa-logout" title="<logout&gt;">logout element</a> in the Spring Security XML Namespace section for further details.
+===</p>
+</td></tr></table></div>
+<p>Generally, in order to customize logout functionality, you can add
+<code class="literal"><a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/web/authentication/logout/LogoutHandler.html" target="_top">LogoutHandler</a></code>
+and/or
+<code class="literal"><a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/web/authentication/logout/LogoutSuccessHandler.html" target="_top">LogoutSuccessHandler</a></code>
+implementations.
+For many common scenarios, these handlers are applied under the
+covers when using the fluent API.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jc-logout-handler" href="#jc-logout-handler"></a>6.5.1&nbsp;LogoutHandler</h3></div></div></div>
+
+<p>Generally, <code class="literal"><a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/web/authentication/logout/LogoutHandler.html" target="_top">LogoutHandler</a></code>
+implementations indicate classes that are able to participate in logout handling.
+They are expected to be invoked to perform necessary clean-up.
+As such they should
+not throw exceptions.
+Various implementations are provided:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/web/authentication/rememberme/PersistentTokenBasedRememberMeServices.html" target="_top">PersistentTokenBasedRememberMeServices</a>
+</li><li class="listitem">
+<a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/web/authentication/rememberme/TokenBasedRememberMeServices.html" target="_top">TokenBasedRememberMeServices</a>
+</li><li class="listitem">
+<a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/web/authentication/logout/CookieClearingLogoutHandler.html" target="_top">CookieClearingLogoutHandler</a>
+</li><li class="listitem">
+<a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/web/csrf/CsrfLogoutHandler.html" target="_top">CsrfLogoutHandler</a>
+</li><li class="listitem">
+<a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/web/authentication/logout/SecurityContextLogoutHandler.html" target="_top">SecurityContextLogoutHandler</a>
+</li></ul></div>
+<p>Please see <a class="xref" href="web-app-security.html#remember-me-impls" title="10.5.4&nbsp;Remember-Me Interfaces and Implementations">Section&nbsp;10.5.4, &#8220;Remember-Me Interfaces and Implementations&#8221;</a> for details.</p>
+<p>Instead of providing <code class="literal">LogoutHandler</code> implementations directly, the fluent API also provides shortcuts that provide the respective <code class="literal">LogoutHandler</code> implementations under the covers.
+E.g. <code class="literal">deleteCookies()</code> allows specifying the names of one or more cookies to be removed on logout success.
+This is a shortcut compared to adding a <code class="literal">CookieClearingLogoutHandler</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jc-logout-success-handler" href="#jc-logout-success-handler"></a>6.5.2&nbsp;LogoutSuccessHandler</h3></div></div></div>
+
+<p>The <code class="literal">LogoutSuccessHandler</code> is called after a successful logout by the <code class="literal">LogoutFilter</code>, to handle e.g.
+redirection or forwarding to the appropriate destination.
+Note that the interface is almost the same as the <code class="literal">LogoutHandler</code> but may raise an exception.</p>
+<p>The following implementations are provided:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/web/authentication/logout/SimpleUrlLogoutSuccessHandler.html" target="_top">SimpleUrlLogoutSuccessHandler</a>
+</li><li class="listitem">
+HttpStatusReturningLogoutSuccessHandler
+</li></ul></div>
+<p>As mentioned above, you don&#8217;t need to specify the <code class="literal">SimpleUrlLogoutSuccessHandler</code> directly.
+Instead, the fluent API provides a shortcut by setting the <code class="literal">logoutSuccessUrl()</code>.
+This will setup the <code class="literal">SimpleUrlLogoutSuccessHandler</code> under the covers.
+The provided URL will be redirected to after a logout has occurred.
+The default is <code class="literal">/login?logout</code>.</p>
+<p>The <code class="literal">HttpStatusReturningLogoutSuccessHandler</code> can be interesting in REST API type scenarios.
+Instead of redirecting to a URL upon the successful logout, this <code class="literal">LogoutSuccessHandler</code> allows you to provide a plain HTTP status code to be returned.
+If not configured a status code 200 will be returned by default.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jc-logout-references" href="#jc-logout-references"></a>6.5.3&nbsp;Further Logout-Related References</h3></div></div></div>
+
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="ns-config.html#ns-logout" title="7.2.4&nbsp;Logout Handling">Logout Handling</a>
+</li><li class="listitem">
+<a class="link" href="test.html#test-logout" title="Testing Logout">Testing Logout</a>
+</li><li class="listitem">
+<a class="link" href="web-app-security.html#servletapi-logout" title="HttpServletRequest.logout()">HttpServletRequest.logout()</a>
+</li><li class="listitem">
+<a class="xref" href="web-app-security.html#remember-me-impls" title="10.5.4&nbsp;Remember-Me Interfaces and Implementations">Section&nbsp;10.5.4, &#8220;Remember-Me Interfaces and Implementations&#8221;</a>
+</li><li class="listitem">
+<a class="link" href="web-app-security.html#csrf-logout" title="Logging Out">Logging Out</a> in section CSRF Caveats
+</li><li class="listitem">
+Section <a class="link" href="servlet-webclient.html#cas-singlelogout" title="Single Logout">Single Logout</a> (CAS protocol)
+</li><li class="listitem">
+Documentation for the <a class="link" href="appendix.html#nsa-logout" title="<logout&gt;">logout element</a> in the Spring Security XML Namespace section
+</li></ul></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="oauth2client" href="#oauth2client"></a>6.6&nbsp;OAuth 2.0 Client</h2></div></div></div>
+
+<p>The OAuth 2.0 Client features provide support for the Client role as defined in the <a class="ulink" href="https://tools.ietf.org/html/rfc6749#section-1.1" target="_top">OAuth 2.0 Authorization Framework</a>.</p>
+<p>The following main features are available:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="ulink" href="https://tools.ietf.org/html/rfc6749#section-1.3.1" target="_top">Authorization Code Grant</a>
+</li><li class="listitem">
+<a class="ulink" href="https://tools.ietf.org/html/rfc6749#section-1.3.4" target="_top">Client Credentials Grant</a>
+</li><li class="listitem">
+<a class="link" href="servlet-webclient.html" title="13.&nbsp;WebClient for Servlet Environments"><code class="literal">WebClient</code> extension for Servlet Environments</a> (for making protected resource requests)
+</li></ul></div>
+<p><code class="literal">HttpSecurity.oauth2Client()</code> provides a number of configuration options for customizing OAuth 2.0 Client.
+The following code shows the complete configuration options available for the <code class="literal">oauth2Client()</code> DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2ClientSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Client()
+                .clientRegistrationRepository(<span class="hl-keyword">this</span>.clientRegistrationRepository())
+                .authorizedClientRepository(<span class="hl-keyword">this</span>.authorizedClientRepository())
+                .authorizedClientService(<span class="hl-keyword">this</span>.authorizedClientService())
+                .authorizationCodeGrant()
+                    .authorizationRequestRepository(<span class="hl-keyword">this</span>.authorizationRequestRepository())
+                    .authorizationRequestResolver(<span class="hl-keyword">this</span>.authorizationRequestResolver())
+                    .accessTokenResponseClient(<span class="hl-keyword">this</span>.accessTokenResponseClient());
+    }
+}</pre>
+<p>The following sections go into more detail on each of the configuration options available:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="xref" href="jc.html#oauth2Client-client-registration" title="6.6.1&nbsp;ClientRegistration">Section&nbsp;6.6.1, &#8220;ClientRegistration&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="jc.html#oauth2Client-client-registration-repo" title="6.6.2&nbsp;ClientRegistrationRepository">Section&nbsp;6.6.2, &#8220;ClientRegistrationRepository&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="jc.html#oauth2Client-authorized-client" title="6.6.3&nbsp;OAuth2AuthorizedClient">Section&nbsp;6.6.3, &#8220;OAuth2AuthorizedClient&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="jc.html#oauth2Client-authorized-repo-service" title="6.6.4&nbsp;OAuth2AuthorizedClientRepository / OAuth2AuthorizedClientService">Section&nbsp;6.6.4, &#8220;OAuth2AuthorizedClientRepository / OAuth2AuthorizedClientService&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="jc.html#oauth2Client-registered-authorized-client" title="6.6.5&nbsp;RegisteredOAuth2AuthorizedClient">Section&nbsp;6.6.5, &#8220;RegisteredOAuth2AuthorizedClient&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="jc.html#oauth2Client-authorization-request-repository" title="6.6.6&nbsp;AuthorizationRequestRepository">Section&nbsp;6.6.6, &#8220;AuthorizationRequestRepository&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="jc.html#oauth2Client-authorization-request-resolver" title="6.6.7&nbsp;OAuth2AuthorizationRequestResolver">Section&nbsp;6.6.7, &#8220;OAuth2AuthorizationRequestResolver&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="jc.html#oauth2Client-access-token-client" title="6.6.8&nbsp;OAuth2AccessTokenResponseClient">Section&nbsp;6.6.8, &#8220;OAuth2AccessTokenResponseClient&#8221;</a>
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2Client-client-registration" href="#oauth2Client-client-registration"></a>6.6.1&nbsp;ClientRegistration</h3></div></div></div>
+
+<p><code class="literal">ClientRegistration</code> is a representation of a client registered with an OAuth 2.0 or OpenID Connect 1.0 Provider.</p>
+<p>A client registration holds information, such as client id, client secret, authorization grant type, redirect URI, scope(s), authorization URI, token URI, and other details.</p>
+<p><code class="literal">ClientRegistration</code> and its properties are defined as follows:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">final</span> <span class="hl-keyword">class</span> ClientRegistration {
+    <span class="hl-keyword">private</span> String registrationId;  <a name="CO5-1" href="#CO5-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    <span class="hl-keyword">private</span> String clientId;    <a name="CO5-2" href="#CO5-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    <span class="hl-keyword">private</span> String clientSecret;    <a name="CO5-3" href="#CO5-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    <span class="hl-keyword">private</span> ClientAuthenticationMethod clientAuthenticationMethod;  <a name="CO5-4" href="#CO5-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    <span class="hl-keyword">private</span> AuthorizationGrantType authorizationGrantType;  <a name="CO5-5" href="#CO5-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    <span class="hl-keyword">private</span> String redirectUriTemplate; <a name="CO5-6" href="#CO5-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+    <span class="hl-keyword">private</span> Set&lt;String&gt; scopes; <a name="CO5-7" href="#CO5-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+    <span class="hl-keyword">private</span> ProviderDetails providerDetails;
+    <span class="hl-keyword">private</span> String clientName;  <a name="CO5-8" href="#CO5-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">class</span> ProviderDetails {
+        <span class="hl-keyword">private</span> String authorizationUri;    <a name="CO5-9" href="#CO5-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+        <span class="hl-keyword">private</span> String tokenUri;    <a name="CO5-10" href="#CO5-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+        <span class="hl-keyword">private</span> UserInfoEndpoint userInfoEndpoint;
+        <span class="hl-keyword">private</span> String jwkSetUri;   <a name="CO5-11" href="#CO5-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+        <span class="hl-keyword">private</span> Map&lt;String, Object&gt; configurationMetadata;  <a name="CO5-12" href="#CO5-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+
+        <span class="hl-keyword">public</span> <span class="hl-keyword">class</span> UserInfoEndpoint {
+            <span class="hl-keyword">private</span> String uri; <a name="CO5-13" href="#CO5-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+            <span class="hl-keyword">private</span> AuthenticationMethod authenticationMethod;  <a name="CO5-14" href="#CO5-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span>
+            <span class="hl-keyword">private</span> String userNameAttributeName;   <a name="CO5-15" href="#CO5-15"></a><span><img src="images/callouts/15.png" alt="15" border="0"></span>
+
+        }
+    }
+}</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">registrationId</code>: The ID that uniquely identifies the <code class="literal">ClientRegistration</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">clientId</code>: The client identifier.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">clientSecret</code>: The client secret.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">clientAuthenticationMethod</code>: The method used to authenticate the Client with the Provider.
+The supported values are <span class="strong"><strong>basic</strong></span> and <span class="strong"><strong>post</strong></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">authorizationGrantType</code>: The OAuth 2.0 Authorization Framework defines four <a class="ulink" href="https://tools.ietf.org/html/rfc6749#section-1.3" target="_top">Authorization Grant</a> types.
+The supported values are authorization_code, implicit, and client_credentials.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">redirectUriTemplate</code>: The client&#8217;s registered redirect URI that the <span class="emphasis"><em>Authorization Server</em></span> redirects the end-user&#8217;s user-agent
+to after the end-user has authenticated and authorized access to the client.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">scopes</code>: The scope(s) requested by the client during the Authorization Request flow, such as openid, email, or profile.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">clientName</code>: A descriptive name used for the client.
+The name may be used in certain scenarios, such as when displaying the name of the client in the auto-generated login page.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">authorizationUri</code>: The Authorization Endpoint URI for the Authorization Server.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">tokenUri</code>: The Token Endpoint URI for the Authorization Server.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">jwkSetUri</code>: The URI used to retrieve the <a class="ulink" href="https://tools.ietf.org/html/rfc7517" target="_top">JSON Web Key (JWK)</a> Set from the Authorization Server,
+which contains the cryptographic key(s) used to verify the <a class="ulink" href="https://tools.ietf.org/html/rfc7515" target="_top">JSON Web Signature (JWS)</a> of the ID Token and optionally the UserInfo Response.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">configurationMetadata</code>: The <a class="ulink" href="https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig" target="_top">OpenID Provider Configuration Information</a>.
+This information will only be available if the Spring Boot 2.x property <code class="literal">spring.security.oauth2.client.provider.[providerId].issuerUri</code> is configured.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">(userInfoEndpoint)uri</code>: The UserInfo Endpoint URI used to access the claims/attributes of the authenticated end-user.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">(userInfoEndpoint)authenticationMethod</code>: The authentication method used when sending the access token to the UserInfo Endpoint.
+The supported values are <span class="strong"><strong>header</strong></span>, <span class="strong"><strong>form</strong></span> and <span class="strong"><strong>query</strong></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO5-15"><span><img src="images/callouts/15.png" alt="15" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">userNameAttributeName</code>: The name of the attribute returned in the UserInfo Response that references the Name or Identifier of the end-user.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2Client-client-registration-repo" href="#oauth2Client-client-registration-repo"></a>6.6.2&nbsp;ClientRegistrationRepository</h3></div></div></div>
+
+<p>The <code class="literal">ClientRegistrationRepository</code> serves as a repository for OAuth 2.0 / OpenID Connect 1.0 <code class="literal">ClientRegistration</code>(s).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Client registration information is ultimately stored and owned by the associated Authorization Server.
+This repository provides the ability to retrieve a sub-set of the primary client registration information, which is stored with the Authorization Server.</p>
+</td></tr></table></div>
+<p>Spring Boot 2.x auto-configuration binds each of the properties under <code class="literal">spring.security.oauth2.client.registration.<span class="emphasis"><em>[registrationId]</em></span></code> to an instance of <code class="literal">ClientRegistration</code> and then composes each of the <code class="literal">ClientRegistration</code> instance(s) within a <code class="literal">ClientRegistrationRepository</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The default implementation of <code class="literal">ClientRegistrationRepository</code> is <code class="literal">InMemoryClientRegistrationRepository</code>.</p>
+</td></tr></table></div>
+<p>The auto-configuration also registers the <code class="literal">ClientRegistrationRepository</code> as a <code class="literal">@Bean</code> in the <code class="literal">ApplicationContext</code> so that it is available for dependency-injection, if needed by the application.</p>
+<p>The following listing shows an example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Controller</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2ClientController {
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> ClientRegistrationRepository clientRegistrationRepository;
+
+    <em><span class="hl-annotation" style="color: gray">@RequestMapping("/")</span></em>
+    <span class="hl-keyword">public</span> String index() {
+        ClientRegistration googleRegistration =
+            <span class="hl-keyword">this</span>.clientRegistrationRepository.findByRegistrationId(<span class="hl-string">"google"</span>);
+
+        ...
+
+        <span class="hl-keyword">return</span> <span class="hl-string">"index"</span>;
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2Client-authorized-client" href="#oauth2Client-authorized-client"></a>6.6.3&nbsp;OAuth2AuthorizedClient</h3></div></div></div>
+
+<p><code class="literal">OAuth2AuthorizedClient</code> is a representation of an Authorized Client.
+A client is considered to be authorized when the end-user (Resource Owner) has granted authorization to the client to access its protected resources.</p>
+<p><code class="literal">OAuth2AuthorizedClient</code> serves the purpose of associating an <code class="literal">OAuth2AccessToken</code> (and optional <code class="literal">OAuth2RefreshToken</code>) to a <code class="literal">ClientRegistration</code> (client) and resource owner, who is the <code class="literal">Principal</code> end-user that granted the authorization.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2Client-authorized-repo-service" href="#oauth2Client-authorized-repo-service"></a>6.6.4&nbsp;OAuth2AuthorizedClientRepository / OAuth2AuthorizedClientService</h3></div></div></div>
+
+<p><code class="literal">OAuth2AuthorizedClientRepository</code> is responsible for persisting <code class="literal">OAuth2AuthorizedClient</code>(s) between web requests.
+Whereas, the primary role of <code class="literal">OAuth2AuthorizedClientService</code> is to manage <code class="literal">OAuth2AuthorizedClient</code>(s) at the application-level.</p>
+<p>From a developer perspective, the <code class="literal">OAuth2AuthorizedClientRepository</code> or <code class="literal">OAuth2AuthorizedClientService</code> provides the capability to lookup an <code class="literal">OAuth2AccessToken</code> associated with a client so that it may be used to initiate a protected resource request.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Spring Boot 2.x auto-configuration registers an <code class="literal">OAuth2AuthorizedClientRepository</code> and/or <code class="literal">OAuth2AuthorizedClientService</code> <code class="literal">@Bean</code> in the <code class="literal">ApplicationContext</code>.</p>
+</td></tr></table></div>
+<p>The developer may also register an <code class="literal">OAuth2AuthorizedClientRepository</code> or <code class="literal">OAuth2AuthorizedClientService</code> <code class="literal">@Bean</code> in the <code class="literal">ApplicationContext</code> (overriding Spring Boot 2.x auto-configuration) in order to have the ability to lookup an <code class="literal">OAuth2AccessToken</code> associated with a specific <code class="literal">ClientRegistration</code> (client).</p>
+<p>The following listing shows an example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Controller</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginController {
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> OAuth2AuthorizedClientService authorizedClientService;
+
+    <em><span class="hl-annotation" style="color: gray">@RequestMapping("/userinfo")</span></em>
+    <span class="hl-keyword">public</span> String userinfo(OAuth2AuthenticationToken authentication) {
+        <span class="hl-comment">// authentication.getAuthorizedClientRegistrationId() returns the</span>
+        <span class="hl-comment">// registrationId of the Client that was authorized during the oauth2Login() flow</span>
+        OAuth2AuthorizedClient authorizedClient =
+            <span class="hl-keyword">this</span>.authorizedClientService.loadAuthorizedClient(
+                authentication.getAuthorizedClientRegistrationId(),
+                authentication.getName());
+
+        OAuth2AccessToken accessToken = authorizedClient.getAccessToken();
+
+        ...
+
+        <span class="hl-keyword">return</span> <span class="hl-string">"userinfo"</span>;
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2Client-registered-authorized-client" href="#oauth2Client-registered-authorized-client"></a>6.6.5&nbsp;RegisteredOAuth2AuthorizedClient</h3></div></div></div>
+
+<p>The <code class="literal">@RegisteredOAuth2AuthorizedClient</code> annotation provides the capability of resolving a method parameter to an argument value of type <code class="literal">OAuth2AuthorizedClient</code>.
+This is a convenient alternative compared to looking up the <code class="literal">OAuth2AuthorizedClient</code> via the <code class="literal">OAuth2AuthorizedClientService</code>.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Controller</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginController {
+
+    <em><span class="hl-annotation" style="color: gray">@RequestMapping("/userinfo")</span></em>
+    <span class="hl-keyword">public</span> String userinfo(<em><span class="hl-annotation" style="color: gray">@RegisteredOAuth2AuthorizedClient("google")</span></em> OAuth2AuthorizedClient authorizedClient) {
+        OAuth2AccessToken accessToken = authorizedClient.getAccessToken();
+
+        ...
+
+        <span class="hl-keyword">return</span> <span class="hl-string">"userinfo"</span>;
+    }
+}</pre>
+<p>The <code class="literal">@RegisteredOAuth2AuthorizedClient</code> annotation is handled by <code class="literal">OAuth2AuthorizedClientArgumentResolver</code> and provides the following capabilities:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<p class="simpara">An <code class="literal">OAuth2AccessToken</code> will automatically be requested if the client has not yet been authorized.</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+For <code class="literal">authorization_code</code>, this involves triggering the authorization request redirect to initiate the flow
+</li><li class="listitem">
+For <code class="literal">client_credentials</code>, the access token is directly obtained from the Token Endpoint using <code class="literal">DefaultClientCredentialsTokenResponseClient</code>
+</li></ul></div>
+</li></ul></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2Client-authorization-request-repository" href="#oauth2Client-authorization-request-repository"></a>6.6.6&nbsp;AuthorizationRequestRepository</h3></div></div></div>
+
+<p><code class="literal">AuthorizationRequestRepository</code> is responsible for the persistence of the <code class="literal">OAuth2AuthorizationRequest</code> from the time the Authorization Request is initiated to the time the Authorization Response is received (the callback).</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">OAuth2AuthorizationRequest</code> is used to correlate and validate the Authorization Response.</p>
+</td></tr></table></div>
+<p>The default implementation of <code class="literal">AuthorizationRequestRepository</code> is <code class="literal">HttpSessionOAuth2AuthorizationRequestRepository</code>, which stores the <code class="literal">OAuth2AuthorizationRequest</code> in the <code class="literal">HttpSession</code>.</p>
+<p>If you would like to provide a custom implementation of <code class="literal">AuthorizationRequestRepository</code> that stores the attributes of <code class="literal">OAuth2AuthorizationRequest</code> in a <code class="literal">Cookie</code>, you may configure it as shown in the following example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2ClientSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Client()
+                .authorizationCodeGrant()
+                    .authorizationRequestRepository(<span class="hl-keyword">this</span>.cookieAuthorizationRequestRepository())
+                    ...
+    }
+
+    <span class="hl-keyword">private</span> AuthorizationRequestRepository&lt;OAuth2AuthorizationRequest&gt; cookieAuthorizationRequestRepository() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> HttpCookieOAuth2AuthorizationRequestRepository();
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2Client-authorization-request-resolver" href="#oauth2Client-authorization-request-resolver"></a>6.6.7&nbsp;OAuth2AuthorizationRequestResolver</h3></div></div></div>
+
+<p>The primary role of the <code class="literal">OAuth2AuthorizationRequestResolver</code> is to resolve an <code class="literal">OAuth2AuthorizationRequest</code> from the provided web request.
+The default implementation <code class="literal">DefaultOAuth2AuthorizationRequestResolver</code> matches on the (default) path <code class="literal">/oauth2/authorization/{registrationId}</code> extracting the <code class="literal">registrationId</code> and using it to build the <code class="literal">OAuth2AuthorizationRequest</code> for the associated <code class="literal">ClientRegistration</code>.</p>
+<p>One of the primary use cases an <code class="literal">OAuth2AuthorizationRequestResolver</code> can realize is the ability to customize the Authorization Request with additional parameters above the standard parameters defined in the OAuth 2.0 Authorization Framework.</p>
+<p>For example, OpenID Connect defines additional OAuth 2.0 request parameters for the <a class="ulink" href="https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest" target="_top">Authorization Code Flow</a> extending from the standard parameters defined in the <a class="ulink" href="https://tools.ietf.org/html/rfc6749#section-4.1.1" target="_top">OAuth 2.0 Authorization Framework</a>.
+One of those extended parameters is the <code class="literal">prompt</code> parameter.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>OPTIONAL. Space delimited, case sensitive list of ASCII string values that specifies whether the Authorization Server prompts the End-User for reauthentication and consent. The defined values are: none, login, consent, select_account</p>
+</td></tr></table></div>
+<p>The following example shows how to implement an <code class="literal">OAuth2AuthorizationRequestResolver</code> that customizes the Authorization Request for <code class="literal">oauth2Login()</code>, by including the request parameter <code class="literal">prompt=consent</code>.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+    <span class="hl-keyword">private</span> ClientRegistrationRepository clientRegistrationRepository;
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .authorizeRequests()
+                .anyRequest().authenticated()
+                .and()
+            .oauth2Login()
+                .authorizationEndpoint()
+                    .authorizationRequestResolver(
+                            <span class="hl-keyword">new</span> CustomAuthorizationRequestResolver(
+                                    <span class="hl-keyword">this</span>.clientRegistrationRepository));    <a name="CO6-1" href="#CO6-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    }
+}
+
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> CustomAuthorizationRequestResolver <span class="hl-keyword">implements</span> OAuth2AuthorizationRequestResolver {
+    <span class="hl-keyword">private</span> <span class="hl-keyword">final</span> OAuth2AuthorizationRequestResolver defaultAuthorizationRequestResolver;
+
+    <span class="hl-keyword">public</span> CustomAuthorizationRequestResolver(
+            ClientRegistrationRepository clientRegistrationRepository) {
+
+        <span class="hl-keyword">this</span>.defaultAuthorizationRequestResolver =
+                <span class="hl-keyword">new</span> DefaultOAuth2AuthorizationRequestResolver(
+                        clientRegistrationRepository, <span class="hl-string">"/oauth2/authorization"</span>);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
+        OAuth2AuthorizationRequest authorizationRequest =
+                <span class="hl-keyword">this</span>.defaultAuthorizationRequestResolver.resolve(request);  <a name="CO6-2" href="#CO6-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+
+        <span class="hl-keyword">return</span> authorizationRequest != null ?   <a name="CO6-3" href="#CO6-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                customAuthorizationRequest(authorizationRequest) :
+                null;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> OAuth2AuthorizationRequest resolve(
+            HttpServletRequest request, String clientRegistrationId) {
+
+        OAuth2AuthorizationRequest authorizationRequest =
+                <span class="hl-keyword">this</span>.defaultAuthorizationRequestResolver.resolve(
+                    request, clientRegistrationId);    <a name="CO6-4" href="#CO6-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+
+        <span class="hl-keyword">return</span> authorizationRequest != null ?   <a name="CO6-5" href="#CO6-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                customAuthorizationRequest(authorizationRequest) :
+                null;
+    }
+
+    <span class="hl-keyword">private</span> OAuth2AuthorizationRequest customAuthorizationRequest(
+            OAuth2AuthorizationRequest authorizationRequest) {
+
+        Map&lt;String, Object&gt; additionalParameters =
+                <span class="hl-keyword">new</span> LinkedHashMap&lt;&gt;(authorizationRequest.getAdditionalParameters());
+        additionalParameters.put(<span class="hl-string">"prompt"</span>, <span class="hl-string">"consent"</span>);  <a name="CO6-6" href="#CO6-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+
+        <span class="hl-keyword">return</span> OAuth2AuthorizationRequest.from(authorizationRequest)    <a name="CO6-7" href="#CO6-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                .additionalParameters(additionalParameters) <a name="CO6-8" href="#CO6-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                .build();
+    }
+}</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO6-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Configure the custom <code class="literal">OAuth2AuthorizationRequestResolver</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO6-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> <a href="#CO6-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Attempt to resolve the <code class="literal">OAuth2AuthorizationRequest</code> using the <code class="literal">DefaultOAuth2AuthorizationRequestResolver</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO6-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> <a href="#CO6-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>If an <code class="literal">OAuth2AuthorizationRequest</code> was resolved than return a customized version else return <code class="literal">null</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO6-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Add custom parameters to the existing <code class="literal">OAuth2AuthorizationRequest.additionalParameters</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO6-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Create a copy of the default <code class="literal">OAuth2AuthorizationRequest</code> which returns an <code class="literal">OAuth2AuthorizationRequest.Builder</code> for further modifications</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO6-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Override the default <code class="literal">additionalParameters</code></p>
+</td></tr></table></div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p><code class="literal">OAuth2AuthorizationRequest.Builder.build()</code> constructs the <code class="literal">OAuth2AuthorizationRequest.authorizationRequestUri</code>, which represents the complete Authorization Request URI including all query parameters using the <code class="literal">application/x-www-form-urlencoded</code> format.</p>
+</td></tr></table></div>
+<p>The preceding example shows the common use case of adding a custom parameter on top of the standard parameters.
+However, if you need to remove or change a standard parameter or your requirements are more advanced, than you can take full control in building the Authorization Request URI by simply overriding the <code class="literal">OAuth2AuthorizationRequest.authorizationRequestUri</code> property.</p>
+<p>The following example shows a variation of the <code class="literal">customAuthorizationRequest()</code> method from the preceding example, and instead overrides the <code class="literal">OAuth2AuthorizationRequest.authorizationRequestUri</code> property.</p>
+<pre class="programlisting"><span class="hl-keyword">private</span> OAuth2AuthorizationRequest customAuthorizationRequest(
+        OAuth2AuthorizationRequest authorizationRequest) {
+
+    String customAuthorizationRequestUri = UriComponentsBuilder
+            .fromUriString(authorizationRequest.getAuthorizationRequestUri())
+            .queryParam(<span class="hl-string">"prompt"</span>, <span class="hl-string">"consent"</span>)
+            .build(true)
+            .toUriString();
+
+    <span class="hl-keyword">return</span> OAuth2AuthorizationRequest.from(authorizationRequest)
+            .authorizationRequestUri(customAuthorizationRequestUri)
+            .build();
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2Client-access-token-client" href="#oauth2Client-access-token-client"></a>6.6.8&nbsp;OAuth2AccessTokenResponseClient</h3></div></div></div>
+
+<p>The primary role of the <code class="literal">OAuth2AccessTokenResponseClient</code> is to exchange an authorization grant credential for an access token credential at the Authorization Server&#8217;s Token Endpoint.</p>
+<p>The default implementation of <code class="literal">OAuth2AccessTokenResponseClient</code> for the <code class="literal">authorization_code</code> grant is <code class="literal">DefaultAuthorizationCodeTokenResponseClient</code>, which uses a <code class="literal">RestOperations</code> for exchanging an authorization code for an access token at the Token Endpoint.</p>
+<p>The <code class="literal">DefaultAuthorizationCodeTokenResponseClient</code> is quite flexible as it allows you to customize the pre-processing of the Token Request and/or post-handling of the Token Response.</p>
+<p>If you need to customize the pre-processing of the Token Request, you can provide <code class="literal">DefaultAuthorizationCodeTokenResponseClient.setRequestEntityConverter()</code> with a custom <code class="literal">Converter&lt;OAuth2AuthorizationCodeGrantRequest, RequestEntity&lt;?&gt;&gt;</code>.
+The default implementation <code class="literal">OAuth2AuthorizationCodeGrantRequestEntityConverter</code> builds a <code class="literal">RequestEntity</code> representation of a standard <a class="ulink" href="https://tools.ietf.org/html/rfc6749#section-4.1.3" target="_top">OAuth 2.0 Access Token Request</a>.
+However, providing a custom <code class="literal">Converter</code>, would allow you to extend the standard Token Request and add a custom parameter for example.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The custom <code class="literal">Converter</code> must return a valid <code class="literal">RequestEntity</code> representation of an OAuth 2.0 Access Token Request that is understood by the intended OAuth 2.0 Provider.</p>
+</td></tr></table></div>
+<p>On the other end, if you need to customize the post-handling of the Token Response, you will need to provide <code class="literal">DefaultAuthorizationCodeTokenResponseClient.setRestOperations()</code> with a custom configured <code class="literal">RestOperations</code>.
+The default <code class="literal">RestOperations</code> is configured as follows:</p>
+<pre class="programlisting">RestTemplate restTemplate = <span class="hl-keyword">new</span> RestTemplate(Arrays.asList(
+        <span class="hl-keyword">new</span> FormHttpMessageConverter(),
+        <span class="hl-keyword">new</span> OAuth2AccessTokenResponseHttpMessageConverter()));
+
+restTemplate.setErrorHandler(<span class="hl-keyword">new</span> OAuth2ErrorResponseErrorHandler());</pre>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>Spring MVC <code class="literal">FormHttpMessageConverter</code> is required as it&#8217;s used when sending the OAuth 2.0 Access Token Request.</p>
+</td></tr></table></div>
+<p><code class="literal">OAuth2AccessTokenResponseHttpMessageConverter</code> is a <code class="literal">HttpMessageConverter</code> for an OAuth 2.0 Access Token Response.
+You can provide <code class="literal">OAuth2AccessTokenResponseHttpMessageConverter.setTokenResponseConverter()</code> with a custom <code class="literal">Converter&lt;Map&lt;String, String&gt;, OAuth2AccessTokenResponse&gt;</code> that is used for converting the OAuth 2.0 Access Token Response parameters to an <code class="literal">OAuth2AccessTokenResponse</code>.</p>
+<p><code class="literal">OAuth2ErrorResponseErrorHandler</code> is a <code class="literal">ResponseErrorHandler</code> that can handle an OAuth 2.0 Error (400 Bad Request).
+It uses an <code class="literal">OAuth2ErrorHttpMessageConverter</code> for converting the OAuth 2.0 Error parameters to an <code class="literal">OAuth2Error</code>.</p>
+<p>Whether you customize <code class="literal">DefaultAuthorizationCodeTokenResponseClient</code> or provide your own implementation of <code class="literal">OAuth2AccessTokenResponseClient</code>, you&#8217;ll need to configure it as shown in the following example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2ClientSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Client()
+                .authorizationCodeGrant()
+                    .accessTokenResponseClient(<span class="hl-keyword">this</span>.customAccessTokenResponseClient())
+                    ...
+    }
+
+    <span class="hl-keyword">private</span> OAuth2AccessTokenResponseClient&lt;OAuth2AuthorizationCodeGrantRequest&gt; customAccessTokenResponseClient() {
+        ...
+    }
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="oauth2login" href="#oauth2login"></a>6.7&nbsp;OAuth 2.0 Login</h2></div></div></div>
+
+<p>The OAuth 2.0 Login feature provides an application with the capability to have users log in to the application by using their existing account at an OAuth 2.0 Provider (e.g. GitHub) or OpenID Connect 1.0 Provider (such as Google).
+OAuth 2.0 Login implements the use cases: "Login with Google" or "Login with GitHub".</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>OAuth 2.0 Login is implemented by using the <span class="strong"><strong>Authorization Code Grant</strong></span>, as specified in the <a class="ulink" href="https://tools.ietf.org/html/rfc6749#section-4.1" target="_top">OAuth 2.0 Authorization Framework</a> and <a class="ulink" href="http://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth" target="_top">OpenID Connect Core 1.0</a>.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-sample-boot" href="#oauth2login-sample-boot"></a>6.7.1&nbsp;Spring Boot 2.x Sample</h3></div></div></div>
+
+<p>Spring Boot 2.x brings full auto-configuration capabilities for OAuth 2.0 Login.</p>
+<p>This section shows how to configure the <a class="ulink" href="https://github.com/spring-projects/spring-security/tree/5.1.3.RELEASE/samples/boot/oauth2login" target="_top"><span class="strong"><strong>OAuth 2.0 Login sample</strong></span></a> using <span class="emphasis"><em>Google</em></span> as the <span class="emphasis"><em>Authentication Provider</em></span> and covers the following topics:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="jc.html#oauth2login-sample-initial-setup" title="Initial setup">Initial setup</a>
+</li><li class="listitem">
+<a class="link" href="jc.html#oauth2login-sample-redirect-uri" title="Setting the redirect URI">Setting the redirect URI</a>
+</li><li class="listitem">
+<a class="link" href="jc.html#oauth2login-sample-application-config" title="Configure application.yml">Configure application.yml</a>
+</li><li class="listitem">
+<a class="link" href="jc.html#oauth2login-sample-boot-application" title="Boot up the application">Boot up the application</a>
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-sample-initial-setup" href="#oauth2login-sample-initial-setup"></a>Initial setup</h4></div></div></div>
+
+<p>To use Google&#8217;s OAuth 2.0 authentication system for login, you must set up a project in the Google API Console to obtain OAuth 2.0 credentials.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p><a class="ulink" href="https://developers.google.com/identity/protocols/OpenIDConnect" target="_top">Google&#8217;s OAuth 2.0 implementation</a> for authentication conforms to the  <a class="ulink" href="http://openid.net/connect/" target="_top">OpenID Connect 1.0</a> specification and is <a class="ulink" href="http://openid.net/certification/" target="_top">OpenID Certified</a>.</p>
+</td></tr></table></div>
+<p>Follow the instructions on the <a class="ulink" href="https://developers.google.com/identity/protocols/OpenIDConnect" target="_top">OpenID Connect</a> page, starting in the section, "Setting up OAuth 2.0".</p>
+<p>After completing the "Obtain OAuth 2.0 credentials" instructions, you should have a new OAuth Client with credentials consisting of a Client ID and a Client Secret.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-sample-redirect-uri" href="#oauth2login-sample-redirect-uri"></a>Setting the redirect URI</h4></div></div></div>
+
+<p>The redirect URI is the path in the application that the end-user&#8217;s user-agent is redirected back to after they have authenticated with Google and have granted access to the OAuth Client <span class="emphasis"><em>(<a class="link" href="jc.html#oauth2login-sample-initial-setup" title="Initial setup">created in the previous step</a>)</em></span> on the Consent page.</p>
+<p>In the "Set a redirect URI" sub-section, ensure that the <span class="strong"><strong>Authorized redirect URIs</strong></span> field is set to <code class="literal"><a class="ulink" href="http://localhost:8080/login/oauth2/code/google" target="_top">http://localhost:8080/login/oauth2/code/google</a></code>.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>The default redirect URI template is <code class="literal">{baseUrl}/login/oauth2/code/{registrationId}</code>.
+The <span class="strong"><strong><span class="emphasis"><em>registrationId</em></span></strong></span> is a unique identifier for the <a class="link" href="jc.html#oauth2Client-client-registration" title="6.6.1&nbsp;ClientRegistration">ClientRegistration</a>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-sample-application-config" href="#oauth2login-sample-application-config"></a>Configure application.yml</h4></div></div></div>
+
+<p>Now that you have a new OAuth Client with Google, you need to configure the application to use the OAuth Client for the <span class="emphasis"><em>authentication flow</em></span>.
+To do so:</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+<p class="simpara">Go to <code class="literal">application.yml</code> and set the following configuration:</p>
+<pre class="programlisting"><span class="hl-attribute">spring</span>:
+<span class="hl-attribute">  security</span>:
+<span class="hl-attribute">    oauth2</span>:
+<span class="hl-attribute">      client</span>:
+<span class="hl-attribute">        registration</span>:   <a name="CO7-1" href="#CO7-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+<span class="hl-attribute">          google</span>:   <a name="CO7-2" href="#CO7-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+<span class="hl-attribute">            client-id</span>: google-client-id
+<span class="hl-attribute">            client-secret</span>: google-client-secret</pre>
+<div class="example"><a name="d5e1230" href="#d5e1230"></a><p class="title"><b>Example&nbsp;6.1.&nbsp;OAuth Client properties</b></p><div class="example-contents">
+
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO7-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">spring.security.oauth2.client.registration</code> is the base property prefix for OAuth Client properties.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO7-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Following the base property prefix is the ID for the <a class="link" href="jc.html#oauth2Client-client-registration" title="6.6.1&nbsp;ClientRegistration">ClientRegistration</a>, such as google.</p>
+</td></tr></table></div>
+</div></div><br class="example-break">
+</li><li class="listitem">
+Replace the values in the <code class="literal">client-id</code> and <code class="literal">client-secret</code> property with the OAuth 2.0 credentials you created earlier.
+</li></ol></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-sample-boot-application" href="#oauth2login-sample-boot-application"></a>Boot up the application</h4></div></div></div>
+
+<p>Launch the Spring Boot 2.x sample and go to <code class="literal"><a class="ulink" href="http://localhost:8080" target="_top">http://localhost:8080</a></code>.
+You are then redirected to the default <span class="emphasis"><em>auto-generated</em></span> login page, which displays a link for Google.</p>
+<p>Click on the Google link, and you are then redirected to Google for authentication.</p>
+<p>After authenticating with your Google account credentials, the next page presented to you is the Consent screen.
+The Consent screen asks you to either allow or deny access to the OAuth Client you created earlier.
+Click <span class="strong"><strong>Allow</strong></span> to authorize the OAuth Client to access your email address and basic profile information.</p>
+<p>At this point, the OAuth Client retrieves your email address and basic profile information from the <a class="ulink" href="http://openid.net/specs/openid-connect-core-1_0.html#UserInfo" target="_top">UserInfo Endpoint</a> and establishes an authenticated session.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-boot-property-mappings" href="#oauth2login-boot-property-mappings"></a>6.7.2&nbsp;Spring Boot 2.x Property Mappings</h3></div></div></div>
+
+<p>The following table outlines the mapping of the Spring Boot 2.x OAuth Client properties to the <a class="link" href="jc.html#oauth2Client-client-registration" title="6.6.1&nbsp;ClientRegistration">ClientRegistration</a> properties.</p>
+<div class="informaltable">
+<table style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Spring Boot 2.x</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">ClientRegistration</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.registration.<span class="emphasis"><em>[registrationId]</em></span></code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">registrationId</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.registration.<span class="emphasis"><em>[registrationId]</em></span>.client-id</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">clientId</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.registration.<span class="emphasis"><em>[registrationId]</em></span>.client-secret</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">clientSecret</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.registration.<span class="emphasis"><em>[registrationId]</em></span>.client-authentication-method</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">clientAuthenticationMethod</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.registration.<span class="emphasis"><em>[registrationId]</em></span>.authorization-grant-type</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">authorizationGrantType</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.registration.<span class="emphasis"><em>[registrationId]</em></span>.redirect-uri</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">redirectUriTemplate</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.registration.<span class="emphasis"><em>[registrationId]</em></span>.scope</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">scopes</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.registration.<span class="emphasis"><em>[registrationId]</em></span>.client-name</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">clientName</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.provider.<span class="emphasis"><em>[providerId]</em></span>.authorization-uri</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">providerDetails.authorizationUri</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.provider.<span class="emphasis"><em>[providerId]</em></span>.token-uri</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">providerDetails.tokenUri</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.provider.<span class="emphasis"><em>[providerId]</em></span>.jwk-set-uri</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">providerDetails.jwkSetUri</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.provider.<span class="emphasis"><em>[providerId]</em></span>.user-info-uri</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">providerDetails.userInfoEndpoint.uri</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.provider.<span class="emphasis"><em>[providerId]</em></span>.user-info-authentication-method</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">providerDetails.userInfoEndpoint.authenticationMethod</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">spring.security.oauth2.client.provider.<span class="emphasis"><em>[providerId]</em></span>.userNameAttribute</code></p></td><td style="" align="left" valign="top"><p><code class="literal">providerDetails.userInfoEndpoint.userNameAttributeName</code></p></td></tr></tbody></table>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-common-oauth2-provider" href="#oauth2login-common-oauth2-provider"></a>6.7.3&nbsp;CommonOAuth2Provider</h3></div></div></div>
+
+<p><code class="literal">CommonOAuth2Provider</code> pre-defines a set of default client properties for a number of well known providers: Google, GitHub, Facebook, and Okta.</p>
+<p>For example, the <code class="literal">authorization-uri</code>, <code class="literal">token-uri</code>, and <code class="literal">user-info-uri</code> do not change often for a Provider.
+Therefore, it makes sense to provide default values in order to reduce the required configuration.</p>
+<p>As demonstrated previously, when we <a class="link" href="jc.html#oauth2login-sample-application-config" title="Configure application.yml">configured a Google client</a>, only the <code class="literal">client-id</code> and <code class="literal">client-secret</code> properties are required.</p>
+<p>The following listing shows an example:</p>
+<pre class="programlisting"><span class="hl-attribute">spring</span>:
+<span class="hl-attribute">  security</span>:
+<span class="hl-attribute">    oauth2</span>:
+<span class="hl-attribute">      client</span>:
+<span class="hl-attribute">        registration</span>:
+<span class="hl-attribute">          google</span>:
+<span class="hl-attribute">            client-id</span>: google-client-id
+<span class="hl-attribute">            client-secret</span>: google-client-secret</pre>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>The auto-defaulting of client properties works seamlessly here because the <code class="literal">registrationId</code> (<code class="literal">google</code>) matches the <code class="literal">GOOGLE</code> <code class="literal">enum</code> (case-insensitive) in <code class="literal">CommonOAuth2Provider</code>.</p>
+</td></tr></table></div>
+<p>For cases where you may want to specify a different <code class="literal">registrationId</code>, such as <code class="literal">google-login</code>, you can still leverage auto-defaulting of client properties by configuring the <code class="literal">provider</code> property.</p>
+<p>The following listing shows an example:</p>
+<pre class="programlisting"><span class="hl-attribute">spring</span>:
+<span class="hl-attribute">  security</span>:
+<span class="hl-attribute">    oauth2</span>:
+<span class="hl-attribute">      client</span>:
+<span class="hl-attribute">        registration</span>:
+<span class="hl-attribute">          google-login</span>: <a name="CO8-1" href="#CO8-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+<span class="hl-attribute">            provider</span>: google    <a name="CO8-2" href="#CO8-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+<span class="hl-attribute">            client-id</span>: google-client-id
+<span class="hl-attribute">            client-secret</span>: google-client-secret</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">registrationId</code> is set to <code class="literal">google-login</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO8-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">provider</code> property is set to <code class="literal">google</code>, which will leverage the auto-defaulting of client properties set in <code class="literal">CommonOAuth2Provider.GOOGLE.getBuilder()</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-custom-provider-properties" href="#oauth2login-custom-provider-properties"></a>6.7.4&nbsp;Configuring Custom Provider Properties</h3></div></div></div>
+
+<p>There are some OAuth 2.0 Providers that support multi-tenancy, which results in different protocol endpoints for each tenant (or sub-domain).</p>
+<p>For example, an OAuth Client registered with Okta is assigned to a specific sub-domain and have their own protocol endpoints.</p>
+<p>For these cases, Spring Boot 2.x provides the following base property for configuring custom provider properties: <code class="literal">spring.security.oauth2.client.provider.<span class="emphasis"><em>[providerId]</em></span></code>.</p>
+<p>The following listing shows an example:</p>
+<pre class="programlisting"><span class="hl-attribute">spring</span>:
+<span class="hl-attribute">  security</span>:
+<span class="hl-attribute">    oauth2</span>:
+<span class="hl-attribute">      client</span>:
+<span class="hl-attribute">        registration</span>:
+<span class="hl-attribute">          okta</span>:
+<span class="hl-attribute">            client-id</span>: okta-client-id
+<span class="hl-attribute">            client-secret</span>: okta-client-secret
+<span class="hl-attribute">        provider</span>:
+<span class="hl-attribute">          okta</span>: <a name="CO9-1" href="#CO9-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+<span class="hl-attribute">            authorization-uri</span>: https://your-subdomain.oktapreview.com/oauth2/v1/authorize
+<span class="hl-attribute">            token-uri</span>: https://your-subdomain.oktapreview.com/oauth2/v1/token
+<span class="hl-attribute">            user-info-uri</span>: https://your-subdomain.oktapreview.com/oauth2/v1/userinfo
+<span class="hl-attribute">            user-name-attribute</span>: sub
+<span class="hl-attribute">            jwk-set-uri</span>: https://your-subdomain.oktapreview.com/oauth2/v1/keys</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO9-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The base property (<code class="literal">spring.security.oauth2.client.provider.okta</code>) allows for custom configuration of protocol endpoint locations.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-override-boot-autoconfig" href="#oauth2login-override-boot-autoconfig"></a>6.7.5&nbsp;Overriding Spring Boot 2.x Auto-configuration</h3></div></div></div>
+
+<p>The Spring Boot 2.x auto-configuration class for OAuth Client support is <code class="literal">OAuth2ClientAutoConfiguration</code>.</p>
+<p>It performs the following tasks:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Registers a <code class="literal">ClientRegistrationRepository</code> <code class="literal">@Bean</code> composed of <code class="literal">ClientRegistration</code>(s) from the configured OAuth Client properties.
+</li><li class="listitem">
+Provides a <code class="literal">WebSecurityConfigurerAdapter</code> <code class="literal">@Configuration</code> and enables OAuth 2.0 Login through <code class="literal">httpSecurity.oauth2Login()</code>.
+</li></ul></div>
+<p>If you need to override the auto-configuration based on your specific requirements, you may do so in the following ways:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="jc.html#oauth2login-register-clientregistrationrepository-bean" title="Register a ClientRegistrationRepository @Bean">Register a ClientRegistrationRepository @Bean</a>
+</li><li class="listitem">
+<a class="link" href="jc.html#oauth2login-provide-websecurityconfigureradapter" title="Provide a WebSecurityConfigurerAdapter">Provide a WebSecurityConfigurerAdapter</a>
+</li><li class="listitem">
+<a class="link" href="jc.html#oauth2login-completely-override-autoconfiguration" title="Completely Override the Auto-configuration">Completely Override the Auto-configuration</a>
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-register-clientregistrationrepository-bean" href="#oauth2login-register-clientregistrationrepository-bean"></a>Register a ClientRegistrationRepository @Bean</h4></div></div></div>
+
+<p>The following example shows how to register a <code class="literal">ClientRegistrationRepository</code> <code class="literal">@Bean</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginConfig {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> ClientRegistrationRepository clientRegistrationRepository() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> InMemoryClientRegistrationRepository(<span class="hl-keyword">this</span>.googleClientRegistration());
+    }
+
+    <span class="hl-keyword">private</span> ClientRegistration googleClientRegistration() {
+        <span class="hl-keyword">return</span> ClientRegistration.withRegistrationId(<span class="hl-string">"google"</span>)
+            .clientId(<span class="hl-string">"google-client-id"</span>)
+            .clientSecret(<span class="hl-string">"google-client-secret"</span>)
+            .clientAuthenticationMethod(ClientAuthenticationMethod.BASIC)
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .redirectUriTemplate(<span class="hl-string">"{baseUrl}/login/oauth2/code/{registrationId}"</span>)
+            .scope(<span class="hl-string">"openid"</span>, <span class="hl-string">"profile"</span>, <span class="hl-string">"email"</span>, <span class="hl-string">"address"</span>, <span class="hl-string">"phone"</span>)
+            .authorizationUri(<span class="hl-string">"https://accounts.google.com/o/oauth2/v2/auth"</span>)
+            .tokenUri(<span class="hl-string">"https://www.googleapis.com/oauth2/v4/token"</span>)
+            .userInfoUri(<span class="hl-string">"https://www.googleapis.com/oauth2/v3/userinfo"</span>)
+            .userNameAttributeName(IdTokenClaimNames.SUB)
+            .jwkSetUri(<span class="hl-string">"https://www.googleapis.com/oauth2/v3/certs"</span>)
+            .clientName(<span class="hl-string">"Google"</span>)
+            .build();
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-provide-websecurityconfigureradapter" href="#oauth2login-provide-websecurityconfigureradapter"></a>Provide a WebSecurityConfigurerAdapter</h4></div></div></div>
+
+<p>The following example shows how to provide a <code class="literal">WebSecurityConfigurerAdapter</code> with <code class="literal">@EnableWebSecurity</code> and enable OAuth 2.0 login through <code class="literal">httpSecurity.oauth2Login()</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .authorizeRequests()
+                .anyRequest().authenticated()
+                .and()
+            .oauth2Login();
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-completely-override-autoconfiguration" href="#oauth2login-completely-override-autoconfiguration"></a>Completely Override the Auto-configuration</h4></div></div></div>
+
+<p>The following example shows how to completely override the auto-configuration by registering a <code class="literal">ClientRegistrationRepository</code> <code class="literal">@Bean</code> and providing a <code class="literal">WebSecurityConfigurerAdapter</code>.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginConfig {
+
+    <em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+        <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+        <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+            http
+                .authorizeRequests()
+                    .anyRequest().authenticated()
+                    .and()
+                .oauth2Login();
+        }
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> ClientRegistrationRepository clientRegistrationRepository() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> InMemoryClientRegistrationRepository(<span class="hl-keyword">this</span>.googleClientRegistration());
+    }
+
+    <span class="hl-keyword">private</span> ClientRegistration googleClientRegistration() {
+        <span class="hl-keyword">return</span> ClientRegistration.withRegistrationId(<span class="hl-string">"google"</span>)
+            .clientId(<span class="hl-string">"google-client-id"</span>)
+            .clientSecret(<span class="hl-string">"google-client-secret"</span>)
+            .clientAuthenticationMethod(ClientAuthenticationMethod.BASIC)
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .redirectUriTemplate(<span class="hl-string">"{baseUrl}/login/oauth2/code/{registrationId}"</span>)
+            .scope(<span class="hl-string">"openid"</span>, <span class="hl-string">"profile"</span>, <span class="hl-string">"email"</span>, <span class="hl-string">"address"</span>, <span class="hl-string">"phone"</span>)
+            .authorizationUri(<span class="hl-string">"https://accounts.google.com/o/oauth2/v2/auth"</span>)
+            .tokenUri(<span class="hl-string">"https://www.googleapis.com/oauth2/v4/token"</span>)
+            .userInfoUri(<span class="hl-string">"https://www.googleapis.com/oauth2/v3/userinfo"</span>)
+            .userNameAttributeName(IdTokenClaimNames.SUB)
+            .jwkSetUri(<span class="hl-string">"https://www.googleapis.com/oauth2/v3/certs"</span>)
+            .clientName(<span class="hl-string">"Google"</span>)
+            .build();
+    }
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-javaconfig-wo-boot" href="#oauth2login-javaconfig-wo-boot"></a>6.7.6&nbsp;Java Configuration without Spring Boot 2.x</h3></div></div></div>
+
+<p>If you are not able to use Spring Boot 2.x and would like to configure one of the pre-defined providers in <code class="literal">CommonOAuth2Provider</code> (for example, Google), apply the following configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginConfig {
+
+    <em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+        <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+        <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+            http
+                .authorizeRequests()
+                    .anyRequest().authenticated()
+                    .and()
+                .oauth2Login();
+        }
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> ClientRegistrationRepository clientRegistrationRepository() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> InMemoryClientRegistrationRepository(<span class="hl-keyword">this</span>.googleClientRegistration());
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> OAuth2AuthorizedClientService authorizedClientService(
+            ClientRegistrationRepository clientRegistrationRepository) {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> OAuth2AuthorizedClientRepository authorizedClientRepository(
+            OAuth2AuthorizedClientService authorizedClientService) {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> AuthenticatedPrincipalOAuth2AuthorizedClientRepository(authorizedClientService);
+    }
+
+    <span class="hl-keyword">private</span> ClientRegistration googleClientRegistration() {
+        <span class="hl-keyword">return</span> CommonOAuth2Provider.GOOGLE.getBuilder(<span class="hl-string">"google"</span>)
+            .clientId(<span class="hl-string">"google-client-id"</span>)
+            .clientSecret(<span class="hl-string">"google-client-secret"</span>)
+            .build();
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-resources" href="#oauth2login-resources"></a>6.7.7&nbsp;Additional Resources</h3></div></div></div>
+
+<p>The following additional resources describe advanced configuration options:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-login-page" title="12.4.1&nbsp;OAuth 2.0 Login Page">OAuth 2.0 Login Page</a>
+</li><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-redirection-endpoint" title="12.4.2&nbsp;Redirection Endpoint">Redirection Endpoint</a>
+</li><li class="listitem">
+<p class="simpara"><a class="link" href="advanced-topics.html#oauth2login-advanced-userinfo-endpoint" title="12.4.3&nbsp;UserInfo Endpoint">UserInfo Endpoint:</a></p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-map-authorities" title="Mapping User Authorities">Mapping User Authorities</a>
+</li><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-custom-user" title="Configuring a Custom OAuth2User">Configuring a Custom OAuth2User</a>
+</li><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-oauth2-user-service" title="OAuth 2.0 UserService">OAuth 2.0 UserService</a>
+</li><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-oidc-user-service" title="OpenID Connect 1.0 UserService">OpenID Connect 1.0 UserService</a>
+</li></ul></div>
+</li></ul></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="oauth2resourceserver" href="#oauth2resourceserver"></a>6.8&nbsp;OAuth 2.0 Resource Server</h2></div></div></div>
+
+<p>Spring Security supports protecting endpoints using <a class="ulink" href="https://tools.ietf.org/html/rfc7519" target="_top">JWT</a>-encoded OAuth 2.0 <a class="ulink" href="https://tools.ietf.org/html/rfc6750.html" target="_top">Bearer Tokens</a>.</p>
+<p>This is handy in circumstances where an application has federated its authority management out to an <a class="ulink" href="https://tools.ietf.org/html/rfc6749" target="_top">authorization server</a> (for example, Okta or Ping Identity).
+This authorization server can be consulted by Resource Servers to validate authority when serving requests.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>A complete working example can be found in <a class="ulink" href="https://github.com/spring-projects/spring-security/tree/5.1.3.RELEASE/samples/boot/oauth2resourceserver" target="_top"><span class="strong"><strong>OAuth 2.0 Resource Server Servlet sample</strong></span></a>.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="dependencies" href="#dependencies"></a>6.8.1&nbsp;Dependencies</h3></div></div></div>
+
+<p>Most Resource Server support is collected into <code class="literal">spring-security-oauth2-resource-server</code>.
+However, the support for decoding and verifying JWTs is in <code class="literal">spring-security-oauth2-jose</code>, meaning that both are necessary in order to have a working resource server that supports JWT-encoded Bearer Tokens.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2resourceserver-minimalconfiguration" href="#oauth2resourceserver-minimalconfiguration"></a>6.8.2&nbsp;Minimal Configuration</h3></div></div></div>
+
+<p>When using <a class="ulink" href="https://spring.io/projects/spring-boot" target="_top">Spring Boot</a>, configuring an application as a resource server consists of two basic steps.
+First, include the needed dependencies and second, indicate the location of the authorization server.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="specifying-the-authorization-server" href="#specifying-the-authorization-server"></a>Specifying the Authorization Server</h4></div></div></div>
+
+<p>To specify which authorization server to use, simply do:</p>
+<pre class="programlisting"><span class="hl-attribute">security</span>:
+<span class="hl-attribute">  oauth2</span>:
+<span class="hl-attribute">    resourceserver</span>:
+<span class="hl-attribute">      jwt</span>:
+<span class="hl-attribute">        issuer-uri</span>: https://idp.example.com</pre>
+<p>Where <code class="literal"><a class="ulink" href="https://idp.example.com" target="_top">https://idp.example.com</a></code> is the value contained in the <code class="literal">iss</code> claim for JWT tokens that the authorization server will issue.
+Resource Server will use this property to further self-configure, discover the authorization server&#8217;s public keys, and subsequently validate incoming JWTs.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>To use the <code class="literal">issuer-uri</code> property, it must also be true that <code class="literal"><a class="ulink" href="https://idp.example.com/.well-known/openid-configuration" target="_top">https://idp.example.com/.well-known/openid-configuration</a></code> is a supported endpoint for the authorization server.
+This endpoint is referred to as a <a class="ulink" href="https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig" target="_top">Provider Configuration</a> endpoint.</p>
+</td></tr></table></div>
+<p>And that&#8217;s it!</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="startup-expectations" href="#startup-expectations"></a>Startup Expectations</h4></div></div></div>
+
+<p>When this property and these dependencies are used, Resource Server will automatically configure itself to validate JWT-encoded Bearer Tokens.</p>
+<p>It achieves this through a deterministic startup process:</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+Hit the Provider Configuration endpoint, <code class="literal"><a class="ulink" href="https://idp.example.com/.well-known/openid-configuration" target="_top">https://idp.example.com/.well-known/openid-configuration</a></code>, processing the response for the <code class="literal">jwks_url</code> property
+</li><li class="listitem">
+Configure the validation strategy to query <code class="literal">jwks_url</code> for valid public keys
+</li><li class="listitem">
+Configure the validation strategy to validate each JWTs <code class="literal">iss</code> claim against <code class="literal"><a class="ulink" href="https://idp.example.com" target="_top">https://idp.example.com</a></code>.
+</li></ol></div>
+<p>A consequence of this process is that the authorization server must be up and receiving requests in order for Resource Server to successfully start up.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If the authorization server is down when Resource Server queries it (given appropriate timeouts), then startup will fail.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="runtime-expectations" href="#runtime-expectations"></a>Runtime Expectations</h4></div></div></div>
+
+<p>Once the application is started up, Resource Server will attempt to process any request containing an <code class="literal">Authorization: Bearer</code> header:</p>
+<pre class="programlisting">GET / HTTP/1.1
+Authorization: Bearer some-token-value # Resource Server will process this</pre>
+<p>So long as this scheme is indicated, Resource Server will attempt to process the request according to the Bearer Token specification.</p>
+<p>Given a well-formed JWT token, Resource Server will</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+Validate its signature against a public key obtained from the <code class="literal">jwks_url</code> endpoint during startup and matched against the JWTs header
+</li><li class="listitem">
+Validate the JWTs <code class="literal">exp</code> and <code class="literal">nbf</code> timestamps and the JWTs <code class="literal">iss</code> claim, and
+</li><li class="listitem">
+Map each scope to an authority with the prefix <code class="literal">SCOPE_</code>.
+</li></ol></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>As the authorization server makes available new keys, Spring Security will automatically rotate the keys used to validate the JWT tokens.</p>
+</td></tr></table></div>
+<p>The resulting <code class="literal">Authentication#getPrincipal</code>, by default, is a Spring Security <code class="literal">Jwt</code> object, and <code class="literal">Authentication#getName</code> maps to the JWT&#8217;s <code class="literal">sub</code> property, if one is present.</p>
+<p>From here, consider jumping to:</p>
+<p><a class="link" href="jc.html#oauth2resourceserver-jwkseturi" title="6.8.3&nbsp;Specifying the Authorization Server JWK Set Uri Directly">How to Configure without Tying Resource Server startup to an authorization server&#8217;s availability</a></p>
+<p><a class="link" href="jc.html#oauth2resourceserver-sansboot" title="6.8.4&nbsp;Overriding or Replacing Boot Auto Configuration">How to Configure without Spring Boot</a></p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2resourceserver-jwkseturi" href="#oauth2resourceserver-jwkseturi"></a>6.8.3&nbsp;Specifying the Authorization Server JWK Set Uri Directly</h3></div></div></div>
+
+<p>If the authorization server doesn&#8217;t support the Provider Configuration endpoint, or if Resource Server must be able to start up independently from the authorization server, then <code class="literal">issuer-uri</code> can be exchanged for <code class="literal">jwk-set-uri</code>:</p>
+<pre class="programlisting"><span class="hl-attribute">security</span>:
+<span class="hl-attribute">  oauth2</span>:
+<span class="hl-attribute">    resourceserver</span>:
+<span class="hl-attribute">      jwt</span>:
+<span class="hl-attribute">        jwk-set-uri</span>: https://idp.example.com/.well-known/jwks.json</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The JWK Set uri is not standardized, but can typically be found in the authorization server&#8217;s documentation</p>
+</td></tr></table></div>
+<p>Consequently, Resource Server will not ping the authorization server at startup.
+However, it will also no longer validate the <code class="literal">iss</code> claim in the JWT (since Resource Server no longer knows what the issuer value should be).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>This property can also be supplied directly on the <a class="link" href="jc.html#oauth2resourceserver-jwkseturi-dsl" title="Using jwkSetUri()">DSL</a>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2resourceserver-sansboot" href="#oauth2resourceserver-sansboot"></a>6.8.4&nbsp;Overriding or Replacing Boot Auto Configuration</h3></div></div></div>
+
+<p>There are two <code class="literal">@Bean</code> s that Spring Boot generates on Resource Server&#8217;s behalf.</p>
+<p>The first is a <code class="literal">WebSecurityConfigurerAdapter</code> that configures the app as a resource server:</p>
+<pre class="programlisting"><span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) {
+    http
+        .authorizeRequests()
+            .anyRequest().authenticated()
+            .and()
+        .oauth2ResourceServer()
+            .jwt();
+}</pre>
+<p>If the application doesn&#8217;t expose a <code class="literal">WebSecurityConfigurerAdapter</code> bean, then Spring Boot will expose the above default one.</p>
+<p>Replacing this is as simple as exposing the bean within the application:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MyCustomSecurityConfiguration <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) {
+        http
+            .authorizeRequests()
+                .mvcMatchers(<span class="hl-string">"/messages/**"</span>).hasAuthority(<span class="hl-string">"SCOPE_message:read"</span>)
+                .anyRequest().authenticated()
+                .and()
+            .oauth2ResourceServer()
+                .jwt()
+                    .jwtAuthenticationConverter(myConverter());
+    }
+}</pre>
+<p>The above requires the scope of <code class="literal">message:read</code> for any URL that starts with <code class="literal">/messages/</code>.</p>
+<p>Methods on the <code class="literal">oauth2ResourceServer</code> DSL will also override or replace auto configuration.</p>
+<p>For example, the second <code class="literal">@Bean</code> Spring Boot creates is a <code class="literal">JwtDecoder</code>, which decodes <code class="literal">String</code> tokens into validated instances of <code class="literal">Jwt</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> JwtDecoder jwtDecoder() {
+    <span class="hl-keyword">return</span> JwtDecoders.fromOidcIssuerLocation(issuerUri);
+}</pre>
+<p>If the application doesn&#8217;t expose a <code class="literal">JwtDecoder</code> bean, then Spring Boot will expose the above default one.</p>
+<p>And its configuration can be overridden using <code class="literal">jwkSetUri()</code> or replaced using <code class="literal">decoder()</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-jwkseturi-dsl" href="#oauth2resourceserver-jwkseturi-dsl"></a>Using <code class="literal">jwkSetUri()</code></h4></div></div></div>
+
+<p>An authorization server&#8217;s JWK Set Uri can be configured <a class="link" href="jc.html#oauth2resourceserver-jwkseturi" title="6.8.3&nbsp;Specifying the Authorization Server JWK Set Uri Directly">as a configuration property</a> or it can be supplied in the DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> DirectlyConfiguredJwkSetUri <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) {
+        http
+            .authorizeRequests()
+                .anyRequest().authenticated()
+                .and()
+            .oauth2ResourceServer()
+                .jwt()
+                    .jwkSetUri(<span class="hl-string">"https://idp.example.com/.well-known/jwks.json"</span>);
+    }
+}</pre>
+<p>Using <code class="literal">jwkSetUri()</code> takes precedence over any configuration property.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-decoder-dsl" href="#oauth2resourceserver-decoder-dsl"></a>Using <code class="literal">decoder()</code></h4></div></div></div>
+
+<p>More powerful than <code class="literal">jwkSetUri()</code> is <code class="literal">decoder()</code>, which will completely replace any Boot auto configuration of <code class="literal">JwtDecoder</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> DirectlyConfiguredJwkSetUri <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) {
+        http
+            .authorizeRequests()
+                .anyRequest().authenticated()
+                .and()
+            .oauth2ResourceServer()
+                .jwt()
+                    .decoder(myCustomDecoder());
+    }
+}</pre>
+<p>This is handy when deeper configuration, like <a class="link" href="jc.html#oauth2resourceserver-validation" title="6.8.6&nbsp;Configuring Validation">validation</a>, <a class="link" href="jc.html#oauth2resourceserver-claimsetmapping" title="6.8.7&nbsp;Configuring Claim Set Mapping">mapping</a>, or <a class="link" href="jc.html#oauth2resourceserver-timeouts" title="6.8.8&nbsp;Configuring Timeouts">request timeouts</a>, is necessary.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-decoder-bean" href="#oauth2resourceserver-decoder-bean"></a>Exposing a <code class="literal">JwtDecoder</code> <code class="literal">@Bean</code></h4></div></div></div>
+
+<p>Or, exposing a <code class="literal">JwtDecoder</code> <code class="literal">@Bean</code> has the same effect as <code class="literal">decoder()</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> JwtDecoder jwtDecoder() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> NimbusJwtDecoderJwkSupport(jwkSetUri);
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2resourceserver-authorization" href="#oauth2resourceserver-authorization"></a>6.8.5&nbsp;Configuring Authorization</h3></div></div></div>
+
+<p>A JWT that is issued from an OAuth 2.0 Authorization Server will typically either have a <code class="literal">scope</code> or <code class="literal">scp</code> attribute, indicating the scopes (or authorities) it&#8217;s been granted, for example:</p>
+<p><code class="literal">{ &#8230;&#8203;, "scope" : "messages contacts"}</code></p>
+<p>When this is the case, Resource Server will attempt to coerce these scopes into a list of granted authorities, prefixing each scope with the string "SCOPE_".</p>
+<p>This means that to protect an endpoint or method with a scope derived from a JWT, the corresponding expressions should include this prefix:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> DirectlyConfiguredJwkSetUri <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) {
+        http
+            .authorizeRequests()
+                .mvcMatchers(<span class="hl-string">"/contacts/**"</span>).hasAuthority(<span class="hl-string">"SCOPE_contacts"</span>)
+                .mvcMatchers(<span class="hl-string">"/messages/**"</span>).hasAuthority(<span class="hl-string">"SCOPE_messages"</span>)
+                .anyRequest().authenticated()
+                .and()
+            .oauth2ResourceServer()
+                .jwt();
+    }
+}</pre>
+<p>Or similarly with method security:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@PreAuthorize("hasAuthority('SCOPE_messages')")</span></em>
+<span class="hl-keyword">public</span> List&lt;Message&gt; getMessages(...) {}</pre>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-authorization-extraction" href="#oauth2resourceserver-authorization-extraction"></a>Extracting Authorities Manually</h4></div></div></div>
+
+<p>However, there are a number of circumstances where this default is insufficient.
+For example, some authorization servers don&#8217;t use the <code class="literal">scope</code> attribute, but instead have their own custom attribute.
+Or, at other times, the resource server may need to adapt the attribute or a composition of attributes into internalized authorities.</p>
+<p>To this end, the DSL exposes <code class="literal">jwtAuthenticationConverter()</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> DirectlyConfiguredJwkSetUri <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) {
+        http
+            .authorizeRequests()
+                .anyRequest().authenticated()
+                .and()
+            .oauth2ResourceServer()
+                .jwt()
+                    .jwtAuthenticationConverter(grantedAuthoritiesExtractor());
+    }
+}
+
+Converter&lt;Jwt, AbstractAuthenticationToken&gt; grantedAuthoritiesExtractor() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> GrantedAuthoritiesExtractor();
+}</pre>
+<p>which is responsible for converting a <code class="literal">Jwt</code> into an <code class="literal">Authentication</code>.</p>
+<p>We can override this quite simply to alter the way granted authorities are derived:</p>
+<pre class="programlisting"><span class="hl-keyword">static</span> <span class="hl-keyword">class</span> GrantedAuthoritiesExtractor <span class="hl-keyword">extends</span> JwtAuthenticationConverter {
+    <span class="hl-keyword">protected</span> Collection&lt;GrantedAuthorities&gt; extractAuthorities(Jwt jwt) {
+        Collection&lt;String&gt; authorities = (Collection&lt;String&gt;)
+                jwt.getClaims().get(<span class="hl-string">"mycustomclaim"</span>);
+
+        <span class="hl-keyword">return</span> authorities.stream()
+                .map(SimpleGrantedAuthority::<span class="hl-keyword">new</span>)
+                .collect(Collectors.toList());
+    }
+}</pre>
+<p>For more flexibility, the DSL supports entirely replacing the converter with any class that implements <code class="literal">Converter&lt;Jwt, AbstractAuthenticationToken&gt;</code>:</p>
+<pre class="programlisting"><span class="hl-keyword">static</span> <span class="hl-keyword">class</span> CustomAuthenticationConverter <span class="hl-keyword">implements</span> Converter&lt;Jwt, AbstractAuthenticationToken&gt; {
+    <span class="hl-keyword">public</span> AbstractAuthenticationToken convert(Jwt jwt) {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> CustomAuthenticationToken(jwt);
+    }
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2resourceserver-validation" href="#oauth2resourceserver-validation"></a>6.8.6&nbsp;Configuring Validation</h3></div></div></div>
+
+<p>Using <a class="link" href="jc.html#oauth2resourceserver-minimalconfiguration" title="6.8.2&nbsp;Minimal Configuration">minimal Spring Boot configuration</a>, indicating the authorization server&#8217;s issuer uri, Resource Server will default to verifying the <code class="literal">iss</code> claim as well as the <code class="literal">exp</code> and <code class="literal">nbf</code> timestamp claims.</p>
+<p>In circumstances where validation needs to be customized, Resource Server ships with two standard validators and also accepts custom <code class="literal">OAuth2TokenValidator</code> instances.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-validation-clockskew" href="#oauth2resourceserver-validation-clockskew"></a>Customizing Timestamp Validation</h4></div></div></div>
+
+<p>JWT&#8217;s typically have a window of validity, with the start of the window indicated in the <code class="literal">nbf</code> claim and the end indicated in the <code class="literal">exp</code> claim.</p>
+<p>However, every server can experience clock drift, which can cause tokens to appear expired to one server, but not to another.
+This can cause some implementation heartburn as the number of collaborating servers increases in a distributed system.</p>
+<p>Resource Server uses <code class="literal">JwtTimestampValidator</code> to verify a token&#8217;s validity window, and it can be configured with a <code class="literal">clockSkew</code> to alleviate the above problem:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+JwtDecoder jwtDecoder() {
+     NimbusJwtDecoderJwkSupport jwtDecoder = (NimbusJwtDecoderJwkSupport)
+             JwtDecoders.withOidcIssuerLocation(issuerUri);
+
+     OAuth2TokenValidator&lt;Jwt&gt; withClockSkew = <span class="hl-keyword">new</span> DelegatingOAuth2TokenValidator&lt;&gt;(
+            <span class="hl-keyword">new</span> JwtTimestampValidator(Duration.ofSeconds(<span class="hl-number">60</span>)),
+            <span class="hl-keyword">new</span> IssuerValidator(issuerUri));
+
+     jwtDecoder.setJwtValidator(withClockSkew);
+
+     <span class="hl-keyword">return</span> jwtDecoder;
+}</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>By default, Resource Server configures a clock skew of 30 seconds.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-validation-custom" href="#oauth2resourceserver-validation-custom"></a>Configuring a Custom Validator</h4></div></div></div>
+
+<p>Adding a check for the <code class="literal">aud</code> claim is simple with the <code class="literal">OAuth2TokenValidator</code> API:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AudienceValidator <span class="hl-keyword">implements</span> OAuth2TokenValidator&lt;Jwt&gt; {
+    OAuth2Error error = <span class="hl-keyword">new</span> OAuth2Error(<span class="hl-string">"invalid_token"</span>, <span class="hl-string">"The required audience is missing"</span>, null);
+
+    <span class="hl-keyword">public</span> OAuth2TokenValidatorResult validate(Jwt jwt) {
+        <span class="hl-keyword">if</span> (jwt.getAudience().contains(<span class="hl-string">"messaging"</span>)) {
+            <span class="hl-keyword">return</span> OAuth2TokenValidatorResult.success();
+        } <span class="hl-keyword">else</span> {
+            <span class="hl-keyword">return</span> OAuth2TokenValidatorResult.failure(error);
+        }
+    }
+}</pre>
+<p>Then, to add into a resource server, it&#8217;s a matter of specifying the <code class="literal">JwtDecoder</code> instance:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+JwtDecoder jwtDecoder() {
+    NimbusJwtDecoderJwkSupport jwtDecoder = (NimbusJwtDecoderJwkSupport)
+        JwtDecoders.withOidcIssuerLocation(issuerUri);
+
+    OAuth2TokenValidator&lt;Jwt&gt; audienceValidator = <span class="hl-keyword">new</span> AudienceValidator();
+    OAuth2TokenValidator&lt;Jwt&gt; withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
+    OAuth2TokenValidator&lt;Jwt&gt; withAudience = <span class="hl-keyword">new</span> DelegatingOAuth2TokenValidator&lt;&gt;(withIssuer, audienceValidator);
+
+    jwtDecoder.setJwtValidator(withAudience);
+
+    <span class="hl-keyword">return</span> jwtDecoder;
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2resourceserver-claimsetmapping" href="#oauth2resourceserver-claimsetmapping"></a>6.8.7&nbsp;Configuring Claim Set Mapping</h3></div></div></div>
+
+<p>Spring Security uses the <a class="ulink" href="https://bitbucket.org/connect2id/nimbus-jose-jwt/wiki/Home" target="_top">Nimbus</a> library for parsing JWTs and validating their signatures.
+Consequently, Spring Security is subject to Nimbus&#8217;s interpretation of each field value and how to coerce each into a Java type.</p>
+<p>For example, because Nimbus remains Java 7 compatible, it doesn&#8217;t use <code class="literal">Instant</code> to represent timestamp fields.</p>
+<p>And it&#8217;s entirely possible to use a different library or for JWT processing, which may make its own coercion decisions that need adjustment.</p>
+<p>Or, quite simply, a resource server may want to add or remove claims from a JWT for domain-specific reasons.</p>
+<p>For these purposes, Resource Server supports mapping the JWT claim set with <code class="literal">MappedJwtClaimSetConverter</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-claimsetmapping-singleclaim" href="#oauth2resourceserver-claimsetmapping-singleclaim"></a>Customizing the Conversion of a Single Claim</h4></div></div></div>
+
+<p>By default, <code class="literal">MappedJwtClaimSetConverter</code> will attempt to coerce claims into the following types:</p>
+<div class="informaltable">
+<table style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"></colgroup><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Claim</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Java Type</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">aud</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">Collection&lt;String&gt;</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">exp</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">Instant</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">iat</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">Instant</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">iss</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">String</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">jti</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">String</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">nbf</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">Instant</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">sub</code></p></td><td style="" align="left" valign="top"><p><code class="literal">String</code></p></td></tr></tbody></table>
+</div>
+<p>An individual claim&#8217;s conversion strategy can be configured using <code class="literal">MappedJwtClaimSetConverter.withDefaults</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+JwtDecoder jwtDecoder() {
+    NimbusJwtDecoderJwkSupport jwtDecoder = <span class="hl-keyword">new</span> NimbusJwtDecoderJwkSupport(jwkSetUri);
+
+    MappedJwtClaimSetConverter converter = MappedJwtClaimSetConverter
+            .withDefaults(Collections.singletonMap(<span class="hl-string">"sub"</span>, <span class="hl-keyword">this</span>::lookupUserIdBySub));
+    jwtDecoder.setJwtClaimSetConverter(converter);
+
+    <span class="hl-keyword">return</span> jwtDecoder;
+}</pre>
+<p>This will keep all the defaults, except it will override the default claim converter for <code class="literal">sub</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-claimsetmapping-add" href="#oauth2resourceserver-claimsetmapping-add"></a>Adding a Claim</h4></div></div></div>
+
+<p><code class="literal">MappedJwtClaimSetConverter</code> can also be used to add a custom claim, for example, to adapt to an existing system:</p>
+<pre class="programlisting">MappedJwtClaimSetConverter.withDefaults(Collections.singletonMap(<span class="hl-string">"custom"</span>, custom -&gt; <span class="hl-string">"value"</span>));</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-claimsetmapping-remove" href="#oauth2resourceserver-claimsetmapping-remove"></a>Removing a Claim</h4></div></div></div>
+
+<p>And removing a claim is also simple, using the same API:</p>
+<pre class="programlisting">MappedJwtClaimSetConverter.withDefaults(Collections.singletonMap(<span class="hl-string">"legacyclaim"</span>, legacy -&gt; null));</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2resourceserver-claimsetmapping-rename" href="#oauth2resourceserver-claimsetmapping-rename"></a>Renaming a Claim</h4></div></div></div>
+
+<p>In more sophisticated scenarios, like consulting multiple claims at once or renaming a claim, Resource Server accepts any class that implements <code class="literal">Converter&lt;Map&lt;String, Object&gt;, Map&lt;String,Object&gt;&gt;</code>:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> UsernameSubClaimAdapter <span class="hl-keyword">implements</span> Converter&lt;Map&lt;String, Object&gt;, Map&lt;String, Object&gt;&gt; {
+    <span class="hl-keyword">private</span> <span class="hl-keyword">final</span> MappedJwtClaimSetConverter delegate =
+            MappedJwtClaimSetConverter.withDefaults(Collections.emptyMap());
+
+    <span class="hl-keyword">public</span> Map&lt;String, Object&gt; convert(Map&lt;String, Object&gt; claims) {
+        Map&lt;String, Object&gt; convertedClaims = <span class="hl-keyword">this</span>.delegate.convert(claims);
+
+        String username = (String) convertedClaims.get(<span class="hl-string">"user_name"</span>);
+        convertedClaims.put(<span class="hl-string">"sub"</span>, username);
+
+        <span class="hl-keyword">return</span> convertedClaims;
+    }
+}</pre>
+<p>And then, the instance can be supplied like normal:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+JwtDecoder jwtDecoder() {
+    NimbusJwtDecoderJwkSupport jwtDecoder = <span class="hl-keyword">new</span> NimbusJwtDecoderJwkSupport(jwkSetUri);
+    jwtDecoder.setJwtClaimSetConverter(<span class="hl-keyword">new</span> UsernameSubClaimAdapter());
+    <span class="hl-keyword">return</span> jwtDecoder;
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2resourceserver-timeouts" href="#oauth2resourceserver-timeouts"></a>6.8.8&nbsp;Configuring Timeouts</h3></div></div></div>
+
+<p>By default, Resource Server uses connection and socket timeouts of 30 seconds each for coordinating with the authorization server.</p>
+<p>This may be too short in some scenarios.
+Further, it doesn&#8217;t take into account more sophisticated patterns like back-off and discovery.</p>
+<p>To adjust the way in which Resource Server connects to the authorization server, <code class="literal">NimbusJwtDecoderJwkSupport</code> accepts an instance of <code class="literal">RestOperations</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> JwtDecoder jwtDecoder(RestTemplateBuilder builder) {
+    RestOperations rest = builder
+            .setConnectionTimeout(<span class="hl-number">60000</span>)
+            .setReadTimeout(<span class="hl-number">60000</span>)
+            .build();
+
+    NimbusJwtDecoderJwkSupport jwtDecoder = <span class="hl-keyword">new</span> NimbusJwtDecoderJwkSupport(jwkSetUri);
+    jwtDecoder.setRestOperations(rest);
+    <span class="hl-keyword">return</span> jwtDecoder;
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jc-authentication" href="#jc-authentication"></a>6.9&nbsp;Authentication</h2></div></div></div>
+
+<p>Thus far we have only taken a look at the most basic authentication configuration.
+Let&#8217;s take a look at a few slightly more advanced options for configuring authentication.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jc-authentication-inmemory" href="#jc-authentication-inmemory"></a>6.9.1&nbsp;In-Memory Authentication</h3></div></div></div>
+
+<p>We have already seen an example of configuring in-memory authentication for a single user.
+Below is an example to configure multiple users:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> UserDetailsService userDetailsService() <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-comment">// ensure the passwords are encoded properly</span>
+    UserBuilder users = User.withDefaultPasswordEncoder();
+    InMemoryUserDetailsManager manager = <span class="hl-keyword">new</span> InMemoryUserDetailsManager();
+    manager.createUser(users.username(<span class="hl-string">"user"</span>).password(<span class="hl-string">"password"</span>).roles(<span class="hl-string">"USER"</span>).build());
+    manager.createUser(users.username(<span class="hl-string">"admin"</span>).password(<span class="hl-string">"password"</span>).roles(<span class="hl-string">"USER"</span>,<span class="hl-string">"ADMIN"</span>).build());
+    <span class="hl-keyword">return</span> manager;
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jc-authentication-jdbc" href="#jc-authentication-jdbc"></a>6.9.2&nbsp;JDBC Authentication</h3></div></div></div>
+
+<p>You can find the updates to support JDBC based authentication.
+The example below assumes that you have already defined a <code class="literal">DataSource</code> within your application.
+The <a class="ulink" href="https://github.com/spring-projects/spring-security/tree/master/samples/javaconfig/jdbc" target="_top">jdbc-javaconfig</a> sample provides a complete example of using JDBC based authentication.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<span class="hl-keyword">private</span> DataSource dataSource;
+
+<em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> configureGlobal(AuthenticationManagerBuilder auth) <span class="hl-keyword">throws</span> Exception {
+    <span class="hl-comment">// ensure the passwords are encoded properly</span>
+    UserBuilder users = User.withDefaultPasswordEncoder();
+    auth
+        .jdbcAuthentication()
+            .dataSource(dataSource)
+            .withDefaultSchema()
+            .withUser(users.username(<span class="hl-string">"user"</span>).password(<span class="hl-string">"password"</span>).roles(<span class="hl-string">"USER"</span>))
+            .withUser(users.username(<span class="hl-string">"admin"</span>).password(<span class="hl-string">"password"</span>).roles(<span class="hl-string">"USER"</span>,<span class="hl-string">"ADMIN"</span>));
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="ldap-authentication" href="#ldap-authentication"></a>6.9.3&nbsp;LDAP Authentication</h3></div></div></div>
+
+<p>You can find the updates to support LDAP based authentication.
+The <a class="ulink" href="https://github.com/spring-projects/spring-security/tree/master/samples/javaconfig/ldap" target="_top">ldap-javaconfig</a> sample provides a complete example of using LDAP based authentication.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<span class="hl-keyword">private</span> DataSource dataSource;
+
+<em><span class="hl-annotation" style="color: gray">@Autowired</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">void</span> configureGlobal(AuthenticationManagerBuilder auth) <span class="hl-keyword">throws</span> Exception {
+    auth
+        .ldapAuthentication()
+            .userDnPatterns(<span class="hl-string">"uid={0},ou=people"</span>)
+            .groupSearchBase(<span class="hl-string">"ou=groups"</span>);
+}</pre>
+<p>The example above uses the following LDIF and an embedded Apache DS LDAP instance.</p>
+<p>
+<b>users.ldif.&nbsp;</b>
+
+</p><pre class="screen">dn: ou=groups,dc=springframework,dc=org
+objectclass: top
+objectclass: organizationalUnit
+ou: groups
+
+dn: ou=people,dc=springframework,dc=org
+objectclass: top
+objectclass: organizationalUnit
+ou: people
+
+dn: uid=admin,ou=people,dc=springframework,dc=org
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+cn: Rod Johnson
+sn: Johnson
+uid: admin
+userPassword: password
+
+dn: uid=user,ou=people,dc=springframework,dc=org
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+cn: Dianne Emu
+sn: Emu
+uid: user
+userPassword: password
+
+dn: cn=user,ou=groups,dc=springframework,dc=org
+objectclass: top
+objectclass: groupOfNames
+cn: user
+uniqueMember: uid=admin,ou=people,dc=springframework,dc=org
+uniqueMember: uid=user,ou=people,dc=springframework,dc=org
+
+dn: cn=admin,ou=groups,dc=springframework,dc=org
+objectclass: top
+objectclass: groupOfNames
+cn: admin
+uniqueMember: uid=admin,ou=people,dc=springframework,dc=org</pre><p>
+
+</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jc-authentication-authenticationprovider" href="#jc-authentication-authenticationprovider"></a>6.9.4&nbsp;AuthenticationProvider</h3></div></div></div>
+
+<p>You can define custom authentication by exposing a custom <code class="literal">AuthenticationProvider</code> as a bean.
+For example, the following will customize authentication assuming that <code class="literal">SpringAuthenticationProvider</code> implements <code class="literal">AuthenticationProvider</code>:</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>This is only used if the <code class="literal">AuthenticationManagerBuilder</code> has not been populated</p>
+</td></tr></table></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> SpringAuthenticationProvider springAuthenticationProvider() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> SpringAuthenticationProvider();
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jc-authentication-userdetailsservice" href="#jc-authentication-userdetailsservice"></a>6.9.5&nbsp;UserDetailsService</h3></div></div></div>
+
+<p>You can define custom authentication by exposing a custom <code class="literal">UserDetailsService</code> as a bean.
+For example, the following will customize authentication assuming that <code class="literal">SpringDataUserDetailsService</code> implements <code class="literal">UserDetailsService</code>:</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>This is only used if the <code class="literal">AuthenticationManagerBuilder</code> has not been populated and no <code class="literal">AuthenticationProviderBean</code> is defined.</p>
+</td></tr></table></div>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> SpringDataUserDetailsService springDataUserDetailsService() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> SpringDataUserDetailsService();
+}</pre>
+<p>You can also customize how passwords are encoded by exposing a <code class="literal">PasswordEncoder</code> as a bean.
+For example, if you use bcrypt you can add a bean definition as shown below:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> BCryptPasswordEncoder passwordEncoder() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> BCryptPasswordEncoder();
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="multiple-httpsecurity" href="#multiple-httpsecurity"></a>6.10&nbsp;Multiple HttpSecurity</h2></div></div></div>
+
+<p>We can configure multiple HttpSecurity instances just as we can have multiple <code class="literal">&lt;http&gt;</code> blocks.
+The key is to extend the <code class="literal">WebSecurityConfigurationAdapter</code> multiple times.
+For example, the following is an example of having a different configuration for URL&#8217;s that start with <code class="literal">/api/</code>.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MultiHttpSecurityConfig {
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>                                                             <a name="CO10-1" href="#CO10-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    <span class="hl-keyword">public</span> UserDetailsService userDetailsService() <span class="hl-keyword">throws</span> Exception {
+        <span class="hl-comment">// ensure the passwords are encoded properly</span>
+        UserBuilder users = User.withDefaultPasswordEncoder();
+        InMemoryUserDetailsManager manager = <span class="hl-keyword">new</span> InMemoryUserDetailsManager();
+        manager.createUser(users.username(<span class="hl-string">"user"</span>).password(<span class="hl-string">"password"</span>).roles(<span class="hl-string">"USER"</span>).build());
+        manager.createUser(users.username(<span class="hl-string">"admin"</span>).password(<span class="hl-string">"password"</span>).roles(<span class="hl-string">"USER"</span>,<span class="hl-string">"ADMIN"</span>).build());
+        <span class="hl-keyword">return</span> manager;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+    <em><span class="hl-annotation" style="color: gray">@Order(1)</span></em>                                                        <a name="CO10-2" href="#CO10-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">class</span> ApiWebSecurityConfigurationAdapter <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+        <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+            http
+                .antMatcher(<span class="hl-string">"/api/**"</span>)                               <a name="CO10-3" href="#CO10-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                .authorizeRequests()
+                    .anyRequest().hasRole(<span class="hl-string">"ADMIN"</span>)
+                    .and()
+                .httpBasic();
+        }
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Configuration</span></em>                                                   <a name="CO10-4" href="#CO10-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">class</span> FormLoginWebSecurityConfigurerAdapter <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+        <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+        <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+            http
+                .authorizeRequests()
+                    .anyRequest().authenticated()
+                    .and()
+                .formLogin();
+        }
+    }
+}</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Configure Authentication as normal</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Create an instance of <code class="literal">WebSecurityConfigurerAdapter</code> that contains <code class="literal">@Order</code> to specify which <code class="literal">WebSecurityConfigurerAdapter</code> should be considered first.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">http.antMatcher</code> states that this <code class="literal">HttpSecurity</code> will only be applicable to URLs that start with <code class="literal">/api/</code></p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO10-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Create another instance of <code class="literal">WebSecurityConfigurerAdapter</code>.
+If the URL does not start with <code class="literal">/api/</code> this configuration will be used.
+This configuration is considered after <code class="literal">ApiWebSecurityConfigurationAdapter</code> since it has an <code class="literal">@Order</code> value after <code class="literal">1</code> (no <code class="literal">@Order</code> defaults to last).</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jc-method" href="#jc-method"></a>6.11&nbsp;Method Security</h2></div></div></div>
+
+<p>From version 2.0 onwards Spring Security has improved support substantially for adding security to your service layer methods.
+It provides support for JSR-250 annotation security as well as the framework&#8217;s original <code class="literal">@Secured</code> annotation.
+From 3.0 you can also make use of new <a class="link" href="authorization.html#el-access" title="11.3&nbsp;Expression-Based Access Control">expression-based annotations</a>.
+You can apply security to a single bean, using the <code class="literal">intercept-methods</code> element to decorate the bean declaration, or you can secure multiple beans across the entire service layer using the AspectJ style pointcuts.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="enableglobalmethodsecurity" href="#enableglobalmethodsecurity"></a>6.11.1&nbsp;EnableGlobalMethodSecurity</h3></div></div></div>
+
+<p>We can enable annotation-based security using the <code class="literal">@EnableGlobalMethodSecurity</code> annotation on any <code class="literal">@Configuration</code> instance.
+For example, the following would enable Spring Security&#8217;s <code class="literal">@Secured</code> annotation.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableGlobalMethodSecurity(securedEnabled = true)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MethodSecurityConfig {
+<span class="hl-comment">// ...</span>
+}</pre>
+<p>Adding an annotation to a method (on a class or interface) would then limit the access to that method accordingly.
+Spring Security&#8217;s native annotation support defines a set of attributes for the method.
+These will be passed to the AccessDecisionManager for it to make the actual decision:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> BankService {
+
+<em><span class="hl-annotation" style="color: gray">@Secured("IS_AUTHENTICATED_ANONYMOUSLY")</span></em>
+<span class="hl-keyword">public</span> Account readAccount(Long id);
+
+<em><span class="hl-annotation" style="color: gray">@Secured("IS_AUTHENTICATED_ANONYMOUSLY")</span></em>
+<span class="hl-keyword">public</span> Account[] findAccounts();
+
+<em><span class="hl-annotation" style="color: gray">@Secured("ROLE_TELLER")</span></em>
+<span class="hl-keyword">public</span> Account post(Account account, <span class="hl-keyword">double</span> amount);
+}</pre>
+<p>Support for JSR-250 annotations can be enabled using</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableGlobalMethodSecurity(jsr250Enabled = true)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MethodSecurityConfig {
+<span class="hl-comment">// ...</span>
+}</pre>
+<p>These are standards-based and allow simple role-based constraints to be applied but do not have the power Spring Security&#8217;s native annotations.
+To use the new expression-based syntax, you would use</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableGlobalMethodSecurity(prePostEnabled = true)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MethodSecurityConfig {
+<span class="hl-comment">// ...</span>
+}</pre>
+<p>and the equivalent Java code would be</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> BankService {
+
+<em><span class="hl-annotation" style="color: gray">@PreAuthorize("isAnonymous()")</span></em>
+<span class="hl-keyword">public</span> Account readAccount(Long id);
+
+<em><span class="hl-annotation" style="color: gray">@PreAuthorize("isAnonymous()")</span></em>
+<span class="hl-keyword">public</span> Account[] findAccounts();
+
+<em><span class="hl-annotation" style="color: gray">@PreAuthorize("hasAuthority('ROLE_TELLER')")</span></em>
+<span class="hl-keyword">public</span> Account post(Account account, <span class="hl-keyword">double</span> amount);
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="globalmethodsecurityconfiguration" href="#globalmethodsecurityconfiguration"></a>6.11.2&nbsp;GlobalMethodSecurityConfiguration</h3></div></div></div>
+
+<p>Sometimes you may need to perform operations that are more complicated than are possible with the <code class="literal">@EnableGlobalMethodSecurity</code> annotation allow.
+For these instances, you can extend the <code class="literal">GlobalMethodSecurityConfiguration</code> ensuring that the <code class="literal">@EnableGlobalMethodSecurity</code> annotation is present on your subclass.
+For example, if you wanted to provide a custom <code class="literal">MethodSecurityExpressionHandler</code>, you could use the following configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableGlobalMethodSecurity(prePostEnabled = true)</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MethodSecurityConfig <span class="hl-keyword">extends</span> GlobalMethodSecurityConfiguration {
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> MethodSecurityExpressionHandler createExpressionHandler() {
+        <span class="hl-comment">// ... create and return custom MethodSecurityExpressionHandler ...</span>
+        <span class="hl-keyword">return</span> expressionHandler;
+    }
+}</pre>
+<p>For additional information about methods that can be overridden, refer to the <code class="literal">GlobalMethodSecurityConfiguration</code> Javadoc.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="post-processing-configured-objects" href="#post-processing-configured-objects"></a>6.12&nbsp;Post Processing Configured Objects</h2></div></div></div>
+
+<p>Spring Security&#8217;s Java Configuration does not expose every property of every object that it configures.
+This simplifies the configuration for a majority of users.
+Afterall, if every property was exposed, users could use standard bean configuration.</p>
+<p>While there are good reasons to not directly expose every property, users may still need more advanced configuration options.
+To address this Spring Security introduces the concept of an <code class="literal">ObjectPostProcessor</code> which can be used to modify or replace many of the Object instances created by the Java Configuration.
+For example, if you wanted to configure the <code class="literal">filterSecurityPublishAuthorizationSuccess</code> property on <code class="literal">FilterSecurityInterceptor</code> you could use the following:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Override</span></em>
+<span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+    http
+        .authorizeRequests()
+            .anyRequest().authenticated()
+            .withObjectPostProcessor(<span class="hl-keyword">new</span> ObjectPostProcessor&lt;FilterSecurityInterceptor&gt;() {
+                <span class="hl-keyword">public</span> &lt;O <span class="hl-keyword">extends</span> FilterSecurityInterceptor&gt; O postProcess(
+                        O fsi) {
+                    fsi.setPublishAuthorizationSuccess(true);
+                    <span class="hl-keyword">return</span> fsi;
+                }
+            });
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jc-custom-dsls" href="#jc-custom-dsls"></a>6.13&nbsp;Custom DSLs</h2></div></div></div>
+
+<p>You can provide your own custom DSLs in Spring Security.
+For example, you might have something that looks like this:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> MyCustomDsl <span class="hl-keyword">extends</span> AbstractHttpConfigurer&lt;MyCustomDsl, HttpSecurity&gt; {
+    <span class="hl-keyword">private</span> <span class="hl-keyword">boolean</span> flag;
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> init(H http) <span class="hl-keyword">throws</span> Exception {
+        <span class="hl-comment">// any method that adds another configurer</span>
+        <span class="hl-comment">// must be done in the init method</span>
+        http.csrf().disable();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> configure(H http) <span class="hl-keyword">throws</span> Exception {
+        ApplicationContext context = http.getSharedObject(ApplicationContext.<span class="hl-keyword">class</span>);
+
+        <span class="hl-comment">// here we lookup from the ApplicationContext. You can also just create a new instance.</span>
+        MyFilter myFilter = context.getBean(MyFilter.<span class="hl-keyword">class</span>);
+        myFilter.setFlag(flag);
+        http.addFilterBefore(myFilter, UsernamePasswordAuthenticationFilter.<span class="hl-keyword">class</span>);
+    }
+
+    <span class="hl-keyword">public</span> MyCustomDsl flag(<span class="hl-keyword">boolean</span> value) {
+        <span class="hl-keyword">this</span>.flag = value;
+        <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>;
+    }
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> MyCustomDsl customDsl() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> MyCustomDsl();
+    }
+}</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>This is actually how methods like <code class="literal">HttpSecurity.authorizeRequests()</code> are implemented.</p>
+</td></tr></table></div>
+<p>The custom DSL can then be used like this:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Config <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .apply(customDsl())
+                .flag(true)
+                .and()
+            ...;
+    }
+}</pre>
+<p>The code is invoked in the following order:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Code in `Config`s configure method is invoked
+</li><li class="listitem">
+Code in `MyCustomDsl`s init method is invoked
+</li><li class="listitem">
+Code in `MyCustomDsl`s configure method is invoked
+</li></ul></div>
+<p>If you want, you can have <code class="literal">WebSecurityConfiguerAdapter</code> add <code class="literal">MyCustomDsl</code> by default by using <code class="literal">SpringFactories</code>.
+For example, you would create a resource on the classpath named <code class="literal">META-INF/spring.factories</code> with the following contents:</p>
+<p>
+<b>META-INF/spring.factories.&nbsp;</b>
+
+</p><pre class="screen">org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer = sample.MyCustomDsl</pre><p>
+
+</p>
+<p>Users wishing to disable the default can do so explicitly.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Config <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .apply(customDsl()).disable()
+            ...;
+    }
+}</pre>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="servlet-applications.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="servlet-applications.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ns-config.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Part&nbsp;II.&nbsp;Servlet Applications&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;7.&nbsp;Security Namespace Configuration</td></tr></table></div></body></html>

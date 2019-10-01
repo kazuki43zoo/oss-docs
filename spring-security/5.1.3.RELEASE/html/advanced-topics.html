@@ -1,0 +1,958 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>12.&nbsp;Additional Topics</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="servlet-applications.html" title="Part&nbsp;II.&nbsp;Servlet Applications"><link rel="prev" href="authorization.html" title="11.&nbsp;Authorization"><link rel="next" href="servlet-webclient.html" title="13.&nbsp;WebClient for Servlet Environments"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">12.&nbsp;Additional Topics</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="authorization.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;II.&nbsp;Servlet Applications</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="servlet-webclient.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="advanced-topics" href="#advanced-topics"></a>12.&nbsp;Additional Topics</h2></div></div></div>
+
+<p>In this part we cover features which require knowledge of previous chapters as well as some of the more advanced and less-commonly used features of the framework.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="domain-acls" href="#domain-acls"></a>12.1&nbsp;Domain Object Security (ACLs)</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="domain-acls-overview" href="#domain-acls-overview"></a>12.1.1&nbsp;Overview</h3></div></div></div>
+
+<p>Complex applications often will find the need to define access permissions not simply at a web request or method invocation level.
+Instead, security decisions need to comprise both who (<code class="literal">Authentication</code>), where (<code class="literal">MethodInvocation</code>) and what (<code class="literal">SomeDomainObject</code>).
+In other words, authorization decisions also need to consider the actual domain object instance subject of a method invocation.</p>
+<p>Imagine you&#8217;re designing an application for a pet clinic.
+There will be two main groups of users of your Spring-based application: staff of the pet clinic, as well as the pet clinic&#8217;s customers.
+The staff will have access to all of the data, whilst your customers will only be able to see their own customer records.
+To make it a little more interesting, your customers can allow other users to see their customer records, such as their "puppy preschool" mentor or president of their local "Pony Club".
+Using Spring Security as the foundation, you have several approaches that can be used:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Write your business methods to enforce the security.
+You could consult a collection within the <code class="literal">Customer</code> domain object instance to determine which users have access.
+By using the <code class="literal">SecurityContextHolder.getContext().getAuthentication()</code>, you&#8217;ll be able to access the <code class="literal">Authentication</code> object.
+</li><li class="listitem">
+Write an <code class="literal">AccessDecisionVoter</code> to enforce the security from the <code class="literal">GrantedAuthority[]</code> s stored in the <code class="literal">Authentication</code> object.
+This would mean your <code class="literal">AuthenticationManager</code> would need to populate the <code class="literal">Authentication</code> with custom <code class="literal">GrantedAuthority[]</code>s representing each of the <code class="literal">Customer</code> domain object instances the principal has access to.
+</li><li class="listitem">
+Write an <code class="literal">AccessDecisionVoter</code> to enforce the security and open the target <code class="literal">Customer</code> domain object directly.
+This would mean your voter needs access to a DAO that allows it to retrieve the <code class="literal">Customer</code> object.
+It would then access the <code class="literal">Customer</code> object&#8217;s collection of approved users and make the appropriate decision.
+</li></ul></div>
+<p>Each one of these approaches is perfectly legitimate.
+However, the first couples your authorization checking to your business code.
+The main problems with this include the enhanced difficulty of unit testing and the fact it would be more difficult to reuse the <code class="literal">Customer</code> authorization logic elsewhere.
+Obtaining the <code class="literal">GrantedAuthority[]</code> s from the <code class="literal">Authentication</code> object is also fine, but will not scale to large numbers of <code class="literal">Customer</code> s.
+If a user might be able to access 5,000 <code class="literal">Customer</code> s (unlikely in this case, but imagine if it were a popular vet for a large Pony Club!) the amount of memory consumed and time required to construct the <code class="literal">Authentication</code> object would be undesirable.
+The final method, opening the <code class="literal">Customer</code> directly from external code, is probably the best of the three.
+It achieves separation of concerns, and doesn&#8217;t misuse memory or CPU cycles, but it is still inefficient in that both the <code class="literal">AccessDecisionVoter</code> and the eventual business method itself will perform a call to the DAO responsible for retrieving the <code class="literal">Customer</code> object.
+Two accesses per method invocation is clearly undesirable.
+In addition, with every approach listed you&#8217;ll need to write your own access control list (ACL) persistence and business logic from scratch.</p>
+<p>Fortunately, there is another alternative, which we&#8217;ll talk about below.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="domain-acls-key-concepts" href="#domain-acls-key-concepts"></a>12.1.2&nbsp;Key Concepts</h3></div></div></div>
+
+<p>Spring Security&#8217;s ACL services are shipped in the <code class="literal">spring-security-acl-xxx.jar</code>.
+You will need to add this JAR to your classpath to use Spring Security&#8217;s domain object instance security capabilities.</p>
+<p>Spring Security&#8217;s domain object instance security capabilities centre on the concept of an access control list (ACL).
+Every domain object instance in your system has its own ACL, and the ACL records details of who can and can&#8217;t work with that domain object.
+With this in mind, Spring Security delivers three main ACL-related capabilities to your application:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+A way of efficiently retrieving ACL entries for all of your domain objects (and modifying those ACLs)
+</li><li class="listitem">
+A way of ensuring a given principal is permitted to work with your objects, before methods are called
+</li><li class="listitem">
+A way of ensuring a given principal is permitted to work with your objects (or something they return), after methods are called
+</li></ul></div>
+<p>As indicated by the first bullet point, one of the main capabilities of the Spring Security ACL module is providing a high-performance way of retrieving ACLs.
+This ACL repository capability is extremely important, because every domain object instance in your system might have several access control entries, and each ACL might inherit from other ACLs in a tree-like structure (this is supported out-of-the-box by Spring Security, and is very commonly used).
+Spring Security&#8217;s ACL capability has been carefully designed to provide high performance retrieval of ACLs, together with pluggable caching, deadlock-minimizing database updates, independence from ORM frameworks (we use JDBC directly), proper encapsulation, and transparent database updating.</p>
+<p>Given databases are central to the operation of the ACL module, let&#8217;s explore the four main tables used by default in the implementation.
+The tables are presented below in order of size in a typical Spring Security ACL deployment, with the table with the most rows listed last:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+ACL_SID allows us to uniquely identify any principal or authority in the system ("SID" stands for "security identity").
+The only columns are the ID, a textual representation of the SID, and a flag to indicate whether the textual                   representation refers to a principal name or a <code class="literal">GrantedAuthority</code>.
+Thus, there is a single row for each unique principal or <code class="literal">GrantedAuthority</code>.
+When used in the context of receiving a permission, a SID is generally called a "recipient".
+</li><li class="listitem">
+ACL_CLASS allows us to uniquely identify any domain object class in the system.
+The only columns are the ID and the Java class name.
+Thus, there is a single row for each unique Class we wish to store ACL permissions for.
+</li><li class="listitem">
+ACL_OBJECT_IDENTITY stores information for each unique domain object instance in the system.
+Columns include the ID, a foreign key to the ACL_CLASS table, a unique identifier so we know which ACL_CLASS instance we&#8217;re providing information for, the parent, a foreign key to the ACL_SID table to represent the owner of the domain object instance, and whether we allow ACL entries to inherit from any parent ACL.
+We have a single row for every domain object instance we&#8217;re storing ACL permissions for.
+</li><li class="listitem">
+Finally, ACL_ENTRY stores the individual permissions assigned to each recipient.
+Columns include a foreign key to the ACL_OBJECT_IDENTITY, the recipient (ie a foreign key to ACL_SID), whether we&#8217;ll be auditing or not, and the integer bit mask that represents the actual permission being granted or denied.
+We have a single row for every recipient that receives a permission to work with a domain object.
+</li></ul></div>
+<p>As mentioned in the last paragraph, the ACL system uses integer bit masking.
+Don&#8217;t worry, you need not be aware of the finer points of bit shifting to use the ACL system, but suffice to say that we have 32 bits we can switch on or off.
+Each of these bits represents a permission, and by default the permissions are read (bit 0), write (bit 1), create (bit 2), delete (bit 3) and administer (bit 4).
+It&#8217;s easy to implement your own <code class="literal">Permission</code> instance if you wish to use other permissions, and the remainder of the ACL framework will operate without knowledge of your extensions.</p>
+<p>It is important to understand that the number of domain objects in your system has absolutely no bearing on the fact we&#8217;ve chosen to use integer bit masking.
+Whilst you have 32 bits available for permissions, you could have billions of domain object instances (which will mean billions of rows in ACL_OBJECT_IDENTITY and quite probably ACL_ENTRY).
+We make this point because we&#8217;ve found sometimes people mistakenly believe they need a bit for each potential domain object, which is not the case.</p>
+<p>Now that we&#8217;ve provided a basic overview of what the ACL system does, and what it looks like at a table structure, let&#8217;s explore the key interfaces.
+The key interfaces are:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">Acl</code>: Every domain object has one and only one <code class="literal">Acl</code> object, which internally holds the <code class="literal">AccessControlEntry</code> s as well as knows the owner of the <code class="literal">Acl</code>.
+An Acl does not refer directly to the domain object, but instead to an <code class="literal">ObjectIdentity</code>.
+The <code class="literal">Acl</code> is stored in the ACL_OBJECT_IDENTITY table.
+</li><li class="listitem">
+<code class="literal">AccessControlEntry</code>: An <code class="literal">Acl</code> holds multiple <code class="literal">AccessControlEntry</code> s, which are often abbreviated as ACEs in the framework.
+Each ACE refers to a specific tuple of <code class="literal">Permission</code>, <code class="literal">Sid</code> and <code class="literal">Acl</code>.
+An ACE can also be granting or non-granting and contain audit settings.
+The ACE is stored in the ACL_ENTRY table.
+</li><li class="listitem">
+<code class="literal">Permission</code>: A permission represents a particular immutable bit mask, and offers convenience functions for bit masking and outputting information.
+The basic permissions presented above (bits 0 through 4) are contained in the <code class="literal">BasePermission</code> class.
+</li><li class="listitem">
+<code class="literal">Sid</code>: The ACL module needs to refer to principals and <code class="literal">GrantedAuthority[]</code> s.
+A level of indirection is provided by the <code class="literal">Sid</code> interface, which is an abbreviation of "security identity".
+Common classes include <code class="literal">PrincipalSid</code> (to represent the principal inside an <code class="literal">Authentication</code> object) and <code class="literal">GrantedAuthoritySid</code>.
+The security identity information is stored in the ACL_SID table.
+</li><li class="listitem">
+<code class="literal">ObjectIdentity</code>: Each domain object is represented internally within the ACL module by an <code class="literal">ObjectIdentity</code>.
+The default implementation is called <code class="literal">ObjectIdentityImpl</code>.
+</li><li class="listitem">
+<code class="literal">AclService</code>: Retrieves the <code class="literal">Acl</code> applicable for a given <code class="literal">ObjectIdentity</code>.
+In the included implementation (<code class="literal">JdbcAclService</code>), retrieval operations are delegated to a <code class="literal">LookupStrategy</code>.
+The <code class="literal">LookupStrategy</code> provides a highly optimized strategy for retrieving ACL information, using batched retrievals <code class="literal">(BasicLookupStrategy</code>) and supporting custom implementations that leverage materialized views, hierarchical queries and similar performance-centric, non-ANSI SQL capabilities.
+</li><li class="listitem">
+<code class="literal">MutableAclService</code>: Allows a modified <code class="literal">Acl</code> to be presented for persistence.
+It is not essential to use this interface if you do not wish.
+</li></ul></div>
+<p>Please note that our out-of-the-box AclService and related database classes all use ANSI SQL.
+This should therefore work with all major databases.
+At the time of writing, the system had been successfully tested using Hypersonic SQL, PostgreSQL, Microsoft SQL Server and Oracle.</p>
+<p>Two samples ship with Spring Security that demonstrate the ACL module.
+The first is the Contacts Sample, and the other is the Document Management System (DMS) Sample.
+We suggest taking a look over these for examples.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="domain-acls-getting-started" href="#domain-acls-getting-started"></a>12.1.3&nbsp;Getting Started</h3></div></div></div>
+
+<p>To get starting using Spring Security&#8217;s ACL capability, you will need to store your ACL information somewhere.
+This necessitates the instantiation of a <code class="literal">DataSource</code> using Spring.
+The <code class="literal">DataSource</code> is then injected into a <code class="literal">JdbcMutableAclService</code> and <code class="literal">BasicLookupStrategy</code> instance.
+The latter provides high-performance ACL retrieval capabilities, and the former provides mutator capabilities.
+Refer to one of the samples that ship with Spring Security for an example configuration.
+You&#8217;ll also need to populate the database with the four ACL-specific tables listed in the last section (refer to the ACL samples for the appropriate SQL statements).</p>
+<p>Once you&#8217;ve created the required schema and instantiated <code class="literal">JdbcMutableAclService</code>, you&#8217;ll next need to ensure your domain model supports interoperability with the Spring Security ACL package.
+Hopefully <code class="literal">ObjectIdentityImpl</code> will prove sufficient, as it provides a large number of ways in which it can be used.
+Most people will have domain objects that contain a <code class="literal">public Serializable getId()</code> method.
+If the return type is long, or compatible with long (eg an int), you will find you need not give further consideration to <code class="literal">ObjectIdentity</code> issues.
+Many parts of the ACL module rely on long identifiers.
+If you&#8217;re not using long (or an int, byte etc), there is a very good chance you&#8217;ll need to reimplement a number of classes.
+We do not intend to support non-long identifiers in Spring Security&#8217;s ACL module, as longs are already compatible with all database sequences, the most common identifier data type, and are of sufficient length to accommodate all common usage scenarios.</p>
+<p>The following fragment of code shows how to create an <code class="literal">Acl</code>, or modify an existing <code class="literal">Acl</code>:</p>
+<pre class="programlisting"><span class="hl-comment">// Prepare the information we'd like in our access control entry (ACE)</span>
+ObjectIdentity oi = <span class="hl-keyword">new</span> ObjectIdentityImpl(Foo.<span class="hl-keyword">class</span>, <span class="hl-keyword">new</span> Long(<span class="hl-number">44</span>));
+Sid sid = <span class="hl-keyword">new</span> PrincipalSid(<span class="hl-string">"Samantha"</span>);
+Permission p = BasePermission.ADMINISTRATION;
+
+<span class="hl-comment">// Create or update the relevant ACL</span>
+MutableAcl acl = null;
+<span class="hl-keyword">try</span> {
+acl = (MutableAcl) aclService.readAclById(oi);
+} <span class="hl-keyword">catch</span> (NotFoundException nfe) {
+acl = aclService.createAcl(oi);
+}
+
+<span class="hl-comment">// Now grant some permissions via an access control entry (ACE)</span>
+acl.insertAce(acl.getEntries().length, p, sid, true);
+aclService.updateAcl(acl);</pre>
+<p>In the example above, we&#8217;re retrieving the ACL associated with the "Foo" domain object with identifier number 44.
+We&#8217;re then adding an ACE so that a principal named "Samantha" can "administer" the object.
+The code fragment is relatively self-explanatory, except the insertAce method.
+The first argument to the insertAce method is determining at what position in the Acl the new entry will be inserted.
+In the example above, we&#8217;re just putting the new ACE at the end of the existing ACEs.
+The final argument is a Boolean indicating whether the ACE is granting or denying.
+Most of the time it will be granting (true), but if it is denying (false), the permissions are effectively being blocked.</p>
+<p>Spring Security does not provide any special integration to automatically create, update or delete ACLs as part of your DAO or repository operations.
+Instead, you will need to write code like shown above for your individual domain objects.
+It&#8217;s worth considering using AOP on your services layer to automatically integrate the ACL information with your services layer operations.
+We&#8217;ve found this quite an effective approach in the past.</p>
+<p>Once you&#8217;ve used the above techniques to store some ACL information in the database, the next step is to actually use the ACL information as part of authorization decision logic.
+You have a number of choices here.
+You could write your own <code class="literal">AccessDecisionVoter</code> or <code class="literal">AfterInvocationProvider</code> that respectively fires before or after a method invocation.
+Such classes would use <code class="literal">AclService</code> to retrieve the relevant ACL and then call <code class="literal">Acl.isGranted(Permission[] permission, Sid[] sids, boolean administrativeMode)</code> to decide whether permission is granted or denied.
+Alternately, you could use our <code class="literal">AclEntryVoter</code>, <code class="literal">AclEntryAfterInvocationProvider</code> or <code class="literal">AclEntryAfterInvocationCollectionFilteringProvider</code> classes.
+All of these classes provide a declarative-based approach to evaluating ACL information at runtime, freeing you from needing to write any code.
+Please refer to the sample applications to learn how to use these classes.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="preauth" href="#preauth"></a>12.2&nbsp;Pre-Authentication Scenarios</h2></div></div></div>
+
+<p>There are situations where you want to use Spring Security for authorization, but the user has already been reliably authenticated by some external system prior to accessing the application.
+We refer to these situations as "pre-authenticated" scenarios.
+Examples include X.509, Siteminder and authentication by the Java EE container in which the application is running.
+When using pre-authentication, Spring Security has to</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Identify the user making the request.
+</li><li class="listitem">
+Obtain the authorities for the user.
+</li></ul></div>
+<p>The details will depend on the external authentication mechanism.
+A user might be identified by their certificate information in the case of X.509, or by an HTTP request header in the case of Siteminder.
+If relying on container authentication, the user will be identified by calling the <code class="literal">getUserPrincipal()</code> method on the incoming HTTP request.
+In some cases, the external mechanism may supply role/authority information for the user but in others the authorities must be obtained from a separate source, such as a <code class="literal">UserDetailsService</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="pre-authentication-framework-classes" href="#pre-authentication-framework-classes"></a>12.2.1&nbsp;Pre-Authentication Framework Classes</h3></div></div></div>
+
+<p>Because most pre-authentication mechanisms follow the same pattern, Spring Security has a set of classes which provide an internal framework for implementing pre-authenticated authentication providers.
+This removes duplication and allows new implementations to be added in a structured fashion, without having to write everything from scratch.
+You don&#8217;t need to know about these classes if you want to use something like <a class="link" href="servlet-webclient.html#x509" title="13.8&nbsp;X.509 Authentication">X.509 authentication</a>, as it already has a namespace configuration option which is simpler to use and get started with.
+If you need to use explicit bean configuration or are planning on writing your own implementation then an understanding of how the provided implementations work will be useful.
+You will find classes under the <code class="literal">org.springframework.security.web.authentication.preauth</code>.
+We just provide an outline here so you should consult the Javadoc and source where appropriate.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="abstractpreauthenticatedprocessingfilter" href="#abstractpreauthenticatedprocessingfilter"></a>AbstractPreAuthenticatedProcessingFilter</h4></div></div></div>
+
+<p>This class will check the current contents of the security context and, if empty, it will attempt to extract user information from the HTTP request and submit it to the <code class="literal">AuthenticationManager</code>.
+Subclasses override the following methods to obtain this information:</p>
+<pre class="programlisting"><span class="hl-keyword">protected</span> <span class="hl-keyword">abstract</span> Object getPreAuthenticatedPrincipal(HttpServletRequest request);
+
+<span class="hl-keyword">protected</span> <span class="hl-keyword">abstract</span> Object getPreAuthenticatedCredentials(HttpServletRequest request);</pre>
+<p>After calling these, the filter will create a <code class="literal">PreAuthenticatedAuthenticationToken</code> containing the returned data and submit it for authentication.
+By "authentication" here, we really just mean further processing to perhaps load the user&#8217;s authorities, but the standard Spring Security authentication architecture is followed.</p>
+<p>Like other Spring Security authentication filters, the pre-authentication filter has an <code class="literal">authenticationDetailsSource</code> property which by default will create a <code class="literal">WebAuthenticationDetails</code> object to store additional information such as the session-identifier and originating IP address in the <code class="literal">details</code> property of the <code class="literal">Authentication</code> object.
+In cases where user role information can be obtained from the pre-authentication mechanism, the data is also stored in this property, with the details implementing the <code class="literal">GrantedAuthoritiesContainer</code> interface.
+This enables the authentication provider to read the authorities which were externally allocated to the user.
+We&#8217;ll look at a concrete example next.</p>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="j2ee-preauth-details" href="#j2ee-preauth-details"></a>J2eeBasedPreAuthenticatedWebAuthenticationDetailsSource</h5></div></div></div>
+
+<p>If the filter is configured with an <code class="literal">authenticationDetailsSource</code> which is an instance of this class, the authority information is obtained by calling the <code class="literal">isUserInRole(String role)</code> method for each of a pre-determined set of "mappable roles".
+The class gets these from a configured <code class="literal">MappableAttributesRetriever</code>.
+Possible implementations include hard-coding a list in the application context and reading the role information from the <code class="literal">&lt;security-role&gt;</code> information in a <code class="literal">web.xml</code> file.
+The pre-authentication sample application uses the latter approach.</p>
+<p>There is an additional stage where the roles (or attributes) are mapped to Spring Security <code class="literal">GrantedAuthority</code> objects using a configured <code class="literal">Attributes2GrantedAuthoritiesMapper</code>.
+The default will just add the usual <code class="literal">ROLE_</code> prefix to the names, but it gives you full control over the behaviour.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="preauthenticatedauthenticationprovider" href="#preauthenticatedauthenticationprovider"></a>PreAuthenticatedAuthenticationProvider</h4></div></div></div>
+
+<p>The pre-authenticated provider has little more to do than load the <code class="literal">UserDetails</code> object for the user.
+It does this by delegating to an <code class="literal">AuthenticationUserDetailsService</code>.
+The latter is similar to the standard <code class="literal">UserDetailsService</code> but takes an <code class="literal">Authentication</code> object rather than just user name:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> AuthenticationUserDetailsService {
+    UserDetails loadUserDetails(Authentication token) <span class="hl-keyword">throws</span> UsernameNotFoundException;
+}</pre>
+<p>This interface may have also other uses but with pre-authentication it allows access to the authorities which were packaged in the <code class="literal">Authentication</code> object, as we saw in the previous section.
+The <code class="literal">PreAuthenticatedGrantedAuthoritiesUserDetailsService</code> class does this.
+Alternatively, it may delegate to a standard <code class="literal">UserDetailsService</code> via the <code class="literal">UserDetailsByNameServiceWrapper</code> implementation.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="http403forbiddenentrypoint" href="#http403forbiddenentrypoint"></a>Http403ForbiddenEntryPoint</h4></div></div></div>
+
+<p>The <code class="literal">AuthenticationEntryPoint</code> was discussed in the <a class="link" href="overall-architecture.html#tech-intro-auth-entry-point" title="AuthenticationEntryPoint">technical overview</a> chapter.
+Normally it is responsible for kick-starting the authentication process for an unauthenticated user (when they try to access a protected resource), but in the pre-authenticated case this doesn&#8217;t apply.
+You would only configure the <code class="literal">ExceptionTranslationFilter</code> with an instance of this class if you aren&#8217;t using pre-authentication in combination with other authentication mechanisms.
+It will be called if the user is rejected by the <code class="literal">AbstractPreAuthenticatedProcessingFilter</code> resulting in a null authentication.
+It always returns a <code class="literal">403</code>-forbidden response code if called.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="concrete-implementations" href="#concrete-implementations"></a>12.2.2&nbsp;Concrete Implementations</h3></div></div></div>
+
+<p>X.509 authentication is covered in its <a class="link" href="servlet-webclient.html#x509" title="13.8&nbsp;X.509 Authentication">own chapter</a>.
+Here we&#8217;ll look at some classes which provide support for other pre-authenticated scenarios.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="request-header-authentication-siteminder" href="#request-header-authentication-siteminder"></a>Request-Header Authentication (Siteminder)</h4></div></div></div>
+
+<p>An external authentication system may supply information to the application by setting specific headers on the HTTP request.
+A well-known example of this is Siteminder, which passes the username in a header called <code class="literal">SM_USER</code>.
+This mechanism is supported by the class <code class="literal">RequestHeaderAuthenticationFilter</code> which simply extracts the username from the header.
+It defaults to using the name <code class="literal">SM_USER</code> as the header name.
+See the Javadoc for more details.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>Note that when using a system like this, the framework performs no authentication checks at all and it is <span class="emphasis"><em>extremely</em></span> important that the external system is configured properly and protects all access to the application.
+If an attacker is able to forge the headers in their original request without this being detected then they could potentially choose any username they wished.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="siteminder-example-configuration" href="#siteminder-example-configuration"></a>Siteminder Example Configuration</h5></div></div></div>
+
+<p>A typical configuration using this filter would look like this:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;security:http&gt;</span>
+<span class="hl-comment">&lt;!-- Additional http configuration omitted --&gt;</span>
+<span class="hl-tag">&lt;security:custom-filter</span> <span class="hl-attribute">position</span>=<span class="hl-value">"PRE_AUTH_FILTER"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"siteminderFilter"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/security:http&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"siteminderFilter"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.web.authentication.preauth.RequestHeaderAuthenticationFilter"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"principalRequestHeader"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"SM_USER"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"authenticationManager"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"authenticationManager"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"preauthAuthProvider"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"preAuthenticatedUserDetailsService"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"userDetailsServiceWrapper"</span>
+        <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.core.userdetails.UserDetailsByNameServiceWrapper"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"userDetailsService"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"userDetailsService"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;security:authentication-manager</span> <span class="hl-attribute">alias</span>=<span class="hl-value">"authenticationManager"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;security:authentication-provider</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"preauthAuthProvider"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/security:authentication-manager&gt;</span></pre>
+<p>We&#8217;ve assumed here that the <a class="link" href="ns-config.html" title="7.&nbsp;Security Namespace Configuration">security namespace</a> is being used for configuration.
+It&#8217;s also assumed that you have added a <code class="literal">UserDetailsService</code> (called "userDetailsService") to your configuration to load the user&#8217;s roles.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="java-ee-container-authentication" href="#java-ee-container-authentication"></a>Java EE Container Authentication</h4></div></div></div>
+
+<p>The class <code class="literal">J2eePreAuthenticatedProcessingFilter</code> will extract the username from the <code class="literal">userPrincipal</code> property of the <code class="literal">HttpServletRequest</code>.
+Use of this filter would usually be combined with the use of Java EE roles as described above in <a class="xref" href="advanced-topics.html#j2ee-preauth-details" title="J2eeBasedPreAuthenticatedWebAuthenticationDetailsSource">the section called &#8220;J2eeBasedPreAuthenticatedWebAuthenticationDetailsSource&#8221;</a>.</p>
+<p>There is a sample application in the codebase which uses this approach, so get hold of the code from github and have a look at the application context file if you are interested.
+The code is in the <code class="literal">samples/xml/preauth</code> directory.</p>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ldap" href="#ldap"></a>12.3&nbsp;LDAP Authentication</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="ldap-overview" href="#ldap-overview"></a>12.3.1&nbsp;Overview</h3></div></div></div>
+
+<p>LDAP is often used by organizations as a central repository for user information and as an authentication service.
+It can also be used to store the role information for application users.</p>
+<p>There are many different scenarios for how an LDAP server may be configured so Spring Security&#8217;s LDAP provider is fully configurable.
+It uses separate strategy interfaces for authentication and role retrieval and provides default implementations which can be configured to handle a wide range of situations.</p>
+<p>You should be familiar with LDAP before trying to use it with Spring Security.
+The following link provides a good introduction to the concepts involved and a guide to setting up a directory using the free LDAP server OpenLDAP: <a class="ulink" href="http://www.zytrax.com/books/ldap/" target="_top">http://www.zytrax.com/books/ldap/</a>.
+Some familiarity with the JNDI APIs used to access LDAP from Java may also be useful.
+We don&#8217;t use any third-party LDAP libraries (Mozilla, JLDAP etc.) in the LDAP provider, but extensive use is made of Spring LDAP, so some familiarity with that project may be useful if you plan on adding your own customizations.</p>
+<p>When using LDAP authentication, it is important to ensure that you configure LDAP connection pooling properly.
+If you are unfamiliar with how to do this, you can refer to the <a class="ulink" href="http://docs.oracle.com/javase/jndi/tutorial/ldap/connect/config.html" target="_top">Java LDAP documentation</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="using-ldap-with-spring-security" href="#using-ldap-with-spring-security"></a>12.3.2&nbsp;Using LDAP with Spring Security</h3></div></div></div>
+
+<p>LDAP authentication in Spring Security can be roughly divided into the following stages.</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Obtaining the unique LDAP "Distinguished Name", or DN, from the login name.
+This will often mean performing a search in the directory, unless the exact mapping of usernames to DNs is known in advance.
+So a user might enter the name "joe" when logging in, but the actual name used to authenticate to LDAP will be the full DN, such as <code class="literal">uid=joe,ou=users,dc=spring,dc=io</code>.
+</li><li class="listitem">
+Authenticating the user, either by "binding" as that user or by performing a remote "compare" operation of the user&#8217;s password against the password attribute in the directory entry for the DN.
+</li><li class="listitem">
+Loading the list of authorities for the user.
+</li></ul></div>
+<p>The exception is when the LDAP directory is just being used to retrieve user information and authenticate against it locally.
+This may not be possible as directories are often set up with limited read access for attributes such as user passwords.</p>
+<p>We will look at some configuration scenarios below.
+For full information on available configuration options, please consult the security namespace schema (information from which should be available in your XML editor).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="ldap-server" href="#ldap-server"></a>12.3.3&nbsp;Configuring an LDAP Server</h3></div></div></div>
+
+<p>The first thing you need to do is configure the server against which authentication should take place.
+This is done using the <code class="literal">&lt;ldap-server&gt;</code> element from the security namespace.
+This can be configured to point at an external LDAP server, using the <code class="literal">url</code> attribute:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;ldap-server</span> <span class="hl-attribute">url</span>=<span class="hl-value">"ldap://springframework.org:389/dc=springframework,dc=org"</span><span class="hl-tag"> /&gt;</span></pre>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="using-an-embedded-test-server" href="#using-an-embedded-test-server"></a>Using an Embedded Test Server</h4></div></div></div>
+
+<p>The <code class="literal">&lt;ldap-server&gt;</code> element can also be used to create an embedded server, which can be very useful for testing and demonstrations.
+In this case you use it without the <code class="literal">url</code> attribute:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;ldap-server</span> <span class="hl-attribute">root</span>=<span class="hl-value">"dc=springframework,dc=org"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Here we&#8217;ve specified that the root DIT of the directory should be "dc=springframework,dc=org", which is the default.
+Used this way, the namespace parser will create an embedded Apache Directory server and scan the classpath for any LDIF files, which it will attempt to load into the server.
+You can customize this behaviour using the <code class="literal">ldif</code> attribute, which defines an LDIF resource to be loaded:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;ldap-server</span> <span class="hl-attribute">ldif</span>=<span class="hl-value">"classpath:users.ldif"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>This makes it a lot easier to get up and running with LDAP, since it can be inconvenient to work all the time with an external server.
+It also insulates the user from the complex bean configuration needed to wire up an Apache Directory server.
+Using plain Spring Beans the configuration would be much more cluttered.
+You must have the necessary Apache Directory dependency jars available for your application to use.
+These can be obtained from the LDAP sample application.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="using-bind-authentication" href="#using-bind-authentication"></a>Using Bind Authentication</h4></div></div></div>
+
+<p>This is the most common LDAP authentication scenario.</p>
+<pre class="programlisting"><span class="hl-tag">&lt;ldap-authentication-provider</span> <span class="hl-attribute">user-dn-pattern</span>=<span class="hl-value">"uid={0},ou=people"</span><span class="hl-tag">/&gt;</span></pre>
+<p>This simple example would obtain the DN for the user by substituting the user login name in the supplied pattern and attempting to bind as that user with the login password.
+This is OK if all your users are stored under a single node in the directory.
+If instead you wished to configure an LDAP search filter to locate the user, you could use the following:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;ldap-authentication-provider</span> <span class="hl-attribute">user-search-filter</span>=<span class="hl-value">"(uid={0})"</span>
+    <span class="hl-attribute">user-search-base</span>=<span class="hl-value">"ou=people"</span><span class="hl-tag">/&gt;</span></pre>
+<p>If used with the server definition above, this would perform a search under the DN <code class="literal">ou=people,dc=springframework,dc=org</code> using the value of the <code class="literal">user-search-filter</code> attribute as a filter.
+Again the user login name is substituted for the parameter in the filter name, so it will search for an entry with the <code class="literal">uid</code> attribute equal to the user name.
+If <code class="literal">user-search-base</code> isn&#8217;t supplied, the search will be performed from the root.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="loading-authorities" href="#loading-authorities"></a>Loading Authorities</h4></div></div></div>
+
+<p>How authorities are loaded from groups in the LDAP directory is controlled by the following attributes.</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">group-search-base</code>.
+Defines the part of the directory tree under which group searches should be performed.
+</li><li class="listitem">
+<code class="literal">group-role-attribute</code>.
+The attribute which contains the name of the authority defined by the group entry.
+Defaults to <code class="literal">cn</code>
+</li><li class="listitem">
+<code class="literal">group-search-filter</code>.
+The filter which is used to search for group membership.
+The default is <code class="literal">uniqueMember={0}</code>, corresponding to the <code class="literal">groupOfUniqueNames</code> LDAP class <a href="#ftn.d5e5849" class="footnote" name="d5e5849"><sup class="footnote">[19]</sup></a>.
+In this case, the substituted parameter is the full distinguished name of the user.
+The parameter <code class="literal">{1}</code> can be used if you want to filter on the login name.
+</li></ul></div>
+<p>So if we used the following configuration</p>
+<pre class="programlisting"><span class="hl-tag">&lt;ldap-authentication-provider</span> <span class="hl-attribute">user-dn-pattern</span>=<span class="hl-value">"uid={0},ou=people"</span>
+        <span class="hl-attribute">group-search-base</span>=<span class="hl-value">"ou=groups"</span><span class="hl-tag"> /&gt;</span></pre>
+<p>and authenticated successfully as user "ben", the subsequent loading of authorities would perform a search under the directory entry <code class="literal">ou=groups,dc=springframework,dc=org</code>, looking for entries which contain the attribute <code class="literal">uniqueMember</code> with value <code class="literal">uid=ben,ou=people,dc=springframework,dc=org</code>.
+By default the authority names will have the prefix <code class="literal">ROLE_</code> prepended.
+You can change this using the <code class="literal">role-prefix</code> attribute.
+If you don&#8217;t want any prefix, use <code class="literal">role-prefix="none"</code>.
+For more information on loading authorities, see the Javadoc for the <code class="literal">DefaultLdapAuthoritiesPopulator</code> class.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="implementation-classes" href="#implementation-classes"></a>12.3.4&nbsp;Implementation Classes</h3></div></div></div>
+
+<p>The namespace configuration options we&#8217;ve used above are simple to use and much more concise than using Spring beans explicitly.
+There are situations when you may need to know how to configure Spring Security LDAP directly in your application context.
+You may wish to customize the behaviour of some of the classes, for example.
+If you&#8217;re happy using namespace configuration then you can skip this section and the next one.</p>
+<p>The main LDAP provider class, <code class="literal">LdapAuthenticationProvider</code>, doesn&#8217;t actually do much itself but delegates the work to two other beans, an <code class="literal">LdapAuthenticator</code> and an <code class="literal">LdapAuthoritiesPopulator</code> which are responsible for authenticating the user and retrieving the user&#8217;s set of <code class="literal">GrantedAuthority</code> s respectively.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="ldap-ldap-authenticators" href="#ldap-ldap-authenticators"></a>LdapAuthenticator Implementations</h4></div></div></div>
+
+<p>The authenticator is also responsible for retrieving any required user attributes.
+This is because the permissions on the attributes may depend on the type of authentication being used.
+For example, if binding as the user, it may be necessary to read them with the user&#8217;s own permissions.</p>
+<p>There are currently two authentication strategies supplied with Spring Security:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Authentication directly to the LDAP server ("bind" authentication).
+</li><li class="listitem">
+Password comparison, where the password supplied by the user is compared with the one stored in the repository.
+This can either be done by retrieving the value of the password attribute and checking it locally or by performing an LDAP "compare" operation, where the supplied password is passed to the server for comparison and the real password value is never retrieved.
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="ldap-ldap-authenticators-common" href="#ldap-ldap-authenticators-common"></a>Common Functionality</h5></div></div></div>
+
+<p>Before it is possible to authenticate a user (by either strategy), the distinguished name (DN) has to be obtained from the login name supplied to the application.
+This can be done either by simple pattern-matching (by setting the <code class="literal">setUserDnPatterns</code> array property) or by setting the <code class="literal">userSearch</code> property.
+For the DN pattern-matching approach, a standard Java pattern format is used, and the login name will be substituted for the parameter <code class="literal">{0}</code>.
+The pattern should be relative to the DN that the configured <code class="literal">SpringSecurityContextSource</code> will bind to (see the section on <a class="link" href="advanced-topics.html#ldap-context-source" title="Connecting to the LDAP Server">connecting to the LDAP server</a> for more information on this).
+For example, if you are using an LDAP server with the URL <code class="literal">ldap://monkeymachine.co.uk/dc=springframework,dc=org</code>, and have a pattern <code class="literal">uid={0},ou=greatapes</code>, then a login name of "gorilla" will map to a DN <code class="literal">uid=gorilla,ou=greatapes,dc=springframework,dc=org</code>.
+Each configured DN pattern will be tried in turn until a match is found.
+For information on using a search, see the section on <a class="link" href="advanced-topics.html#ldap-searchobjects" title="LDAP Search Objects">search objects</a> below.
+A combination of the two approaches can also be used - the patterns will be checked first and if no matching DN is found, the search will be used.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="ldap-ldap-authenticators-bind" href="#ldap-ldap-authenticators-bind"></a>BindAuthenticator</h5></div></div></div>
+
+<p>The class <code class="literal">BindAuthenticator</code> in the package <code class="literal">org.springframework.security.ldap.authentication</code> implements the bind authentication strategy.
+It simply attempts to bind as the user.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="ldap-ldap-authenticators-password" href="#ldap-ldap-authenticators-password"></a>PasswordComparisonAuthenticator</h5></div></div></div>
+
+<p>The class <code class="literal">PasswordComparisonAuthenticator</code> implements the password comparison authentication strategy.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="ldap-context-source" href="#ldap-context-source"></a>Connecting to the LDAP Server</h4></div></div></div>
+
+<p>The beans discussed above have to be able to connect to the server.
+They both have to be supplied with a <code class="literal">SpringSecurityContextSource</code> which is an extension of Spring LDAP&#8217;s <code class="literal">ContextSource</code>.
+Unless you have special requirements, you will usually configure a <code class="literal">DefaultSpringSecurityContextSource</code> bean, which can be configured with the URL of your LDAP server and optionally with the username and password of a "manager" user which will be used by default when binding to the server (instead of binding anonymously).
+For more information read the Javadoc for this class and for Spring LDAP&#8217;s <code class="literal">AbstractContextSource</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="ldap-searchobjects" href="#ldap-searchobjects"></a>LDAP Search Objects</h4></div></div></div>
+
+<p>Often a more complicated strategy than simple DN-matching is required to locate a user entry in the directory.
+This can be encapsulated in an <code class="literal">LdapUserSearch</code> instance which can be supplied to the authenticator implementations, for example, to allow them to locate a user.
+The supplied implementation is <code class="literal">FilterBasedLdapUserSearch</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="ldap-searchobjects-filter" href="#ldap-searchobjects-filter"></a>FilterBasedLdapUserSearch</h5></div></div></div>
+
+<p>This bean uses an LDAP filter to match the user object in the directory.
+The process is explained in the Javadoc for the corresponding search method on the <a class="ulink" href="http://java.sun.com/j2se/1.4.2/docs/api/javax/naming/directory/DirContext.html#search(javax.naming.Name%2C%2520java.lang.String%2C%2520java.lang.Object%5B%5D%2C%2520javax.naming.directory.SearchControls)" target="_top">JDK DirContext class</a>.
+As explained there, the search filter can be supplied with parameters.
+For this class, the only valid parameter is <code class="literal">{0}</code> which will be replaced with the user&#8217;s login name.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="ldap-authorities" href="#ldap-authorities"></a>LdapAuthoritiesPopulator</h4></div></div></div>
+
+<p>After authenticating the user successfully, the <code class="literal">LdapAuthenticationProvider</code> will attempt to load a set of authorities for the user by calling the configured <code class="literal">LdapAuthoritiesPopulator</code> bean.
+The <code class="literal">DefaultLdapAuthoritiesPopulator</code> is an implementation which will load the authorities by searching the directory for groups of which the user is a member (typically these will be <code class="literal">groupOfNames</code> or <code class="literal">groupOfUniqueNames</code> entries in the directory).
+Consult the Javadoc for this class for more details on how it works.</p>
+<p>If you want to use LDAP only for authentication, but load the authorities from a difference source (such as a database) then you can provide your own implementation of this interface and inject that instead.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="ldap-bean-config" href="#ldap-bean-config"></a>Spring Bean Configuration</h4></div></div></div>
+
+<p>A typical configuration, using some of the beans we&#8217;ve discussed here, might look like this:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"contextSource"</span>
+        <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.ldap.DefaultSpringSecurityContextSource"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"ldap://monkeymachine:389/dc=springframework,dc=org"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"userDn"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"cn=manager,dc=springframework,dc=org"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"password"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"password"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"ldapAuthProvider"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.ldap.authentication.LdapAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;constructor-arg&gt;</span>
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.ldap.authentication.BindAuthenticator"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"contextSource"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"userDnPatterns"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;list&gt;</span><span class="hl-tag">&lt;value&gt;</span>uid={0},ou=people<span class="hl-tag">&lt;/value&gt;</span><span class="hl-tag">&lt;/list&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;constructor-arg&gt;</span>
+<span class="hl-tag">&lt;bean</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.ldap.userdetails.DefaultLdapAuthoritiesPopulator"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"contextSource"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"ou=groups"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"groupRoleAttribute"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"ou"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+<span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>This would set up the provider to access an LDAP server with URL <code class="literal">ldap://monkeymachine:389/dc=springframework,dc=org</code>.
+Authentication will be performed by attempting to bind with the DN <code class="literal">uid=&lt;user-login-name&gt;,ou=people,dc=springframework,dc=org</code>.
+After successful authentication, roles will be assigned to the user by searching under the DN <code class="literal">ou=groups,dc=springframework,dc=org</code> with the default filter <code class="literal">(member=&lt;user&#8217;s-DN&gt;)</code>.
+The role name will be taken from the "ou" attribute of each match.</p>
+<p>To configure a user search object, which uses the filter <code class="literal">(uid=&lt;user-login-name&gt;)</code> for use instead of the DN-pattern (or in addition to it), you would configure the following bean</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"userSearch"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.ldap.search.FilterBasedLdapUserSearch"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">index</span>=<span class="hl-value">"0"</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">index</span>=<span class="hl-value">"1"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"(uid={0})"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">index</span>=<span class="hl-value">"2"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"contextSource"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>and use it by setting the <code class="literal">BindAuthenticator</code> bean&#8217;s <code class="literal">userSearch</code> property.
+The authenticator would then call the search object to obtain the correct user&#8217;s DN before attempting to bind as this user.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="ldap-custom-user-details" href="#ldap-custom-user-details"></a>LDAP Attributes and Customized UserDetails</h4></div></div></div>
+
+<p>The net result of an authentication using <code class="literal">LdapAuthenticationProvider</code> is the same as a normal Spring Security authentication using the standard <code class="literal">UserDetailsService</code> interface.
+A <code class="literal">UserDetails</code> object is created and stored in the returned <code class="literal">Authentication</code> object.
+As with using a <code class="literal">UserDetailsService</code>, a common requirement is to be able to customize this implementation and add extra properties.
+When using LDAP, these will normally be attributes from the user entry.
+The creation of the <code class="literal">UserDetails</code> object is controlled by the provider&#8217;s <code class="literal">UserDetailsContextMapper</code> strategy, which is responsible for mapping user objects to and from LDAP context data:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> UserDetailsContextMapper {
+
+UserDetails mapUserFromContext(DirContextOperations ctx, String username,
+        Collection&lt;GrantedAuthority&gt; authorities);
+
+<span class="hl-keyword">void</span> mapUserToContext(UserDetails user, DirContextAdapter ctx);
+}</pre>
+<p>Only the first method is relevant for authentication.
+If you provide an implementation of this interface and inject it into the <code class="literal">LdapAuthenticationProvider</code>, you have control over exactly how the UserDetails object is created.
+The first parameter is an instance of Spring LDAP&#8217;s <code class="literal">DirContextOperations</code> which gives you access to the LDAP attributes which were loaded during authentication.
+The <code class="literal">username</code> parameter is the name used to authenticate and the final parameter is the collection of authorities loaded for the user by the configured <code class="literal">LdapAuthoritiesPopulator</code>.</p>
+<p>The way the context data is loaded varies slightly depending on the type of authentication you are using.
+With the <code class="literal">BindAuthenticator</code>, the context returned from the bind operation will be used to read the attributes, otherwise the data will be read using the standard context obtained from the configured <code class="literal">ContextSource</code> (when a search is configured to locate the user, this will be the data returned by the search object).</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="ldap-active-directory" href="#ldap-active-directory"></a>12.3.5&nbsp;Active Directory Authentication</h3></div></div></div>
+
+<p>Active Directory supports its own non-standard authentication options, and the normal usage pattern doesn&#8217;t fit too cleanly with the standard <code class="literal">LdapAuthenticationProvider</code>.
+Typically authentication is performed using the domain username (in the form <code class="literal">user@domain</code>), rather than using an LDAP distinguished name.
+To make this easier, Spring Security 3.1 has an authentication provider which is customized for a typical Active Directory setup.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="activedirectoryldapauthenticationprovider" href="#activedirectoryldapauthenticationprovider"></a>ActiveDirectoryLdapAuthenticationProvider</h4></div></div></div>
+
+<p>Configuring <code class="literal">ActiveDirectoryLdapAuthenticationProvider</code> is quite straightforward.
+You just need to supply the domain name and an LDAP URL supplying the address of the server <a href="#ftn.d5e5971" class="footnote" name="d5e5971"><sup class="footnote">[20]</sup></a>.
+An example configuration would then look like this:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adAuthenticationProvider"</span>
+<span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"mydomain.com"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"ldap://adserver.mydomain.com/"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+}</pre>
+<p>Note that there is no need to specify a separate <code class="literal">ContextSource</code> in order to define the server location - the bean is completely self-contained.
+A user named "Sharon", for example, would then be able to authenticate by entering either the username <code class="literal">sharon</code> or the full Active Directory <code class="literal">userPrincipalName</code>, namely <code class="literal">sharon@mydomain.com</code>.
+The user&#8217;s directory entry will then be located, and the attributes returned for possible use in customizing the created <code class="literal">UserDetails</code> object (a <code class="literal">UserDetailsContextMapper</code> can be injected for this purpose, as described above).
+All interaction with the directory takes place with the identity of the user themselves.
+There is no concept of a "manager" user.</p>
+<p>By default, the user authorities are obtained from the <code class="literal">memberOf</code> attribute values of the user entry.
+The authorities allocated to the user can again be customized using a <code class="literal">UserDetailsContextMapper</code>.
+You can also inject a <code class="literal">GrantedAuthoritiesMapper</code> into the provider instance to control the authorities which end up in the <code class="literal">Authentication</code> object.</p>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="active-directory-error-codes" href="#active-directory-error-codes"></a>Active Directory Error Codes</h5></div></div></div>
+
+<p>By default, a failed result will cause a standard Spring Security <code class="literal">BadCredentialsException</code>.
+If you set the property <code class="literal">convertSubErrorCodesToExceptions</code> to <code class="literal">true</code>, the exception messages will be parsed to attempt to extract the Active Directory-specific error code and raise a more specific exception.
+Check the class Javadoc for more information.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="oauth2login-advanced" href="#oauth2login-advanced"></a>12.4&nbsp;OAuth 2.0 Login&#8201;&#8212;&#8201;Advanced Configuration</h2></div></div></div>
+
+<p><code class="literal">HttpSecurity.oauth2Login()</code> provides a number of configuration options for customizing OAuth 2.0 Login.
+The main configuration options are grouped into their protocol endpoint counterparts.</p>
+<p>For example, <code class="literal">oauth2Login().authorizationEndpoint()</code> allows configuring the <span class="emphasis"><em>Authorization Endpoint</em></span>, whereas <code class="literal">oauth2Login().tokenEndpoint()</code> allows configuring the <span class="emphasis"><em>Token Endpoint</em></span>.</p>
+<p>The following code shows an example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Login()
+                .authorizationEndpoint()
+                    ...
+                .redirectionEndpoint()
+                    ...
+                .tokenEndpoint()
+                    ...
+                .userInfoEndpoint()
+                    ...
+    }
+}</pre>
+<p>The main goal of the <code class="literal">oauth2Login()</code> DSL was to closely align with the naming, as defined in the specifications.</p>
+<p>The OAuth 2.0 Authorization Framework defines the <a class="ulink" href="https://tools.ietf.org/html/rfc6749#section-3" target="_top">Protocol Endpoints</a> as follows:</p>
+<p>The authorization process utilizes two authorization server endpoints (HTTP resources):</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Authorization Endpoint: Used by the client to obtain authorization from the resource owner via user-agent redirection.
+</li><li class="listitem">
+Token Endpoint: Used by the client to exchange an authorization grant for an access token, typically with client authentication.
+</li></ul></div>
+<p>As well as one client endpoint:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Redirection Endpoint: Used by the authorization server to return responses containing authorization credentials to the client via the resource owner user-agent.
+</li></ul></div>
+<p>The OpenID Connect Core 1.0 specification defines the <a class="ulink" href="http://openid.net/specs/openid-connect-core-1_0.html#UserInfo" target="_top">UserInfo Endpoint</a> as follows:</p>
+<p>The UserInfo Endpoint is an OAuth 2.0 Protected Resource that returns claims about the authenticated end-user.
+To obtain the requested claims about the end-user, the client makes a request to the UserInfo Endpoint by using an access token obtained through OpenID Connect Authentication.
+These claims are normally represented by a JSON object that contains a collection of name-value pairs for the claims.</p>
+<p>The following code shows the complete configuration options available for the <code class="literal">oauth2Login()</code> DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Login()
+                .clientRegistrationRepository(<span class="hl-keyword">this</span>.clientRegistrationRepository())
+                .authorizedClientRepository(<span class="hl-keyword">this</span>.authorizedClientRepository())
+                .authorizedClientService(<span class="hl-keyword">this</span>.authorizedClientService())
+                .loginPage(<span class="hl-string">"/login"</span>)
+                .authorizationEndpoint()
+                    .baseUri(<span class="hl-keyword">this</span>.authorizationRequestBaseUri())
+                    .authorizationRequestRepository(<span class="hl-keyword">this</span>.authorizationRequestRepository())
+                    .authorizationRequestResolver(<span class="hl-keyword">this</span>.authorizationRequestResolver())
+                    .and()
+                .redirectionEndpoint()
+                    .baseUri(<span class="hl-keyword">this</span>.authorizationResponseBaseUri())
+                    .and()
+                .tokenEndpoint()
+                    .accessTokenResponseClient(<span class="hl-keyword">this</span>.accessTokenResponseClient())
+                    .and()
+                .userInfoEndpoint()
+                    .userAuthoritiesMapper(<span class="hl-keyword">this</span>.userAuthoritiesMapper())
+                    .userService(<span class="hl-keyword">this</span>.oauth2UserService())
+                    .oidcUserService(<span class="hl-keyword">this</span>.oidcUserService())
+                    .customUserType(GitHubOAuth2User.<span class="hl-keyword">class</span>, <span class="hl-string">"github"</span>);
+    }
+}</pre>
+<p>The following sections go into more detail on each of the configuration options available:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="xref" href="advanced-topics.html#oauth2login-advanced-login-page" title="12.4.1&nbsp;OAuth 2.0 Login Page">Section&nbsp;12.4.1, &#8220;OAuth 2.0 Login Page&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="advanced-topics.html#oauth2login-advanced-redirection-endpoint" title="12.4.2&nbsp;Redirection Endpoint">Section&nbsp;12.4.2, &#8220;Redirection Endpoint&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="advanced-topics.html#oauth2login-advanced-userinfo-endpoint" title="12.4.3&nbsp;UserInfo Endpoint">Section&nbsp;12.4.3, &#8220;UserInfo Endpoint&#8221;</a>
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-advanced-login-page" href="#oauth2login-advanced-login-page"></a>12.4.1&nbsp;OAuth 2.0 Login Page</h3></div></div></div>
+
+<p>By default, the OAuth 2.0 Login Page is auto-generated by the <code class="literal">DefaultLoginPageGeneratingFilter</code>.
+The default login page shows each configured OAuth Client with its <code class="literal">ClientRegistration.clientName</code> as a link, which is capable of initiating the Authorization Request (or OAuth 2.0 Login).</p>
+<p>The link&#8217;s destination for each OAuth Client defaults to the following:</p>
+<p><code class="literal">OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI</code> + "/{registrationId}"</p>
+<p>The following line shows an example:</p>
+<pre class="programlisting">&lt;a <span class="hl-attribute">href</span>=<span class="hl-value">"/oauth2/authorization/google"</span>&gt;Google&lt;/a&gt;</pre>
+<p>To override the default login page, configure <code class="literal">oauth2Login().loginPage()</code> and (optionally) <code class="literal">oauth2Login().authorizationEndpoint().baseUri()</code>.</p>
+<p>The following listing shows an example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Login()
+                .loginPage(<span class="hl-string">"/login/oauth2"</span>)
+                ...
+                .authorizationEndpoint()
+                    .baseUri(<span class="hl-string">"/login/oauth2/authorization"</span>)
+                    ....
+    }
+}</pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>You need to provide a <code class="literal">@Controller</code> with a <code class="literal">@RequestMapping("/login/oauth2")</code> that is capable of rendering the custom login page.</p>
+</td></tr></table></div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>As noted earlier, configuring <code class="literal">oauth2Login().authorizationEndpoint().baseUri()</code> is optional.
+However, if you choose to customize it, ensure the link to each OAuth Client matches the <code class="literal">authorizationEndpoint().baseUri()</code>.</p>
+<p>The following line shows an example:</p>
+<pre class="programlisting">&lt;a <span class="hl-attribute">href</span>=<span class="hl-value">"/login/oauth2/authorization/google"</span>&gt;Google&lt;/a&gt;</pre>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-advanced-redirection-endpoint" href="#oauth2login-advanced-redirection-endpoint"></a>12.4.2&nbsp;Redirection Endpoint</h3></div></div></div>
+
+<p>The Redirection Endpoint is used by the Authorization Server for returning the Authorization Response (which contains the authorization credentials) to the client via the Resource Owner user-agent.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>OAuth 2.0 Login leverages the Authorization Code Grant.
+Therefore, the authorization credential is the authorization code.</p>
+</td></tr></table></div>
+<p>The default Authorization Response <code class="literal">baseUri</code> (redirection endpoint) is <code class="literal"><span class="strong"><strong>/login/oauth2/code/</strong></span>*</code>, which is defined in <code class="literal">OAuth2LoginAuthenticationFilter.DEFAULT_FILTER_PROCESSES_URI</code>.</p>
+<p>If you would like to customize the Authorization Response <code class="literal">baseUri</code>, configure it as shown in the following example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Login()
+                .redirectionEndpoint()
+                    .baseUri(<span class="hl-string">"/login/oauth2/callback/*"</span>)
+                    ....
+    }
+}</pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>You also need to ensure the <code class="literal">ClientRegistration.redirectUriTemplate</code> matches the custom Authorization Response <code class="literal">baseUri</code>.</p>
+<p>The following listing shows an example:</p>
+<pre class="programlisting"><span class="hl-keyword">return</span> CommonOAuth2Provider.GOOGLE.getBuilder(<span class="hl-string">"google"</span>)
+    .clientId(<span class="hl-string">"google-client-id"</span>)
+    .clientSecret(<span class="hl-string">"google-client-secret"</span>)
+    .redirectUriTemplate(<span class="hl-string">"{baseUrl}/login/oauth2/callback/{registrationId}"</span>)
+    .build();</pre>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="oauth2login-advanced-userinfo-endpoint" href="#oauth2login-advanced-userinfo-endpoint"></a>12.4.3&nbsp;UserInfo Endpoint</h3></div></div></div>
+
+<p>The UserInfo Endpoint includes a number of configuration options, as described in the following sub-sections:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-map-authorities" title="Mapping User Authorities">Mapping User Authorities</a>
+</li><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-custom-user" title="Configuring a Custom OAuth2User">Configuring a Custom OAuth2User</a>
+</li><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-oauth2-user-service" title="OAuth 2.0 UserService">OAuth 2.0 UserService</a>
+</li><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-oidc-user-service" title="OpenID Connect 1.0 UserService">OpenID Connect 1.0 UserService</a>
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-advanced-map-authorities" href="#oauth2login-advanced-map-authorities"></a>Mapping User Authorities</h4></div></div></div>
+
+<p>After the user successfully authenticates with the OAuth 2.0 Provider, the <code class="literal">OAuth2User.getAuthorities()</code> (or <code class="literal">OidcUser.getAuthorities()</code>) may be mapped to a new set of <code class="literal">GrantedAuthority</code> instances, which will be supplied to <code class="literal">OAuth2AuthenticationToken</code> when completing the authentication.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p><code class="literal">OAuth2AuthenticationToken.getAuthorities()</code> is used for authorizing requests, such as in <code class="literal">hasRole('USER')</code> or <code class="literal">hasRole('ADMIN')</code>.</p>
+</td></tr></table></div>
+<p>There are a couple of options to choose from when mapping user authorities:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-map-authorities-grantedauthoritiesmapper" title="Using a GrantedAuthoritiesMapper">Using a GrantedAuthoritiesMapper</a>
+</li><li class="listitem">
+<a class="link" href="advanced-topics.html#oauth2login-advanced-map-authorities-oauth2userservice" title="Delegation-based strategy with OAuth2UserService">Delegation-based strategy with OAuth2UserService</a>
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="oauth2login-advanced-map-authorities-grantedauthoritiesmapper" href="#oauth2login-advanced-map-authorities-grantedauthoritiesmapper"></a>Using a GrantedAuthoritiesMapper</h5></div></div></div>
+
+<p>Provide an implementation of <code class="literal">GrantedAuthoritiesMapper</code> and configure it as shown in the following example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Login()
+                .userInfoEndpoint()
+                    .userAuthoritiesMapper(<span class="hl-keyword">this</span>.userAuthoritiesMapper())
+                    ...
+    }
+
+    <span class="hl-keyword">private</span> GrantedAuthoritiesMapper userAuthoritiesMapper() {
+        <span class="hl-keyword">return</span> (authorities) -&gt; {
+            Set&lt;GrantedAuthority&gt; mappedAuthorities = <span class="hl-keyword">new</span> HashSet&lt;&gt;();
+
+            authorities.forEach(authority -&gt; {
+                <span class="hl-keyword">if</span> (OidcUserAuthority.<span class="hl-keyword">class</span>.isInstance(authority)) {
+                    OidcUserAuthority oidcUserAuthority = (OidcUserAuthority)authority;
+
+                    OidcIdToken idToken = oidcUserAuthority.getIdToken();
+                    OidcUserInfo userInfo = oidcUserAuthority.getUserInfo();
+
+                    <span class="hl-comment">// Map the claims found in idToken and/or userInfo</span>
+                    <span class="hl-comment">// to one or more GrantedAuthority's and add it to mappedAuthorities</span>
+
+                } <span class="hl-keyword">else</span> <span class="hl-keyword">if</span> (OAuth2UserAuthority.<span class="hl-keyword">class</span>.isInstance(authority)) {
+                    OAuth2UserAuthority oauth2UserAuthority = (OAuth2UserAuthority)authority;
+
+                    Map&lt;String, Object&gt; userAttributes = oauth2UserAuthority.getAttributes();
+
+                    <span class="hl-comment">// Map the attributes found in userAttributes</span>
+                    <span class="hl-comment">// to one or more GrantedAuthority's and add it to mappedAuthorities</span>
+
+                }
+            });
+
+            <span class="hl-keyword">return</span> mappedAuthorities;
+        };
+    }
+}</pre>
+<p>Alternatively, you may register a <code class="literal">GrantedAuthoritiesMapper</code> <code class="literal">@Bean</code> to have it automatically applied to the configuration, as shown in the following example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http.oauth2Login();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> GrantedAuthoritiesMapper userAuthoritiesMapper() {
+        ...
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="oauth2login-advanced-map-authorities-oauth2userservice" href="#oauth2login-advanced-map-authorities-oauth2userservice"></a>Delegation-based strategy with OAuth2UserService</h5></div></div></div>
+
+<p>This strategy is advanced compared to using a <code class="literal">GrantedAuthoritiesMapper</code>, however, it&#8217;s also more flexible as it gives you access to the <code class="literal">OAuth2UserRequest</code> and <code class="literal">OAuth2User</code> (when using an OAuth 2.0 UserService) or <code class="literal">OidcUserRequest</code> and <code class="literal">OidcUser</code> (when using an OpenID Connect 1.0 UserService).</p>
+<p>The <code class="literal">OAuth2UserRequest</code> (and <code class="literal">OidcUserRequest</code>) provides you access to the associated <code class="literal">OAuth2AccessToken</code>, which is very useful in the cases where the <span class="emphasis"><em>delegator</em></span> needs to fetch authority information from a protected resource before it can map the custom authorities for the user.</p>
+<p>The following example shows how to implement and configure a delegation-based strategy using an OpenID Connect 1.0 UserService:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Login()
+                .userInfoEndpoint()
+                    .oidcUserService(<span class="hl-keyword">this</span>.oidcUserService())
+                    ...
+    }
+
+    <span class="hl-keyword">private</span> OAuth2UserService&lt;OidcUserRequest, OidcUser&gt; oidcUserService() {
+        <span class="hl-keyword">final</span> OidcUserService delegate = <span class="hl-keyword">new</span> OidcUserService();
+
+        <span class="hl-keyword">return</span> (userRequest) -&gt; {
+            <span class="hl-comment">// Delegate to the default implementation for loading a user</span>
+            OidcUser oidcUser = delegate.loadUser(userRequest);
+
+            OAuth2AccessToken accessToken = userRequest.getAccessToken();
+            Set&lt;GrantedAuthority&gt; mappedAuthorities = <span class="hl-keyword">new</span> HashSet&lt;&gt;();
+
+            <span class="hl-comment">// TODO</span>
+            <span class="hl-comment">// 1) Fetch the authority information from the protected resource using accessToken</span>
+            <span class="hl-comment">// 2) Map the authority information to one or more GrantedAuthority's and add it to mappedAuthorities</span>
+
+            <span class="hl-comment">// 3) Create a copy of oidcUser but use the mappedAuthorities instead</span>
+            oidcUser = <span class="hl-keyword">new</span> DefaultOidcUser(mappedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
+
+            <span class="hl-keyword">return</span> oidcUser;
+        };
+    }
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-advanced-custom-user" href="#oauth2login-advanced-custom-user"></a>Configuring a Custom OAuth2User</h4></div></div></div>
+
+<p><code class="literal">CustomUserTypesOAuth2UserService</code> is an implementation of an <code class="literal">OAuth2UserService</code> that provides support for custom <code class="literal">OAuth2User</code> types.</p>
+<p>If the default implementation (<code class="literal">DefaultOAuth2User</code>) does not suit your needs, you can define your own implementation of <code class="literal">OAuth2User</code>.</p>
+<p>The following code demonstrates how you would register a custom <code class="literal">OAuth2User</code> type for GitHub:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Login()
+                .userInfoEndpoint()
+                    .customUserType(GitHubOAuth2User.<span class="hl-keyword">class</span>, <span class="hl-string">"github"</span>)
+                    ...
+    }
+}</pre>
+<p>The following code shows an example of a custom <code class="literal">OAuth2User</code> type for GitHub:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> GitHubOAuth2User <span class="hl-keyword">implements</span> OAuth2User {
+    <span class="hl-keyword">private</span> List&lt;GrantedAuthority&gt; authorities =
+        AuthorityUtils.createAuthorityList(<span class="hl-string">"ROLE_USER"</span>);
+    <span class="hl-keyword">private</span> Map&lt;String, Object&gt; attributes;
+    <span class="hl-keyword">private</span> String id;
+    <span class="hl-keyword">private</span> String name;
+    <span class="hl-keyword">private</span> String login;
+    <span class="hl-keyword">private</span> String email;
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> Collection&lt;? <span class="hl-keyword">extends</span> GrantedAuthority&gt; getAuthorities() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.authorities;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> Map&lt;String, Object&gt; getAttributes() {
+        <span class="hl-keyword">if</span> (<span class="hl-keyword">this</span>.attributes == null) {
+            <span class="hl-keyword">this</span>.attributes = <span class="hl-keyword">new</span> HashMap&lt;&gt;();
+            <span class="hl-keyword">this</span>.attributes.put(<span class="hl-string">"id"</span>, <span class="hl-keyword">this</span>.getId());
+            <span class="hl-keyword">this</span>.attributes.put(<span class="hl-string">"name"</span>, <span class="hl-keyword">this</span>.getName());
+            <span class="hl-keyword">this</span>.attributes.put(<span class="hl-string">"login"</span>, <span class="hl-keyword">this</span>.getLogin());
+            <span class="hl-keyword">this</span>.attributes.put(<span class="hl-string">"email"</span>, <span class="hl-keyword">this</span>.getEmail());
+        }
+        <span class="hl-keyword">return</span> attributes;
+    }
+
+    <span class="hl-keyword">public</span> String getId() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.id;
+    }
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> setId(String id) {
+        <span class="hl-keyword">this</span>.id = id;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> String getName() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.name;
+    }
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> setName(String name) {
+        <span class="hl-keyword">this</span>.name = name;
+    }
+
+    <span class="hl-keyword">public</span> String getLogin() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.login;
+    }
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> setLogin(String login) {
+        <span class="hl-keyword">this</span>.login = login;
+    }
+
+    <span class="hl-keyword">public</span> String getEmail() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.email;
+    }
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> setEmail(String email) {
+        <span class="hl-keyword">this</span>.email = email;
+    }
+}</pre>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p><code class="literal">id</code>, <code class="literal">name</code>, <code class="literal">login</code>, and <code class="literal">email</code> are attributes returned in GitHub&#8217;s UserInfo Response.
+For detailed information returned from the UserInfo Endpoint, see the API documentation
+for <a class="ulink" href="https://developer.github.com/v3/users/#get-the-authenticated-user" target="_top">"Get the authenticated user"</a>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-advanced-oauth2-user-service" href="#oauth2login-advanced-oauth2-user-service"></a>OAuth 2.0 UserService</h4></div></div></div>
+
+<p><code class="literal">DefaultOAuth2UserService</code> is an implementation of an <code class="literal">OAuth2UserService</code> that supports standard OAuth 2.0 Provider&#8217;s.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p><code class="literal">OAuth2UserService</code> obtains the user attributes of the end-user (the resource owner) from the UserInfo Endpoint (by using the access token granted to the client during the authorization flow) and returns an <code class="literal">AuthenticatedPrincipal</code> in the form of an <code class="literal">OAuth2User</code>.</p>
+</td></tr></table></div>
+<p><code class="literal">DefaultOAuth2UserService</code> uses a <code class="literal">RestOperations</code> when requesting the user attributes at the UserInfo Endpoint.</p>
+<p>If you need to customize the pre-processing of the UserInfo Request, you can provide <code class="literal">DefaultOAuth2UserService.setRequestEntityConverter()</code> with a custom <code class="literal">Converter&lt;OAuth2UserRequest, RequestEntity&lt;?&gt;&gt;</code>.
+The default implementation <code class="literal">OAuth2UserRequestEntityConverter</code> builds a <code class="literal">RequestEntity</code> representation of a UserInfo Request that sets the <code class="literal">OAuth2AccessToken</code> in the <code class="literal">Authorization</code> header by default.</p>
+<p>On the other end, if you need to customize the post-handling of the UserInfo Response, you will need to provide <code class="literal">DefaultOAuth2UserService.setRestOperations()</code> with a custom configured <code class="literal">RestOperations</code>.
+The default <code class="literal">RestOperations</code> is configured as follows:</p>
+<pre class="programlisting">RestTemplate restTemplate = <span class="hl-keyword">new</span> RestTemplate();
+restTemplate.setErrorHandler(<span class="hl-keyword">new</span> OAuth2ErrorResponseErrorHandler());</pre>
+<p><code class="literal">OAuth2ErrorResponseErrorHandler</code> is a <code class="literal">ResponseErrorHandler</code> that can handle an OAuth 2.0 Error (400 Bad Request).
+It uses an <code class="literal">OAuth2ErrorHttpMessageConverter</code> for converting the OAuth 2.0 Error parameters to an <code class="literal">OAuth2Error</code>.</p>
+<p>Whether you customize <code class="literal">DefaultOAuth2UserService</code> or provide your own implementation of <code class="literal">OAuth2UserService</code>, you&#8217;ll need to configure it as shown in the following example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Login()
+                .userInfoEndpoint()
+                    .userService(<span class="hl-keyword">this</span>.oauth2UserService())
+                    ...
+    }
+
+    <span class="hl-keyword">private</span> OAuth2UserService&lt;OAuth2UserRequest, OAuth2User&gt; oauth2UserService() {
+        ...
+    }
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="oauth2login-advanced-oidc-user-service" href="#oauth2login-advanced-oidc-user-service"></a>OpenID Connect 1.0 UserService</h4></div></div></div>
+
+<p><code class="literal">OidcUserService</code> is an implementation of an <code class="literal">OAuth2UserService</code> that supports OpenID Connect 1.0 Provider&#8217;s.</p>
+<p>The <code class="literal">OidcUserService</code> leverages the <code class="literal">DefaultOAuth2UserService</code> when requesting the user attributes at the UserInfo Endpoint.</p>
+<p>If you need to customize the pre-processing of the UserInfo Request and/or the post-handling of the UserInfo Response, you will need to provide <code class="literal">OidcUserService.setOauth2UserService()</code> with a custom configured <code class="literal">DefaultOAuth2UserService</code>.</p>
+<p>Whether you customize <code class="literal">OidcUserService</code> or provide your own implementation of <code class="literal">OAuth2UserService</code> for OpenID Connect 1.0 Provider&#8217;s, you&#8217;ll need to configure it as shown in the following example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> OAuth2LoginSecurityConfig <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        http
+            .oauth2Login()
+                .userInfoEndpoint()
+                    .oidcUserService(<span class="hl-keyword">this</span>.oidcUserService())
+                    ...
+    }
+
+    <span class="hl-keyword">private</span> OAuth2UserService&lt;OidcUserRequest, OidcUser&gt; oidcUserService() {
+        ...
+    }
+}</pre>
+</div>
+</div>
+</div>
+<div class="footnotes"><br><hr style="width:100; text-align:left;margin-left: 0"><div id="ftn.d5e5849" class="footnote"><p><a href="#d5e5849" class="simpara"><sup class="simpara">[19] </sup></a>Note that this is different from the default configuration of the underlying <code class="literal">DefaultLdapAuthoritiesPopulator</code> which uses <code class="literal">member={0}</code>.</p></div><div id="ftn.d5e5971" class="footnote"><p><a href="#d5e5971" class="simpara"><sup class="simpara">[20] </sup></a>It is also possible to obtain the server&#8217;s IP address using a DNS lookup. This is not currently supported, but hopefully will be in a future version.</p></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="authorization.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="servlet-applications.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="servlet-webclient.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">11.&nbsp;Authorization&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;13.&nbsp;WebClient for Servlet Environments</td></tr></table></div></body></html>

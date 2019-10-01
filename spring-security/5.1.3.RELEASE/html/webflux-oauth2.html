@@ -1,0 +1,446 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>19.&nbsp;OAuth2 WebFlux</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="reactive-applications.html" title="Part&nbsp;III.&nbsp;Reactive Applications"><link rel="prev" href="webflux-redirect-https.html" title="18.&nbsp;Redirect to HTTPS"><link rel="next" href="webflux-roac.html" title="20.&nbsp;@RegisteredOAuth2AuthorizedClient"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">19.&nbsp;OAuth2 WebFlux</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="webflux-redirect-https.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;III.&nbsp;Reactive Applications</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="webflux-roac.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="webflux-oauth2" href="#webflux-oauth2"></a>19.&nbsp;OAuth2 WebFlux</h2></div></div></div>
+
+<p>Spring Security provides OAuth2 and WebFlux integration for reactive applications.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webflux-oauth2-login" href="#webflux-oauth2-login"></a>19.1&nbsp;OAuth 2.0 Login</h2></div></div></div>
+
+<p>The OAuth 2.0 Login feature provides an application with the capability to have users log in to the application by using their existing account at an OAuth 2.0 Provider (e.g.
+GitHub) or OpenID Connect 1.0 Provider (such as Google).
+OAuth 2.0 Login implements the use cases: "Login with Google" or "Login with GitHub".</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>OAuth 2.0 Login is implemented by using the <span class="strong"><strong>Authorization Code Grant</strong></span>, as specified in the <a class="ulink" href="https://tools.ietf.org/html/rfc6749#section-4.1" target="_top">OAuth 2.0 Authorization Framework</a> and <a class="ulink" href="http://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth" target="_top">OpenID Connect Core 1.0</a>.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="webflux-oauth2-login-sample" href="#webflux-oauth2-login-sample"></a>19.1.1&nbsp;Spring Boot 2.0 Sample</h3></div></div></div>
+
+<p>Spring Boot 2.0 brings full auto-configuration capabilities for OAuth 2.0 Login.</p>
+<p>This section shows how to configure the <a class="ulink" href="https://github.com/spring-projects/spring-security/tree/5.1.3.RELEASE/samples/boot/oauth2login-webflux" target="_top"><span class="strong"><strong>OAuth 2.0 Login WebFlux sample</strong></span></a> using <span class="emphasis"><em>Google</em></span> as the <span class="emphasis"><em>Authentication Provider</em></span> and covers the following topics:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="webflux-oauth2.html#webflux-oauth2-login-sample-setup" title="Initial setup">Initial setup</a>
+</li><li class="listitem">
+<a class="link" href="webflux-oauth2.html#webflux-oauth2-login-sample-redirect" title="Setting the redirect URI">Setting the redirect URI</a>
+</li><li class="listitem">
+<a class="link" href="webflux-oauth2.html#webflux-oauth2-login-sample-config" title="Configure application.yml">Configure <code class="literal">application.yml</code></a>
+</li><li class="listitem">
+<a class="link" href="webflux-oauth2.html#webflux-oauth2-login-sample-start" title="Boot up the application">Boot up the application</a>
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="webflux-oauth2-login-sample-setup" href="#webflux-oauth2-login-sample-setup"></a>Initial setup</h4></div></div></div>
+
+<p>To use Google&#8217;s OAuth 2.0 authentication system for login, you must set up a project in the Google API Console to obtain OAuth 2.0 credentials.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p><a class="ulink" href="https://developers.google.com/identity/protocols/OpenIDConnect" target="_top">Google&#8217;s OAuth 2.0 implementation</a> for authentication conforms to the  <a class="ulink" href="http://openid.net/connect/" target="_top">OpenID Connect 1.0</a> specification and is <a class="ulink" href="http://openid.net/certification/" target="_top">OpenID Certified</a>.</p>
+</td></tr></table></div>
+<p>Follow the instructions on the <a class="ulink" href="https://developers.google.com/identity/protocols/OpenIDConnect" target="_top">OpenID Connect</a> page, starting in the section, "Setting up OAuth 2.0".</p>
+<p>After completing the "Obtain OAuth 2.0 credentials" instructions, you should have a new OAuth Client with credentials consisting of a Client ID and a Client Secret.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="webflux-oauth2-login-sample-redirect" href="#webflux-oauth2-login-sample-redirect"></a>Setting the redirect URI</h4></div></div></div>
+
+<p>The redirect URI is the path in the application that the end-user&#8217;s user-agent is redirected back to after they have authenticated with Google and have granted access to the OAuth Client <span class="emphasis"><em>(<a class="link" href="webflux-oauth2.html#webflux-oauth2-login-sample-setup" title="Initial setup">created in the previous step</a>)</em></span> on the Consent page.</p>
+<p>In the "Set a redirect URI" sub-section, ensure that the <span class="strong"><strong>Authorized redirect URIs</strong></span> field is set to <code class="literal"><a class="ulink" href="http://localhost:8080/login/oauth2/code/google" target="_top">http://localhost:8080/login/oauth2/code/google</a></code>.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>The default redirect URI template is <code class="literal">{baseUrl}/login/oauth2/code/{registrationId}</code>.
+The <span class="strong"><strong><span class="emphasis"><em>registrationId</em></span></strong></span> is a unique identifier for the <a class="link" href="">ClientRegistration</a>.
+For our example, the <code class="literal">registrationId</code> is <code class="literal">google</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="webflux-oauth2-login-sample-config" href="#webflux-oauth2-login-sample-config"></a>Configure <code class="literal">application.yml</code></h4></div></div></div>
+
+<p>Now that you have a new OAuth Client with Google, you need to configure the application to use the OAuth Client for the <span class="emphasis"><em>authentication flow</em></span>.
+To do so:</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+<p class="simpara">Go to <code class="literal">application.yml</code> and set the following configuration:</p>
+<pre class="programlisting"><span class="hl-attribute">spring</span>:
+<span class="hl-attribute">  security</span>:
+<span class="hl-attribute">    oauth2</span>:
+<span class="hl-attribute">      client</span>:
+<span class="hl-attribute">        registration</span>:   <a name="CO18-1" href="#CO18-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+<span class="hl-attribute">          google</span>:   <a name="CO18-2" href="#CO18-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+<span class="hl-attribute">            client-id</span>: google-client-id
+<span class="hl-attribute">            client-secret</span>: google-client-secret</pre>
+<div class="example"><a name="d5e10638" href="#d5e10638"></a><p class="title"><b>Example&nbsp;19.1.&nbsp;OAuth Client properties</b></p><div class="example-contents">
+
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p><code class="literal">spring.security.oauth2.client.registration</code> is the base property prefix for OAuth Client properties.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Following the base property prefix is the ID for the <a class="link" href="">ClientRegistration</a>, such as google.</p>
+</td></tr></table></div>
+</div></div><br class="example-break">
+</li><li class="listitem">
+Replace the values in the <code class="literal">client-id</code> and <code class="literal">client-secret</code> property with the OAuth 2.0 credentials you created earlier.
+</li></ol></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="webflux-oauth2-login-sample-start" href="#webflux-oauth2-login-sample-start"></a>Boot up the application</h4></div></div></div>
+
+<p>Launch the Spring Boot 2.0 sample and go to <code class="literal"><a class="ulink" href="http://localhost:8080" target="_top">http://localhost:8080</a></code>.
+You are then redirected to the default <span class="emphasis"><em>auto-generated</em></span> login page, which displays a link for Google.</p>
+<p>Click on the Google link, and you are then redirected to Google for authentication.</p>
+<p>After authenticating with your Google account credentials, the next page presented to you is the Consent screen.
+The Consent screen asks you to either allow or deny access to the OAuth Client you created earlier.
+Click <span class="strong"><strong>Allow</strong></span> to authorize the OAuth Client to access your email address and basic profile information.</p>
+<p>At this point, the OAuth Client retrieves your email address and basic profile information from the <a class="ulink" href="http://openid.net/specs/openid-connect-core-1_0.html#UserInfo" target="_top">UserInfo Endpoint</a> and establishes an authenticated session.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="webflux-oauth2-login-openid-provider-configuration" href="#webflux-oauth2-login-openid-provider-configuration"></a>19.1.2&nbsp;Using OpenID Provider Configuration</h3></div></div></div>
+
+<p>For well known providers, Spring Security provides the necessary defaults for the OAuth Authorization Provider&#8217;s configuration.
+If you are working with your own Authorization Provider that supports <a class="ulink" href="https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig" target="_top">OpenID Provider Configuration</a>, you may use the <a class="ulink" href="https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse" target="_top">OpenID Provider Configuration Response</a> the issuer-uri can be used to configure the application.</p>
+<pre class="programlisting">spring:
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: https://idp.example.com/auth/realms/demo
+        registration:
+          keycloak:
+            client-id: spring-security
+            client-secret: 6cea952f-10d0-4d00-ac79-cc865820dc2c</pre>
+<p>The <code class="literal">issuer-uri</code> instructs Spring Security to leverage the endpoint at <code class="literal"><a class="ulink" href="https://idp.example.com/auth/realms/demo/.well-known/openid-configuration" target="_top">https://idp.example.com/auth/realms/demo/.well-known/openid-configuration</a></code> to discover the configuration.
+The <code class="literal">client-id</code> and <code class="literal">client-secret</code> are linked to the provider because <code class="literal">keycloak</code> is used for both the provider and the registration.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="webflux-oauth2-login-explicit" href="#webflux-oauth2-login-explicit"></a>19.1.3&nbsp;Explicit OAuth2 Login Configuration</h3></div></div></div>
+
+<p>A minimal OAuth2 Login configuration is shown below:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+ReactiveClientRegistrationRepository clientRegistrations() {
+    ClientRegistration clientRegistration = ClientRegistrations
+            .fromOidcIssuerLocation(<span class="hl-string">"https://idp.example.com/auth/realms/demo"</span>)
+            .clientId(<span class="hl-string">"spring-security"</span>)
+            .clientSecret(<span class="hl-string">"6cea952f-10d0-4d00-ac79-cc865820dc2c"</span>)
+            .build();
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> InMemoryReactiveClientRegistrationRepository(clientRegistration);
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        <span class="hl-comment">// ...</span>
+        .oauth2Login();
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+<p>Additional configuration options can be seen below:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        <span class="hl-comment">// ...</span>
+        .oauth2Login()
+            .authenticationConverter(converter)
+            .authenticationManager(manager)
+            .authorizedClientRepository(authorizedClients)
+            .clientRegistrationRepository(clientRegistrations);
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webflux-oauth2-client" href="#webflux-oauth2-client"></a>19.2&nbsp;OAuth2 Client</h2></div></div></div>
+
+<p>Spring Security&#8217;s OAuth Support allows obtaining an access token without authenticating.
+A basic configuration with Spring Boot can be seen below:</p>
+<pre class="programlisting">spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: replace-with-client-id
+            client-secret: replace-with-client-secret
+            scopes: read:user,public_repo</pre>
+<p>You will need to replace the <code class="literal">client-id</code> and <code class="literal">client-secret</code> with values registered with GitHub.</p>
+<p>The next step is to instruct Spring Security that you wish to act as an OAuth2 Client so that you can obtain an access token.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain configure(ServerHttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+    http
+        <span class="hl-comment">// ...</span>
+        .oauth2Client();
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+<p>You can now leverage Spring Security&#8217;s <a class="xref" href="webclient.html" title="21.&nbsp;WebClient">Chapter&nbsp;21, <i>WebClient</i></a> or <a class="link" href="webflux-roac.html" title="20.&nbsp;@RegisteredOAuth2AuthorizedClient">@RegisteredOAuth2AuthorizedClient</a> support to obtain and use the access token.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webflux-oauth2-resource-server" href="#webflux-oauth2-resource-server"></a>19.3&nbsp;OAuth2 Resource Server</h2></div></div></div>
+
+<p>Spring Security supports protecting endpoints using <a class="ulink" href="https://tools.ietf.org/html/rfc7519" target="_top">JWT</a>-encoded OAuth 2.0 <a class="ulink" href="https://tools.ietf.org/html/rfc6750.html" target="_top">Bearer Tokens</a>.</p>
+<p>This is handy in circumstances where an application has federated its authority management out to an <a class="ulink" href="https://tools.ietf.org/html/rfc6749" target="_top">authorization server</a> (for example, Okta or Ping Identity).
+This authorization server can be consulted by Resource Servers to validate authority when serving requests.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>A complete working example can be found in <a class="ulink" href="https://github.com/spring-projects/spring-security/tree/5.1.3.RELEASE/samples/boot/oauth2resourceserver-webflux" target="_top"><span class="strong"><strong>OAuth 2.0 Resource Server WebFlux sample</strong></span></a>.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="dependencies-2" href="#dependencies-2"></a>19.3.1&nbsp;Dependencies</h3></div></div></div>
+
+<p>Most Resource Server support is collected into <code class="literal">spring-security-oauth2-resource-server</code>.
+However, the support for decoding and verifying JWTs is in <code class="literal">spring-security-oauth2-jose</code>, meaning that both are necessary in order to have a working resource server that supports JWT-encoded Bearer Tokens.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="webflux-oauth2-resource-server-minimal-configuration" href="#webflux-oauth2-resource-server-minimal-configuration"></a>19.3.2&nbsp;Minimal Configuration</h3></div></div></div>
+
+<p>When using <a class="ulink" href="https://spring.io/projects/spring-boot" target="_top">Spring Boot</a>, configuring an application as a resource server consists of two basic steps.
+First, include the needed dependencies and second, indicate the location of the authorization server.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="specify-the-authorization-server" href="#specify-the-authorization-server"></a>Specify the Authorization Server</h4></div></div></div>
+
+<p>In a Spring Boot application, to specify which authorization server to use, simply do:</p>
+<pre class="programlisting">spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://idp.example.com</pre>
+<p>Where <code class="literal"><a class="ulink" href="https://idp.example.com" target="_top">https://idp.example.com</a></code> is the value contained in the <code class="literal">iss</code> claim for JWT tokens that the authorization server will issue.
+Resource Server will use this property to further self-configure, discover the authorization server&#8217;s public keys, and subsequently validate incoming JWTs.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>To use the <code class="literal">issuer-uri</code> property, it must also be true that <code class="literal"><a class="ulink" href="https://idp.example.com/.well-known/openid-configuration" target="_top">https://idp.example.com/.well-known/openid-configuration</a></code> is a supported endpoint for the authorization server.
+This endpoint is referred to as a <a class="ulink" href="https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig" target="_top">Provider Configuration</a> endpoint.</p>
+</td></tr></table></div>
+<p>And that&#8217;s it!</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="startup-expectations-2" href="#startup-expectations-2"></a>Startup Expectations</h4></div></div></div>
+
+<p>When this property and these dependencies are used, Resource Server will automatically configure itself to validate JWT-encoded Bearer Tokens.</p>
+<p>It achieves this through a deterministic startup process:</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+Hit the Provider Configuration endpoint, <code class="literal"><a class="ulink" href="https://the.issuer.location/.well-known/openid-configuration" target="_top">https://the.issuer.location/.well-known/openid-configuration</a></code>, processing the response for the <code class="literal">jwks_url</code> property
+</li><li class="listitem">
+Configure the validation strategy to query <code class="literal">jwks_url</code> for valid public keys
+</li><li class="listitem">
+Configure the validation strategy to validate each JWTs <code class="literal">iss</code> claim against <code class="literal"><a class="ulink" href="https://idp.example.com" target="_top">https://idp.example.com</a></code>.
+</li></ol></div>
+<p>A consequence of this process is that the authorization server must be up and receiving requests in order for Resource Server to successfully start up.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If the authorization server is down when Resource Server queries it (given appropriate timeouts), then startup will fail.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="runtime-expectations-2" href="#runtime-expectations-2"></a>Runtime Expectations</h4></div></div></div>
+
+<p>Once the application is started up, Resource Server will attempt to process any request containing an <code class="literal">Authorization: Bearer</code> header:</p>
+<pre class="programlisting">GET / HTTP/1.1
+Authorization: Bearer some-token-value # Resource Server will process this</pre>
+<p>So long as this scheme is indicated, Resource Server will attempt to process the request according to the Bearer Token specification.</p>
+<p>Given a well-formed JWT token, Resource Server will:</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+Validate its signature against a public key obtained from the <code class="literal">jwks_url</code> endpoint during startup and matched against the JWTs header
+</li><li class="listitem">
+Validate the JWTs <code class="literal">exp</code> and <code class="literal">nbf</code> timestamps and the JWTs <code class="literal">iss</code> claim, and
+</li><li class="listitem">
+Map each scope to an authority with the prefix <code class="literal">SCOPE_</code>.
+</li></ol></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>As the authorization server makes available new keys, Spring Security will automatically rotate the keys used to validate the JWT tokens.</p>
+</td></tr></table></div>
+<p>The resulting <code class="literal">Authentication#getPrincipal</code>, by default, is a Spring Security <code class="literal">Jwt</code> object, and <code class="literal">Authentication#getName</code> maps to the JWT&#8217;s <code class="literal">sub</code> property, if one is present.</p>
+<p><a class="link" href="webflux-oauth2.html#webflux-oauth2-resource-server-jwkseturi" title="Specifying the Authorization Server JWK Set Uri Directly">How to Configure without Tying Resource Server startup to an authorization server&#8217;s availability</a></p>
+<p><a class="link" href="webflux-oauth2.html#webflux-oauth2-resource-server-sans-boot" title="Overriding or Replacing Boot Auto Configuration">How to Configure without Spring Boot</a></p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="webflux-oauth2-resource-server-jwkseturi" href="#webflux-oauth2-resource-server-jwkseturi"></a>Specifying the Authorization Server JWK Set Uri Directly</h4></div></div></div>
+
+<p>If the authorization server doesn&#8217;t support the Provider Configuration endpoint, or if Resource Server must be able to start up independently from the authorization server, then <code class="literal">issuer-uri</code> can be exchanged for <code class="literal">jwk-set-uri</code>:</p>
+<pre class="programlisting"><span class="hl-attribute">security</span>:
+<span class="hl-attribute">  oauth2</span>:
+<span class="hl-attribute">    resourceserver</span>:
+<span class="hl-attribute">      jwt</span>:
+<span class="hl-attribute">        jwk-set-uri</span>: https://idp.example.com/.well-known/jwks.json</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The JWK Set uri is not standardized, but can typically be found in the authorization server&#8217;s documentation</p>
+</td></tr></table></div>
+<p>Consequently, Resource Server will not ping the authorization server at startup.
+However, it will also no longer validate the <code class="literal">iss</code> claim in the JWT (since Resource Server no longer knows what the issuer value should be).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>This property can also be supplied directly on the <a class="link" href="webflux-oauth2.html#webflux-oauth2-resource-server-jwkseturi-dsl" title="Using jwkSetUri()">DSL</a>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="webflux-oauth2-resource-server-sans-boot" href="#webflux-oauth2-resource-server-sans-boot"></a>Overriding or Replacing Boot Auto Configuration</h4></div></div></div>
+
+<p>There are two <code class="literal">@Bean</code> s that Spring Boot generates on Resource Server&#8217;s behalf.</p>
+<p>The first is a <code class="literal">SecurityWebFilterChain</code> that configures the app as a resource server:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        .authorizeExchange()
+            .anyExchange().authenticated()
+            .and()
+        .oauth2ResourceServer()
+            .jwt();
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+<p>If the application doesn&#8217;t expose a <code class="literal">SecurityWebFilterChain</code> bean, then Spring Boot will expose the above default one.</p>
+<p>Replacing this is as simple as exposing the bean within the application:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        .authorizeExchange()
+            .pathMatchers(<span class="hl-string">"/message/**"</span>).hasAuthority(<span class="hl-string">"SCOPE_message:read"</span>)
+            .anyExchange().authenticated()
+            .and()
+        .oauth2ResourceServer()
+            .jwt();
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+<p>The above requires the scope of <code class="literal">message:read</code> for any URL that starts with <code class="literal">/messages/</code>.</p>
+<p>Methods on the <code class="literal">oauth2ResourceServer</code> DSL will also override or replace auto configuration.</p>
+<p>For example, the second <code class="literal">@Bean</code> Spring Boot creates is a <code class="literal">ReactiveJwtDecoder</code>, which decodes <code class="literal">String</code> tokens into validated instances of <code class="literal">Jwt</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> ReactiveJwtDecoder jwtDecoder() {
+    <span class="hl-keyword">return</span> ReactiveJwtDecoders.fromOidcIssuerLocation(issuerUri);
+}</pre>
+<p>If the application doesn&#8217;t expose a <code class="literal">ReactiveJwtDecoder</code> bean, then Spring Boot will expose the above default one.</p>
+<p>And its configuration can be overridden using <code class="literal">jwkSetUri()</code> or replaced using <code class="literal">decoder()</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="webflux-oauth2-resource-server-jwkseturi-dsl" href="#webflux-oauth2-resource-server-jwkseturi-dsl"></a>Using <code class="literal">jwkSetUri()</code></h5></div></div></div>
+
+<p>An authorization server&#8217;s JWK Set Uri can be configured <a class="link" href="webflux-oauth2.html#webflux-oauth2-resource-server-jwkseturi" title="Specifying the Authorization Server JWK Set Uri Directly">as a configuration property</a> or it can be supplied in the DSL:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        .authorizeExchange()
+            .anyExchange().authenticated()
+            .and()
+        .oauth2ResourceServer()
+            .jwt()
+                .jwkSetUri(<span class="hl-string">"https://idp.example.com/.well-known/jwks.json"</span>);
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+<p>Using <code class="literal">jwkSetUri()</code> takes precedence over any configuration property.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="webflux-oauth2-resource-server-decoder-dsl" href="#webflux-oauth2-resource-server-decoder-dsl"></a>Using <code class="literal">decoder()</code></h5></div></div></div>
+
+<p>More powerful than <code class="literal">jwkSetUri()</code> is <code class="literal">decoder()</code>, which will completely replace any Boot auto configuration of <code class="literal">JwtDecoder</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        .authorizeExchange()
+            .anyExchange().authenticated()
+            .and()
+        .oauth2ResourceServer()
+            .jwt()
+                .decoder(myCustomDecoder());
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+<p>This is handy when deeper configuration, like <a class="link" href="webflux-oauth2.html#webflux-oauth2-resource-server-validation" title="Configuring Validation">validation</a>, is necessary.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="webflux-oauth2-resource-server-decoder-bean" href="#webflux-oauth2-resource-server-decoder-bean"></a>Exposing a <code class="literal">ReactiveJwtDecoder</code> <code class="literal">@Bean</code></h5></div></div></div>
+
+<p>Or, exposing a <code class="literal">ReactiveJwtDecoder</code> <code class="literal">@Bean</code> has the same effect as <code class="literal">decoder()</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> JwtDecoder jwtDecoder() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> NimbusReactiveJwtDecoder(jwkSetUri);
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="webflux-oauth2-resource-server-authorization" href="#webflux-oauth2-resource-server-authorization"></a>Configuring Authorization</h4></div></div></div>
+
+<p>A JWT that is issued from an OAuth 2.0 Authorization Server will typically either have a <code class="literal">scope</code> or <code class="literal">scp</code> attribute, indicating the scopes (or authorities) it&#8217;s been granted, for example:</p>
+<p><code class="literal">{ &#8230;&#8203;, "scope" : "messages contacts"}</code></p>
+<p>When this is the case, Resource Server will attempt to coerce these scopes into a list of granted authorities, prefixing each scope with the string "SCOPE_".</p>
+<p>This means that to protect an endpoint or method with a scope derived from a JWT, the corresponding expressions should include this prefix:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        .authorizeExchange()
+            .mvcMatchers(<span class="hl-string">"/contacts/**"</span>).hasAuthority(<span class="hl-string">"SCOPE_contacts"</span>)
+            .mvcMatchers(<span class="hl-string">"/messages/**"</span>).hasAuthority(<span class="hl-string">"SCOPE_messages"</span>)
+            .anyExchange().authenticated()
+            .and()
+        .oauth2ResourceServer()
+            .jwt();
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+<p>Or similarly with method security:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@PreAuthorize("hasAuthority('SCOPE_messages')")</span></em>
+<span class="hl-keyword">public</span> List&lt;Message&gt; getMessages(...) {}</pre>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="webflux-oauth2-resource-server-authorization-extraction" href="#webflux-oauth2-resource-server-authorization-extraction"></a>Extracting Authorities Manually</h5></div></div></div>
+
+<p>However, there are a number of circumstances where this default is insufficient.
+For example, some authorization servers don&#8217;t use the <code class="literal">scope</code> attribute, but instead have their own custom attribute.
+Or, at other times, the resource server may need to adapt the attribute or a composition of attributes into internalized authorities.</p>
+<p>To this end, the DSL exposes <code class="literal">jwtAuthenticationConverter()</code>:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        .authorizeExchange()
+            .anyExchange().authenticated()
+            .and()
+        .oauth2ResourceServer()
+            .jwt()
+                .jwtAuthenticationConverter(grantedAuthoritiesExtractor());
+    <span class="hl-keyword">return</span> http.build();
+}
+
+Converter&lt;Jwt, Mono&lt;AbstractAuthenticationToken&gt;&gt; grantedAuthoritiesExtractor() {
+    GrantedAuthoritiesExtractor extractor = <span class="hl-keyword">new</span> GrantedAuthoritiesExtractor();
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> ReactiveJwtAuthenticationConverterAdapter(extractor);
+}</pre>
+<p>which is responsible for converting a <code class="literal">Jwt</code> into an <code class="literal">Authentication</code>.</p>
+<p>We can override this quite simply to alter the way granted authorities are derived:</p>
+<pre class="programlisting"><span class="hl-keyword">static</span> <span class="hl-keyword">class</span> GrantedAuthoritiesExtractor <span class="hl-keyword">extends</span> JwtAuthenticationConverter {
+    <span class="hl-keyword">protected</span> Collection&lt;GrantedAuthorities&gt; extractAuthorities(Jwt jwt) {
+        Collection&lt;String&gt; authorities = (Collection&lt;String&gt;)
+                jwt.getClaims().get(<span class="hl-string">"mycustomclaim"</span>);
+
+        <span class="hl-keyword">return</span> authorities.stream()
+                .map(SimpleGrantedAuthority::<span class="hl-keyword">new</span>)
+                .collect(Collectors.toList());
+    }
+}</pre>
+<p>For more flexibility, the DSL supports entirely replacing the converter with any class that implements <code class="literal">Converter&lt;Jwt, Mono&lt;AbstractAuthenticationToken&gt;&gt;</code>:</p>
+<pre class="programlisting"><span class="hl-keyword">static</span> <span class="hl-keyword">class</span> CustomAuthenticationConverter <span class="hl-keyword">implements</span> Converter&lt;Jwt, Mono&lt;AbstractAuthenticationToken&gt;&gt; {
+    <span class="hl-keyword">public</span> AbstractAuthenticationToken convert(Jwt jwt) {
+        <span class="hl-keyword">return</span> Mono.just(jwt).map(<span class="hl-keyword">this</span>::doConversion);
+    }
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="webflux-oauth2-resource-server-validation" href="#webflux-oauth2-resource-server-validation"></a>Configuring Validation</h4></div></div></div>
+
+<p>Using <a class="link" href="webflux-oauth2.html#webflux-oauth2-resource-server-minimal-configuration" title="19.3.2&nbsp;Minimal Configuration">minimal Spring Boot configuration</a>, indicating the authorization server&#8217;s issuer uri, Resource Server will default to verifying the <code class="literal">iss</code> claim as well as the <code class="literal">exp</code> and <code class="literal">nbf</code> timestamp claims.</p>
+<p>In circumstances where validation needs to be customized, Resource Server ships with two standard validators and also accepts custom <code class="literal">OAuth2TokenValidator</code> instances.</p>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="webflux-oauth2-resource-server-validation-clockskew" href="#webflux-oauth2-resource-server-validation-clockskew"></a>Customizing Timestamp Validation</h5></div></div></div>
+
+<p>JWT&#8217;s typically have a window of validity, with the start of the window indicated in the <code class="literal">nbf</code> claim and the end indicated in the <code class="literal">exp</code> claim.</p>
+<p>However, every server can experience clock drift, which can cause tokens to appear expired to one server, but not to another.
+This can cause some implementation heartburn as the number of collaborating servers increases in a distributed system.</p>
+<p>Resource Server uses <code class="literal">JwtTimestampValidator</code> to verify a token&#8217;s validity window, and it can be configured with a <code class="literal">clockSkew</code> to alleviate the above problem:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+ReactiveJwtDecoder jwtDecoder() {
+     NimbusReactiveJwtDecoder jwtDecoder = (NimbusReactiveJwtDecoder)
+             ReactiveJwtDecoders.withOidcIssuerLocation(issuerUri);
+
+     OAuth2TokenValidator&lt;Jwt&gt; withClockSkew = <span class="hl-keyword">new</span> DelegatingOAuth2TokenValidator&lt;&gt;(
+            <span class="hl-keyword">new</span> JwtTimestampValidator(Duration.ofSeconds(<span class="hl-number">60</span>)),
+            <span class="hl-keyword">new</span> IssuerValidator(issuerUri));
+
+     jwtDecoder.setJwtValidator(withClockSkew);
+
+     <span class="hl-keyword">return</span> jwtDecoder;
+}</pre>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>By default, Resource Server configures a clock skew of 30 seconds.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="webflux-oauth2-resource-server-validation-custom" href="#webflux-oauth2-resource-server-validation-custom"></a>Configuring a Custom Validator</h5></div></div></div>
+
+<p>Adding a check for the <code class="literal">aud</code> claim is simple with the <code class="literal">OAuth2TokenValidator</code> API:</p>
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AudienceValidator <span class="hl-keyword">implements</span> OAuth2TokenValidator&lt;Jwt&gt; {
+    OAuth2Error error = <span class="hl-keyword">new</span> OAuth2Error(<span class="hl-string">"invalid_token"</span>, <span class="hl-string">"The required audience is missing"</span>, null);
+
+    <span class="hl-keyword">public</span> OAuth2TokenValidatorResult validate(Jwt jwt) {
+        <span class="hl-keyword">if</span> (jwt.getAudience().contains(<span class="hl-string">"messaging"</span>)) {
+            <span class="hl-keyword">return</span> OAuth2TokenValidatorResult.success();
+        } <span class="hl-keyword">else</span> {
+            <span class="hl-keyword">return</span> OAuth2TokenValidatorResult.failure(error);
+        }
+    }
+}</pre>
+<p>Then, to add into a resource server, it&#8217;s a matter of specifying the <code class="literal">ReactiveJwtDecoder</code> instance:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+ReactiveJwtDecoder jwtDecoder() {
+    NimbusReactiveJwtDecoder jwtDecoder = (NimbusReactiveJwtDecoder)
+            ReactiveJwtDecoders.withOidcIssuerLocation(issuerUri);
+
+    OAuth2TokenValidator&lt;Jwt&gt; audienceValidator = <span class="hl-keyword">new</span> AudienceValidator();
+    OAuth2TokenValidator&lt;Jwt&gt; withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
+    OAuth2TokenValidator&lt;Jwt&gt; withAudience = <span class="hl-keyword">new</span> DelegatingOAuth2TokenValidator&lt;&gt;(withIssuer, audienceValidator);
+
+    jwtDecoder.setJwtValidator(withAudience);
+
+    <span class="hl-keyword">return</span> jwtDecoder;
+}</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="webflux-redirect-https.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="reactive-applications.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="webflux-roac.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">18.&nbsp;Redirect to HTTPS&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;20.&nbsp;@RegisteredOAuth2AuthorizedClient</td></tr></table></div></body></html>

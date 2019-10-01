@@ -1,0 +1,25 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>18.&nbsp;Redirect to HTTPS</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="reactive-applications.html" title="Part&nbsp;III.&nbsp;Reactive Applications"><link rel="prev" href="default-security-headers-2.html" title="17.&nbsp;Default Security Headers"><link rel="next" href="webflux-oauth2.html" title="19.&nbsp;OAuth2 WebFlux"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">18.&nbsp;Redirect to HTTPS</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="default-security-headers-2.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;III.&nbsp;Reactive Applications</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="webflux-oauth2.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="webflux-redirect-https" href="#webflux-redirect-https"></a>18.&nbsp;Redirect to HTTPS</h2></div></div></div>
+
+<p>HTTPS is required to provide a secure application.
+Spring Security can be configured to perform a redirect to https using the following Java Configuration:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        <span class="hl-comment">// ...</span>
+        .redirectToHttps();
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+<p>The configuration can easily be wrapped around an if statement to only be turned on in production.
+Alternatively, it can be enabled by looking for a property about the request that only happens in production.
+For example, if the production environment adds a header named <code class="literal">X-Forwarded-Proto</code> the following Java Configuration could be used:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    http
+        <span class="hl-comment">// ...</span>
+        .redirectToHttps()
+            .httpsRedirectWhen(e -&gt; e.getRequest().getHeaders().containsKey(<span class="hl-string">"X-Forwarded-Proto"</span>));
+    <span class="hl-keyword">return</span> http.build();
+}</pre>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="default-security-headers-2.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="reactive-applications.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="webflux-oauth2.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">17.&nbsp;Default Security Headers&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;19.&nbsp;OAuth2 WebFlux</td></tr></table></div></body></html>

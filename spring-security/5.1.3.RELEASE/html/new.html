@@ -1,0 +1,88 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>2.&nbsp;What&#8217;s New in Spring Security 5.1</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="preface.html" title="Part&nbsp;I.&nbsp;Preface"><link rel="prev" href="community.html" title="1.&nbsp;Spring Security Community"><link rel="next" href="get-spring-security.html" title="3.&nbsp;Getting Spring Security"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">2.&nbsp;What&#8217;s New in Spring Security 5.1</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="community.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;I.&nbsp;Preface</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="get-spring-security.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="new" href="#new"></a>2.&nbsp;What&#8217;s New in Spring Security 5.1</h2></div></div></div>
+
+<p>Spring Security 5.1 provides a number of new features.
+Below are the highlights of the release.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="servlet" href="#servlet"></a>2.1&nbsp;Servlet</h2></div></div></div>
+
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Automatic password storage upgrades through <a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/core/userdetails/UserDetailsPasswordService.html" target="_top">UserDetailsPasswordService</a>
+</li><li class="listitem">
+<p class="simpara"><a class="ulink" href="https://github.com/spring-projects/spring-security/tree/5.1.3.RELEASE/samples/boot/oauth2webclient" target="_top">OAuth 2.0 Client</a></p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+Customizable Authorize and Token requests
+</li><li class="listitem">
+<code class="literal">authorization_code</code> grant support
+</li><li class="listitem">
+<code class="literal">client_credentials</code> grant support
+</li></ul></div>
+</li><li class="listitem">
+OAuth 2.0 Resource Server - support for <a class="ulink" href="https://github.com/spring-projects/spring-security/tree/5.1.3.RELEASE/samples/boot/oauth2resourceserver" target="_top">JWT-encoded bearer tokens</a>
+</li><li class="listitem">
+Added OAuth2 <a class="link" href="servlet-webclient.html" title="13.&nbsp;WebClient for Servlet Environments">WebClient</a> integration
+</li><li class="listitem">
+<a class="link" href="web-app-security.html#request-matching" title="10.1.4&nbsp;Request Matching and HttpFirewall">HTTP Firewall</a> protects against HTTP Verb Tampering and Cross-site Tracing
+</li><li class="listitem">
+<a class="link" href="web-app-security.html#exception-translation-filter" title="10.2.2&nbsp;ExceptionTranslationFilter">ExceptionTranslationFilter</a> support for selecting an <code class="literal">AccessDeniedHandler</code> by <code class="literal">RequestMatcher</code>
+</li><li class="listitem">
+<a class="link" href="web-app-security.html#csrf" title="10.6&nbsp;Cross Site Request Forgery (CSRF)">CSRF</a> support for excluding certain requests
+</li><li class="listitem">
+Added Support for <a class="link" href="web-app-security.html#headers-feature" title="Feature Policy">Feature Policy</a>
+</li><li class="listitem">
+Added <a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/core/src/main/java/org/springframework/security/core/Transient.java" target="_top">@Transient</a> authentication tokens
+</li><li class="listitem">
+A modern look-and-feel for the default log in page
+</li></ul></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webflux" href="#webflux"></a>2.2&nbsp;WebFlux</h2></div></div></div>
+
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Automatic password storage upgrades through <a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/core/userdetails/ReactiveUserDetailsPasswordService.html" target="_top">ReactiveUserDetailsPasswordService</a>
+</li><li class="listitem">
+<p class="simpara">Added <a class="link" href="webflux-oauth2.html" title="19.&nbsp;OAuth2 WebFlux">OAuth2</a> support</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+Added <a class="link" href="webflux-oauth2.html#webflux-oauth2-client" title="19.2&nbsp;OAuth2 Client">OAuth2 Client</a> support
+</li><li class="listitem">
+Added <a class="link" href="webflux-oauth2.html#webflux-oauth2-resource-server" title="19.3&nbsp;OAuth2 Resource Server">OAuth2 Resource Server</a> support
+</li><li class="listitem">
+Added OAuth2 <a class="link" href="webclient.html" title="21.&nbsp;WebClient">WebClient</a> integration
+</li></ul></div>
+</li><li class="listitem">
+<code class="literal">@WithUserDetails</code> <a class="link" href="test.html#test-method-withuserdetails" title="9.1.4&nbsp;@WithUserDetails">now works</a> with <code class="literal">ReactiveUserDetailsService</code>
+</li><li class="listitem">
+Added <a class="link" href="">CORS</a> support
+</li><li class="listitem">
+<p class="simpara">Added support for the following <a class="link" href="jc-webflux.html#webflux-headers">HTTP headers</a></p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+<a class="link" href="default-security-headers-2.html#webflux-headers-csp" title="17.6&nbsp;Content Security Policy (CSP)">Content Security Policy</a>
+</li><li class="listitem">
+<a class="link" href="default-security-headers-2.html#webflux-headers-feature" title="17.8&nbsp;Feature Policy">Feature Policy</a>
+</li><li class="listitem">
+<a class="link" href="default-security-headers-2.html#webflux-headers-referrer" title="17.7&nbsp;Referrer Policy">Referrer Policy</a>
+</li></ul></div>
+</li><li class="listitem">
+<a class="link" href="webflux-redirect-https.html" title="18.&nbsp;Redirect to HTTPS">Redirect to HTTPS</a>
+</li><li class="listitem">
+<p class="simpara">Improvements for <a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/core/annotation/AuthenticationPrincipal.html" target="_top">@AuthenticationPrincipal</a></p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; "><li class="listitem">
+Support for resolving beans
+</li><li class="listitem">
+Support for resolving <code class="literal">errorOnInvalidType</code>
+</li></ul></div>
+</li></ul></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="integrations" href="#integrations"></a>2.3&nbsp;Integrations</h2></div></div></div>
+
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="overall-architecture.html#jackson" title="8.2.4&nbsp;Jackson Support">Jackson Support</a> works with <code class="literal">BadCredentialsException</code>
+</li><li class="listitem">
+<code class="literal">@WithMockUser</code> <a class="link" href="test.html#test-method-withmockuser" title="9.1.2&nbsp;@WithMockUser">supports</a> customizing when the <code class="literal">SecurityContext</code> is setup in the test.
+For example, <code class="literal">@WithMockUser(setupBefore = TestExecutionEvent.TEST_EXECUTION)</code> will setup a user after JUnit&#8217;s <code class="literal">@Before</code> and before the test executes.
+</li><li class="listitem">
+<a class="link" href="advanced-topics.html#ldap" title="12.3&nbsp;LDAP Authentication">LDAP Authentication</a> can be configured with custom environment variables
+</li><li class="listitem">
+<a class="link" href="servlet-webclient.html#x509" title="13.8&nbsp;X.509 Authentication">X.509 Authentication</a> supports deriving the principal as a strategy
+</li></ul></div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="community.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="preface.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="get-spring-security.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">1.&nbsp;Spring Security Community&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;3.&nbsp;Getting Spring Security</td></tr></table></div></body></html>

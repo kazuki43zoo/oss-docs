@@ -1,0 +1,88 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>22.&nbsp;EnableReactiveMethodSecurity</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Security Reference"><link rel="up" href="reactive-applications.html" title="Part&nbsp;III.&nbsp;Reactive Applications"><link rel="prev" href="webclient.html" title="21.&nbsp;WebClient"><link rel="next" href="test-webflux.html" title="23.&nbsp;Reactive Test Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">22.&nbsp;EnableReactiveMethodSecurity</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="webclient.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;III.&nbsp;Reactive Applications</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="test-webflux.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="jc-erms" href="#jc-erms"></a>22.&nbsp;EnableReactiveMethodSecurity</h2></div></div></div>
+
+<p>Spring Security supports method security using <a class="ulink" href="https://projectreactor.io/docs/core/release/reference/#context" target="_top">Reactor&#8217;s Context</a> which is setup using <code class="literal">ReactiveSecurityContextHolder</code>.
+For example, this demonstrates how to retrieve the currently logged in user&#8217;s message.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>For this to work the return type of the method must be a <code class="literal">org.reactivestreams.Publisher</code> (i.e. <code class="literal">Mono</code>/<code class="literal">Flux</code>).
+This is necessary to integrate with Reactor&#8217;s <code class="literal">Context</code>.</p>
+</td></tr></table></div>
+<pre class="programlisting">Authentication authentication = <span class="hl-keyword">new</span> TestingAuthenticationToken(<span class="hl-string">"user"</span>, <span class="hl-string">"password"</span>, <span class="hl-string">"ROLE_USER"</span>);
+
+Mono&lt;String&gt; messageByUsername = ReactiveSecurityContextHolder.getContext()
+    .map(SecurityContext::getAuthentication)
+    .map(Authentication::getName)
+    .flatMap(<span class="hl-keyword">this</span>::findMessageByUsername)
+    <span class="hl-comment">// In a WebFlux application the `subscriberContext` is automatically setup using `ReactorContextWebFilter`</span>
+    .subscriberContext(ReactiveSecurityContextHolder.withAuthentication(authentication));
+
+StepVerifier.create(messageByUsername)
+    .expectNext(<span class="hl-string">"Hi user"</span>)
+    .verifyComplete();</pre>
+<p>with <code class="literal">this::findMessageByUsername</code> defined as:</p>
+<pre class="programlisting">Mono&lt;String&gt; findMessageByUsername(String username) {
+    <span class="hl-keyword">return</span> Mono.just(<span class="hl-string">"Hi "</span> + username);
+}</pre>
+<p>Below is a minimal method security configuration when using method security in reactive applications.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableReactiveMethodSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SecurityConfig {
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MapReactiveUserDetailsService userDetailsService() {
+        User.UserBuilder userBuilder = User.withDefaultPasswordEncoder();
+        UserDetails rob = userBuilder.username(<span class="hl-string">"rob"</span>)
+            .password(<span class="hl-string">"rob"</span>)
+            .roles(<span class="hl-string">"USER"</span>)
+            .build();
+        UserDetails admin = userBuilder.username(<span class="hl-string">"admin"</span>)
+            .password(<span class="hl-string">"admin"</span>)
+            .roles(<span class="hl-string">"USER"</span>,<span class="hl-string">"ADMIN"</span>)
+            .build();
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> MapReactiveUserDetailsService(rob, admin);
+    }
+}</pre>
+<p>Consider the following class:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Component</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> HelloWorldMessageService {
+    <em><span class="hl-annotation" style="color: gray">@PreAuthorize("hasRole('ADMIN')")</span></em>
+    <span class="hl-keyword">public</span> Mono&lt;String&gt; findMessage() {
+        <span class="hl-keyword">return</span> Mono.just(<span class="hl-string">"Hello World!"</span>);
+    }
+}</pre>
+<p>Combined with our configuration above, <code class="literal">@PreAuthorize("hasRole('ADMIN')")</code> will ensure that <code class="literal">findByMessage</code> is only invoked by a user with the role <code class="literal">ADMIN</code>.
+It is important to note that any of the expressions in standard method security work for <code class="literal">@EnableReactiveMethodSecurity</code>.
+However, at this time we only support return type of <code class="literal">Boolean</code> or <code class="literal">boolean</code> of the expression.
+This means that the expression must not block.</p>
+<p>When integrating with <a class="xref" href="jc-webflux.html" title="16.&nbsp;WebFlux Security">Chapter&nbsp;16, <i>WebFlux Security</i></a>, the Reactor Context is automatically established by Spring Security according to the authenticated user.</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableWebFluxSecurity</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableReactiveMethodSecurity</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SecurityConfig {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    SecurityWebFilterChain springWebFilterChain(ServerHttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+        <span class="hl-keyword">return</span> http
+            <span class="hl-comment">// Demonstrate that method security works</span>
+            <span class="hl-comment">// Best practice to use both for defense in depth</span>
+            .authorizeExchange()
+                .anyExchange().permitAll()
+                .and()
+            .httpBasic().and()
+            .build();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    MapReactiveUserDetailsService userDetailsService() {
+        User.UserBuilder userBuilder = User.withDefaultPasswordEncoder();
+        UserDetails rob = userBuilder.username(<span class="hl-string">"rob"</span>)
+            .password(<span class="hl-string">"rob"</span>)
+            .roles(<span class="hl-string">"USER"</span>)
+            .build();
+        UserDetails admin = userBuilder.username(<span class="hl-string">"admin"</span>)
+            .password(<span class="hl-string">"admin"</span>)
+            .roles(<span class="hl-string">"USER"</span>,<span class="hl-string">"ADMIN"</span>)
+            .build();
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> MapReactiveUserDetailsService(rob, admin);
+    }
+}</pre>
+<p>You can find a complete sample in <a class="ulink" href="https://github.com/spring-projects/spring-security/tree/5.1.3.RELEASE/samples/javaconfig/hellowebflux-method" target="_top">hellowebflux-method</a></p>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="webclient.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="reactive-applications.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="test-webflux.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">21.&nbsp;WebClient&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;23.&nbsp;Reactive Test Support</td></tr></table></div></body></html>
