@@ -1,0 +1,169 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-appendices.html" title="Part&nbsp;VI.&nbsp;Appendices"><link rel="prev" href="spring-integration-appendices.html" title="Part&nbsp;VI.&nbsp;Appendices"><link rel="next" href="message-publishing.html" title="Appendix&nbsp;B.&nbsp;Message Publishing"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="spring-integration-appendices.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;VI.&nbsp;Appendices</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="message-publishing.html">Next</a></td></tr></table><hr></div><div class="appendix"><div class="titlepage"><div><div><h2 class="title"><a name="spel" href="#spel"></a>Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)</h2></div></div></div>
+
+<p>You can configure many Spring Integration components by using expressions written in the <a class="ulink" href="http://static.springsource.org/spring-framework/docs/current/spring-framework-reference/html/expressions.html" target="_top">Spring Expression Language</a>.</p>
+<p>In most cases, the <code class="literal">#root</code> object is the <code class="literal">Message</code>, which has two properties (<code class="literal">headers</code> and <code class="literal">payload</code>) that allow such expressions as <code class="literal">payload</code>, <code class="literal">payload.thing</code>, <code class="literal">headers['my.header']</code>, and so on.</p>
+<p>In some cases, additional variables are provided.
+For example, <code class="literal">&lt;int-http:inbound-gateway/&gt;</code> provides <code class="literal">#requestParams</code> (parameters from the HTTP request) and <code class="literal">#pathVariables</code> (values from path placeholders in the URI).</p>
+<p>For all SpEL expressions, a <code class="literal">BeanResolver</code> is available to enable references to any bean in the application context (for example, <code class="literal">@myBean.foo(payload)</code>).
+In addition, two <code class="literal">PropertyAccessors</code> are available.
+A <code class="literal">MapAccessor</code> enables accessing values in a <code class="literal">Map</code> by using a key and a <code class="literal">ReflectivePropertyAccessor</code>, which allows access to fields and JavaBean compliant properties (by using getters and setters).
+This is how you can access the <code class="literal">Message</code> headers and payload properties.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="spel-customization" href="#spel-customization"></a>A.1&nbsp;SpEL Evaluation Context Customization</h2></div></div></div>
+
+<p>Starting with Spring Integration 3.0, you can add additional <code class="literal">PropertyAccessor</code> instances to the SpEL evaluation contexts used by the framework.
+The framework provides the (read-only) <code class="literal">JsonPropertyAccessor</code>, which you can use to access fields from a <code class="literal">JsonNode</code> or JSON in a <code class="literal">String</code>.
+You can also create your own <code class="literal">PropertyAccessor</code> if you have specific needs.</p>
+<p>In addition, you can add custom functions.
+Custom functions are <code class="literal">static</code> methods declared on a class.
+Functions and property accessors are available in any SpEL expression used throughout the framework.</p>
+<p>The following configuration shows how to directly configure the <code class="literal">IntegrationEvaluationContextFactoryBean</code> with custom property accessors and functions:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"integrationEvaluationContext"</span>
+			<span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.config.IntegrationEvaluationContextFactoryBean"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"propertyAccessors"</span><span class="hl-tag">&gt;</span>
+		<span class="hl-tag">&lt;util:map&gt;</span>
+			<span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"things"</span><span class="hl-tag">&gt;</span>
+				<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"things.MyCustomPropertyAccessor"</span><span class="hl-tag">/&gt;</span>
+			<span class="hl-tag">&lt;/entry&gt;</span>
+		<span class="hl-tag">&lt;/util:map&gt;</span>
+	<span class="hl-tag">&lt;/property&gt;</span>
+	<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"functions"</span><span class="hl-tag">&gt;</span>
+		<span class="hl-tag">&lt;map&gt;</span>
+			<span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"barcalc"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"#{T(things.MyFunctions).getMethod('calc', T(things.MyThing))}"</span><span class="hl-tag">/&gt;</span>
+		<span class="hl-tag">&lt;/map&gt;</span>
+	<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<p>For convenience, Spring Integration provides namespace support for both property accessors and functions, as described in the following sections.
+The framework automatically configures the factory bean on your behalf.</p>
+<p>This factory bean definition overrides the default <code class="literal">integrationEvaluationContext</code> bean definition.
+It adds the custom accessor and one custom function to the list (which also includes the standard accessors <a class="link" href="spel.html" title="Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)">mentioned earlier</a>).</p>
+<p>Note that custom functions are static methods.
+In the preceding example, the custom function is a static method called <code class="literal">calc</code> on a class called <code class="literal">MyFunctions</code> and takes a single parameter of type <code class="literal">MyThing</code>.</p>
+<p>Suppose you have a <code class="literal">Message</code> with a payload that has a type of <code class="literal">MyThing</code>.
+Further suppose that you need to perform some action to create an object called <code class="literal">MyObject</code> from <code class="literal">MyThing</code> and then invoke a custom function called <code class="literal">calc</code> on that object.</p>
+<p>The standard property accessors do not know how to get a <code class="literal">MyObject</code> from a <code class="literal">MyThing</code>, so you could write and configure a custom property accessor to do so.
+As a result, your final expression might be <code class="literal">"#barcalc(payload.myObject)"</code>.</p>
+<p>The factory bean has another property (<code class="literal">typeLocator</code>), which lets you customize the <code class="literal">TypeLocator</code> used during SpEL evaluation.
+You might need to do so running in some environments that use a non-standard <code class="literal">ClassLoader</code>.
+In the following example, SpEL expressions always use the bean factory&#8217;s class loader:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"integrationEvaluationContext"</span>
+		<span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.config.IntegrationEvaluationContextFactoryBean"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"typeLocator"</span><span class="hl-tag">&gt;</span>
+		<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.expression.spel.support.StandardTypeLocator"</span><span class="hl-tag">&gt;</span>
+			<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"#{beanFactory.beanClassLoader}"</span><span class="hl-tag">/&gt;</span>
+		<span class="hl-tag">&lt;/bean&gt;</span>
+	<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="spel-functions" href="#spel-functions"></a>A.2&nbsp;SpEL Functions</h2></div></div></div>
+
+<p>Spring Integration provides namespace support to let you create SpEL custom functions.
+You can specify <code class="literal">&lt;spel-function/&gt;</code> components to provide <a class="ulink" href="http://static.springsource.org/spring-framework/docs/current/spring-framework-reference/html/expressions.html#expressions-ref-functions" target="_top">custom SpEL functions</a> to the <code class="literal">EvaluationContext</code> used throughout the framework.
+Instead of configuring the factory bean shown earlier, you can add one or more of these components, and the framework automatically adds them to the default <code class="literal">integrationEvaluationContext</code> factory bean.</p>
+<p>For example, suppose you have a useful static method to evaluate XPath.
+The following example shows how you can create a custom function to use that method:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:spel-function</span> <span class="hl-attribute">id</span>=<span class="hl-value">"xpath"</span>
+	<span class="hl-attribute">class</span>=<span class="hl-value">"com.something.test.XPathUtils"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"evaluate(java.lang.String, java.lang.Object)"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span>
+		 <span class="hl-attribute">expression</span>=<span class="hl-value">"#xpath('//things/@mythings', payload)"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<p>Given the preceding example:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The default <code class="literal">IntegrationEvaluationContextFactoryBean</code> bean with an ID of <code class="literal">integrationEvaluationContext</code> is registered with the application context.
+</li><li class="listitem">
+The <code class="literal">&lt;spel-function/&gt;</code> is parsed and added to the <code class="literal">functions</code> <code class="literal">Map</code> of <code class="literal">integrationEvaluationContext</code> as a map entry with its <code class="literal">id</code> as the key and the static <code class="literal">Method</code> as the value.
+</li><li class="listitem">
+The <code class="literal">integrationEvaluationContext</code> factory bean creates a new <code class="literal">StandardEvaluationContext</code> instance, and it is configured with the default <code class="literal">PropertyAccessor</code> instances, a <code class="literal">BeanResolver</code>, and the custom functions.
+</li><li class="listitem">
+That <code class="literal">EvaluationContext</code> instance is injected into the <code class="literal">ExpressionEvaluatingTransformer</code> bean.
+</li></ul></div>
+<p>To provide a SpEL Function by using Java configuration, you can declare a <code class="literal">SpelFunctionFactoryBean</code> bean for each function.
+The following example shows how to create a custom function:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> SpelFunctionFactoryBean xpath() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> SpelFunctionFactoryBean(XPathUtils.<span class="hl-keyword">class</span>, <span class="hl-string">"evaluate"</span>);
+}</pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>SpEL functions declared in a parent context are also made available in any child contexts.
+Each context has its own instance of the <code class="literal">integrationEvaluationContext</code> factory bean, because each needs a different <code class="literal">BeanResolver</code>, but the function declarations are inherited and can be overridden by declaring a SpEL function with the same name.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_built_in_spel_functions" href="#_built_in_spel_functions"></a>A.2.1&nbsp;Built-in SpEL Functions</h3></div></div></div>
+
+<p>Spring Integration provides the folloiwng  standard functions, which are registered with the application context automatically on start up:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<p class="simpara"><code class="literal">#jsonPath</code>: Evaluates a <span class="emphasis"><em>jsonPath</em></span> on a specified object.
+This function invokes <code class="literal">JsonPathUtils.evaluate(...)</code>, which delegates to the <a class="ulink" href="http://code.google.com/p/json-path" target="_top">Jayway JsonPath library</a>.
+The following listing shows some usage examples:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;transformer</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"#jsonPath(payload, '$.store.book[0].author')"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;filter</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"#jsonPath(payload,'$..book[2].isbn') matches '\d-\d{3}-\d{5}-\d'"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;splitter</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"#jsonPath(payload, '$.store.book')"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;router</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"#jsonPath(payload, headers.jsonPath)"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;mapping</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"output1"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"reference"</span><span class="hl-tag">/&gt;</span>
+	<span class="hl-tag">&lt;mapping</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"output2"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"fiction"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/router&gt;</span></pre>
+</div>
+<p class="simpara"><code class="literal">#jsonPath</code> also supports a third (optional) parameter: an array of <a class="ulink" href="https://github.com/jayway/JsonPath/blob/master/json-path/src/main/java/com/jayway/jsonpath/Filter.java" target="_top"><code class="literal">com.jayway.jsonpath.Filter</code></a>, which can be provided by a reference to a bean or bean method (for example).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Using this function requires the Jayway JsonPath library (<code class="literal">json-path.jar</code>) to be on the classpath.
+Otherwise the <code class="literal">#jsonPath</code> SpEL function is not registered.</p>
+</td></tr></table></div>
+<p class="simpara">For more information regarding JSON see <span class="emphasis"><em>JSON Transformers</em></span> in <a class="xref" href="messaging-transformation-chapter.html#transformer" title="9.1&nbsp;Transformer">Section&nbsp;9.1, &#8220;Transformer&#8221;</a>.</p>
+</li><li class="listitem">
+<code class="literal">#xpath</code>: To evaluate an <span class="emphasis"><em>xpath</em></span> on some provided object.
+For more information regarding XML and XPath, see <a class="xref" href="xml.html" title="38.&nbsp;XML Support - Dealing with XML Payloads">Chapter&nbsp;38, <i>XML Support - Dealing with XML Payloads</i></a>.
+</li></ul></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="spel-property-accessors" href="#spel-property-accessors"></a>A.3&nbsp;Property Accessors</h2></div></div></div>
+
+<p>Spring Integration provides namespace support to let you create SpEL custom <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/expression/PropertyAccessor.html" target="_top"><code class="literal">PropertyAccessor</code></a> implementations.
+You can use the <code class="literal">&lt;spel-property-accessors/&gt;</code> component to provide a list of custom <code class="literal">PropertyAccessor</code> instances to the <code class="literal">EvaluationContext</code> used throughout the framework.
+Instead of configuring the factory bean shown earlier, you can add one or more of these components, and the framework automatically adds the accessors to the default <code class="literal">integrationEvaluationContext</code> factory bean.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:spel-property-accessors&gt;</span>
+	<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jsonPA"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.json.JsonPropertyAccessor"</span><span class="hl-tag">/&gt;</span>
+	<span class="hl-tag">&lt;ref</span> <span class="hl-attribute">bean</span>=<span class="hl-value">"fooPropertyAccessor"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:spel-property-accessors&gt;</span></pre>
+</div>
+<p>In the preceding example, two custom <code class="literal">PropertyAccessor</code> instances are injected into the <code class="literal">EvaluationContext</code> (in the order in which they are declared).</p>
+<p>To provide <code class="literal">PropertyAccessor</code> instances by using Java Configuration, you should declare a <code class="literal">SpelPropertyAccessorRegistrar</code> bean with a name of <code class="literal">spelPropertyAccessorRegistrar</code> (dictated by the <code class="literal">IntegrationContextUtils.SPEL_PROPERTY_ACCESSOR_REGISTRAR_BEAN_NAME</code> constant).
+The following example shows how to configure two custom <code class="literal">PropertyAccessor</code> instances with Java:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> SpelPropertyAccessorRegistrar spelPropertyAccessorRegistrar() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> SpelPropertyAccessorRegistrar(<span class="hl-keyword">new</span> JsonPropertyAccessor())
+                    .add(fooPropertyAccessor());
+}</pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Custom <code class="literal">PropertyAccessor</code> instances declared in a parent context are also made available in any child contexts.
+They are placed at the end of result list (but before the default <code class="literal">org.springframework.context.expression.MapAccessor</code> and <code class="literal">o.s.expression.spel.support.ReflectivePropertyAccessor</code>).
+If you declare a <code class="literal">PropertyAccessor</code> with the same bean ID in a child context, it overrides the parent accessor.
+Beans declared within a <code class="literal">&lt;spel-property-accessors/&gt;</code> must have an <span class="emphasis"><em>id</em></span> attribute.
+The final order of usage is as follows:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The accessors in the current context, in the order in which they are declared
+</li><li class="listitem">
+Any accessors from parent contexts, in order
+</li><li class="listitem">
+The <code class="literal">MapAccessor</code>
+</li><li class="listitem">
+The <code class="literal">ReflectivePropertyAccessor</code>
+</li></ul></div>
+</td></tr></table></div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="spring-integration-appendices.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-appendices.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="message-publishing.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Part&nbsp;VI.&nbsp;Appendices&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Appendix&nbsp;B.&nbsp;Message Publishing</td></tr></table></div></body></html>

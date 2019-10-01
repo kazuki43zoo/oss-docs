@@ -1,0 +1,237 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>7.&nbsp;Message</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-core-messaging.html" title="Part&nbsp;IV.&nbsp;Core Messaging"><link rel="prev" href="messaging-channels-section.html" title="6.&nbsp;Messaging Channels"><link rel="next" href="messaging-routing-chapter.html" title="8.&nbsp;Message Routing"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">7.&nbsp;Message</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="messaging-channels-section.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;IV.&nbsp;Core Messaging</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="messaging-routing-chapter.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="message" href="#message"></a>7.&nbsp;Message</h2></div></div></div>
+
+<p>The Spring Integration <code class="literal">Message</code> is a generic container for data.
+Any object can be provided as the payload, and each <code class="literal">Message</code> instance includes headers containing user-extensible properties as key-value pairs.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="message-interface" href="#message-interface"></a>7.1&nbsp;The <code class="literal">Message</code> Interface</h2></div></div></div>
+
+<p>The following listing shows the definition of the <code class="literal">Message</code> interface:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> Message&lt;T&gt; {
+
+    T getPayload();
+
+    MessageHeaders getHeaders();
+
+}</pre>
+</div>
+<p>The <code class="literal">Message</code> interface is a core part of the API.
+By encapsulating the data in a generic wrapper, the messaging system can pass it around without any knowledge of the data&#8217;s type.
+As an application evolves to support new types or when the types themselves are modified or extended, the messaging system is not affected.
+On the other hand, when some component in the messaging system does require access to information about the <code class="literal">Message</code>, such metadata can typically be stored to and retrieved from the metadata in the message headers.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="message-headers" href="#message-headers"></a>7.2&nbsp;Message Headers</h2></div></div></div>
+
+<p>Just as Spring Integration lets any <code class="literal">Object</code> be used as the payload of a <code class="literal">Message</code>, it also supports any <code class="literal">Object</code> types as header values.
+In fact, the <code class="literal">MessageHeaders</code> class implements the <code class="literal">java.util.Map_ interface</code>, as the following class definition shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">final</span> <span class="hl-keyword">class</span> MessageHeaders <span class="hl-keyword">implements</span> Map&lt;String, Object&gt;, Serializable {
+  ...
+}</pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Even though the <code class="literal">MessageHeaders</code> class implements <code class="literal">Map</code>, it is effectively a read-only implementation.
+Any attempt to <code class="literal">put</code> a value in the Map results in an <code class="literal">UnsupportedOperationException</code>.
+The same applies for <code class="literal">remove</code> and <code class="literal">clear</code>.
+Since messages may be passed to multiple consumers, the structure of the <code class="literal">Map</code> cannot be modified.
+Likewise, the message&#8217;s payload <code class="literal">Object</code> can not be <code class="literal">set</code> after the initial creation.
+However, the mutability of the header values themselves (or the payload Object) is intentionally left as a decision for the framework user.</p>
+</td></tr></table></div>
+<p>As an implementation of <code class="literal">Map</code>, the headers can be retrieved by calling <code class="literal">get(..)</code> with the name of the header.
+Alternatively, you can provide the expected <code class="literal">Class</code> as an additional parameter.
+Even better, when retrieving one of the pre-defined values, convenient getters are available.
+The following example shows each of these three options:</p>
+<div class="informalexample">
+<pre class="programlisting">Object someValue = message.getHeaders().get(<span class="hl-string">"someKey"</span>);
+
+CustomerId customerId = message.getHeaders().get(<span class="hl-string">"customerId"</span>, CustomerId.<span class="hl-keyword">class</span>);
+
+Long timestamp = message.getHeaders().getTimestamp();</pre>
+</div>
+<p>The following table describes the pre-defined message headers:</p>
+<div class="table"><a name="d5e2094" href="#d5e2094"></a><p class="title"><b>Table&nbsp;7.1.&nbsp;Pre-defined Message Headers</b></p><div class="table-contents">
+
+<table summary="Pre-defined Message Headers" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Header Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Header Type</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Usage</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> MessageHeaders.ID</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.util.UUID</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>An identifier for this message instance.
+Changes each time a message is mutated.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> MessageHeaders.
+TIMESTAMP</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.Long</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The time the message was created.
+Changes each time a message is mutated.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> MessageHeaders.
+REPLY_CHANNEL</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.Object
+(String or
+MessageChannel)</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>A channel to which a reply (if any) is sent when no explicit output channel is configured and there is no <code class="literal">ROUTING_SLIP</code> or the <code class="literal">ROUTING_SLIP</code> is exhausted.
+If the value is a <code class="literal">String</code>, it must represent a bean name or have been generated by a <code class="literal">ChannelRegistry.</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> MessageHeaders.
+ERROR_CHANNEL</pre></td><td style="border-right: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.Object
+(String or
+MessageChannel)</pre></td><td style="" align="left" valign="top"><p>A channel to which errors are sent.
+If the value is a <code class="literal">String</code>, it must represent a bean name or have been generated by a <code class="literal">ChannelRegistry.</code></p></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>Many inbound and outbound adapter implementations also provide or expect certain headers, and you can configure additional user-defined headers.
+Constants for these headers can be found in those modules where such headers exist&#8201;&#8212;&#8201;for example. <code class="literal">AmqpHeaders</code>, <code class="literal">JmsHeaders</code>, and so on.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="message-header-accessor" href="#message-header-accessor"></a>7.2.1&nbsp;<code class="literal">MessageHeaderAccessor</code> API</h3></div></div></div>
+
+<p>Starting with Spring Framework 4.0 and Spring Integration 4.0, the core messaging abstraction has been moved to the <code class="literal">spring-messaging</code> module, and the <code class="literal">MessageHeaderAccessor</code> API has been introduced to provide additional abstraction over messaging implementations.
+All (core) Spring Integration-specific message headers constants are now declared in the <code class="literal">IntegrationMessageHeaderAccessor</code> class.
+The following table describes the pre-defined message headers:</p>
+<div class="table"><a name="d5e2150" href="#d5e2150"></a><p class="title"><b>Table&nbsp;7.2.&nbsp;Pre-defined Message Headers</b></p><div class="table-contents">
+
+<table summary="Pre-defined Message Headers" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Header Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Header Type</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Usage</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> IntegrationMessageHeaderAccessor.
+CORRELATION_ID</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.Object</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Used to correlate two or more messages.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> IntegrationMessageHeaderAccessor.
+SEQUENCE_NUMBER</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.Integer</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Usually a sequence number with a group of messages with a <code class="literal">SEQUENCE_SIZE</code> but can also be used in a <code class="literal">&lt;resequencer/&gt;</code> to resequence an unbounded group of messages.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> IntegrationMessageHeaderAccessor.
+SEQUENCE_SIZE</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.Integer</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The number of messages within a group of correlated messages.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> IntegrationMessageHeaderAccessor.
+EXPIRATION_DATE</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.Long</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Indicates when a message is expired.
+Not used by the framework directly but can be set with a header enricher and used in a <code class="literal">&lt;filter/&gt;</code> that is configured with an <code class="literal">UnexpiredMessageSelector</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> IntegrationMessageHeaderAccessor.
+PRIORITY</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.Integer</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Message priority&#8201;&#8212;&#8201;for example, within a <code class="literal">PriorityChannel</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> IntegrationMessageHeaderAccessor.
+DUPLICATE_MESSAGE</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.Boolean</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>True if a message was detected as a duplicate by an idempotent receiver interceptor.
+See <a class="xref" href="messaging-endpoints-chapter.html#idempotent-receiver" title="10.9.10&nbsp;Idempotent Receiver Enterprise Integration Pattern">Section&nbsp;10.9.10, &#8220;Idempotent Receiver Enterprise Integration Pattern&#8221;</a>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> IntegrationMessageHeaderAccessor.
+CLOSEABLE_RESOURCE</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.io.Closeable</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>This header is present if the message is associated with a <code class="literal">Closeable</code> that should be closed when message processing is complete.
+An example is the <code class="literal">Session</code> associated with a streamed file transfer using FTP, SFTP, and so on.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> IntegrationMessageHeaderAccessor.
+DELIVERY_ATTEMPT</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> java.lang.
+AtomicInteger</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>If a message-driven channel adapter supports the configuration of a <code class="literal">RetryTemplate</code>, this header contains the current delivery attempt.</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> IntegrationMessageHeaderAccessor.
+ACKNOWLEDGMENT_CALLBACK</pre></td><td style="border-right: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> o.s.i.support.
+Acknowledgment
+Callback</pre></td><td style="" align="left" valign="top"><p>If a message source supports it, a call back to accept, reject, or requeue a message.
+See <a class="xref" href="messaging-channels-section.html#deferred-acks-message-source" title="6.2.3&nbsp;Deferred Acknowledgment Pollable Message Source">Section&nbsp;6.2.3, &#8220;Deferred Acknowledgment Pollable Message Source&#8221;</a>.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>Convenient typed getters for some of these headers are provided on the <code class="literal">IntegrationMessageHeaderAccessor</code> class, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting">IntegrationMessageHeaderAccessor accessor = <span class="hl-keyword">new</span> IntegrationMessageHeaderAccessor(message);
+<span class="hl-keyword">int</span> sequenceNumber = accessor.getSequenceNumber();
+Object correlationId = accessor.getCorrelationId();
+...</pre>
+</div>
+<p>The following table describes headers that also appear in the <code class="literal">IntegrationMessageHeaderAccessor</code> but are generally not used by user code (that is, they are generally used by internal parts of Spring Integration&#8201;&#8212;&#8201;their inclusion here is for completeness):</p>
+<div class="table"><a name="d5e2241" href="#d5e2241"></a><p class="title"><b>Table&nbsp;7.3.&nbsp;Pre-defined Message Headers</b></p><div class="table-contents">
+
+<table summary="Pre-defined Message Headers" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Header Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Header Type</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Usage</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> `IntegrationMessageHeaderAccessor.
+SEQUENCE_DETAILS`</pre></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> `java.util.`
+`List&lt;List&lt;Object&gt;&gt;`</pre></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>A stack of correlation data used when nested correlation is needed (for example, <code class="literal">splitter-&gt;...-&gt;splitter-&gt;...-&gt;aggregator-&gt;...-&gt;aggregator</code>).</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> `IntegrationMessageHeaderAccessor.
+ROUTING_SLIP`</pre></td><td style="border-right: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> `java.util.`
+`Map&lt;List&lt;Object&gt;, Integer&gt;`</pre></td><td style="" align="left" valign="top"><p>See <a class="xref" href="messaging-routing-chapter.html#routing-slip" title="Routing Slip">the section called &#8220;Routing Slip&#8221;</a>.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="message-id-generation" href="#message-id-generation"></a>7.2.2&nbsp;Message ID Generation</h3></div></div></div>
+
+<p>When a message transitions through an application, each time it is mutated (for example,
+by a transformer) a new message ID is assigned.
+The message ID is a <code class="literal">UUID</code>.
+Beginning with Spring Integration 3.0, the default strategy used for IS generation is more efficient than the previous <code class="literal">java.util.UUID.randomUUID()</code> implementation.
+It uses simple random numbers based on a secure random seed instead of creating a secure random number each time.</p>
+<p>A different UUID generation strategy can be selected by declaring a bean that implements <code class="literal">org.springframework.util.IdGenerator</code> in the application context.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Only one UUID generation strategy can be used in a classloader.
+This means that, if two or more application contexts run in the same classloader, they share the same strategy.
+If one of the contexts changes the strategy, it is used by all contexts.
+If two or more contexts in the same classloader declare a bean of type <code class="literal">org.springframework.util.IdGenerator</code>, they must all be an instance of the same class.
+Otherwise, the context attempting to replace a custom strategy fails to initialize.
+If the strategy is the same, but parameterized, the strategy in the first context to be initialized is used.</p>
+</td></tr></table></div>
+<p>In addition to the default strategy, two additional <code class="literal">IdGenerators</code> are provided.
+<code class="literal">org.springframework.util.JdkIdGenerator</code> uses the previous <code class="literal">UUID.randomUUID()</code> mechanism.
+You can use <code class="literal">o.s.i.support.IdGenerators.SimpleIncrementingIdGenerator</code> when a UUID is not really needed and a simple incrementing value is sufficient.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="read-only-headers" href="#read-only-headers"></a>7.2.3&nbsp;Read-only Headers</h3></div></div></div>
+
+<p>The <code class="literal">MessageHeaders.ID</code> and <code class="literal">MessageHeaders.TIMESTAMP</code> are read-only headers and cannot be overridden.</p>
+<p>Since version 4.3.2, the <code class="literal">MessageBuilder</code> provides the <code class="literal">readOnlyHeaders(String... readOnlyHeaders)</code> API to customize a list of headers that should not be copied from an upstream <code class="literal">Message</code>.
+Only the <code class="literal">MessageHeaders.ID</code> and <code class="literal">MessageHeaders.TIMESTAMP</code> are read only by default.
+The global <code class="literal">spring.integration.readOnly.headers</code> property (see <a class="xref" href="configuration.html#global-properties" title="E.4&nbsp;Global Properties">Section&nbsp;E.4, &#8220;Global Properties&#8221;</a>) is provided to customize <code class="literal">DefaultMessageBuilderFactory</code> for framework components.
+This can be useful when you would like do not populate some out-of-the-box headers, such as <code class="literal">contentType</code> by the <code class="literal">ObjectToJsonTransformer</code> (see <a class="xref" href="messaging-transformation-chapter.html#json-transformers" title="JSON Transformers">the section called &#8220;JSON Transformers&#8221;</a>).</p>
+<p>When you try to build a new message using <code class="literal">MessageBuilder</code>, this kind of header is ignored and a particular <code class="literal">INFO</code> message is emitted to logs.</p>
+<p>Starting with version 5.0, <a class="link" href="messaging-endpoints-chapter.html#gateway" title="10.4&nbsp;Messaging Gateways">Messaging Gateway</a>, <a class="link" href="messaging-transformation-chapter.html#header-enricher" title="9.2.1&nbsp;Header Enricher">Header Enricher</a>, <a class="link" href="messaging-transformation-chapter.html#payload-enricher" title="9.2.2&nbsp;Payload Enricher">Content Enricher</a> and <a class="link" href="messaging-transformation-chapter.html#header-filter" title="9.1.5&nbsp;Header Filter">Header Filter</a> do not let you configure the <code class="literal">MessageHeaders.ID</code> and <code class="literal">MessageHeaders.TIMESTAMP</code> header names when <code class="literal">DefaultMessageBuilderFactory</code> is used, and they throw <code class="literal">BeanInitializationException</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="header-propagation" href="#header-propagation"></a>7.2.4&nbsp;Header Propagation</h3></div></div></div>
+
+<p>When messages are processed (and modified) by message-producing endpoints (such as a <a class="link" href="messaging-endpoints-chapter.html#service-activator" title="10.5&nbsp;Service Activator">service activator</a>), in general, inbound headers are propagated to the outbound message.
+One exception to this is a <a class="link" href="messaging-transformation-chapter.html#transformer" title="9.1&nbsp;Transformer">transformer</a>, when a complete message is returned to the framework.
+In that case, the user code is responsible for the entire outbound message.
+When a transformer just returns the payload, the inbound headers are propagated.
+Also, a header is only propagated if it does not already exist in the outbound message, letting you change header values as needed.</p>
+<p>Starting with version 4.3.10, you can configure message handlers (that modify messages and produce output) to suppress the propagation of specific headers.
+To configure the header(s) you do not want to be copied, call the <code class="literal">setNotPropagatedHeaders()</code> or <code class="literal">addNotPropagatedHeaders()</code> methods on the <code class="literal">MessageProducingMessageHandler</code> abstract class.</p>
+<p>You can also globally suppress propagation of specific message headers by setting the <code class="literal">readOnlyHeaders</code> property in <code class="literal">META-INF/spring.integration.properties</code> to a comma-delimited list of headers.</p>
+<p>Starting with version 5.0, the <code class="literal">setNotPropagatedHeaders()</code> implementation on the <code class="literal">AbstractMessageProducingHandler</code> applies simple patterns (<code class="literal">xxx*</code>, <code class="literal">*xxx</code>, <code class="literal">*xxx*</code>, or <code class="literal">xxx*yyy</code>) to allow filtering headers with a common suffix or prefix.
+See <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/util/PatternMatchUtils.html" target="_top"><code class="literal">PatternMatchUtils</code> Javadoc</a> for more information.
+When one of the patterns is <code class="literal">*</code> (asterisk), no headers are propagated.
+All other patterns are ignored.
+In that case, the service activator behaves the same way as a transformer and any required headers must be supplied in the <code class="literal">Message</code> returned from the service method.
+The <code class="literal">notPropagatedHeaders()</code> option is available in the <code class="literal">ConsumerEndpointSpec</code> for the Java DSL
+It is also available for XML configuration of the <code class="literal">&lt;service-activator&gt;</code> component as a <code class="literal">not-propagated-headers</code> attribute.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Header propagation suppression does not apply to those endpoints that do not modify the message, such as <a class="link" href="messaging-channels-section.html#bridge" title="6.4&nbsp;Messaging Bridge">bridges</a> and <a class="link" href="messaging-routing-chapter.html#router" title="8.1&nbsp;Routers">routers</a>.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="message-implementations" href="#message-implementations"></a>7.3&nbsp;Message Implementations</h2></div></div></div>
+
+<p>The base implementation of the <code class="literal">Message</code> interface is <code class="literal">GenericMessage&lt;T&gt;</code>, and it provides two constructors, shown in the following listing:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">new</span> GenericMessage&lt;T&gt;(T payload);
+
+<span class="hl-keyword">new</span> GenericMessage&lt;T&gt;(T payload, Map&lt;String, Object&gt; headers)</pre>
+</div>
+<p>When a <code class="literal">Message</code> is created, a random unique ID is generated.
+The constructor that accepts a <code class="literal">Map</code> of headers copies the provided headers to the newly created <code class="literal">Message</code>.</p>
+<p>There is also a convenient implementation of <code class="literal">Message</code> designed to communicate error conditions.
+This implementation takes a <code class="literal">Throwable</code> object as its payload, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting">ErrorMessage message = <span class="hl-keyword">new</span> ErrorMessage(someThrowable);
+
+Throwable t = message.getPayload();</pre>
+</div>
+<p>Note that this implementation takes advantage of the fact that the <code class="literal">GenericMessage</code> base class is parameterized.
+Therefore, as shown in both examples, no casting is necessary when retrieving the <code class="literal">Message</code> payload <code class="literal">Object</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="message-builder" href="#message-builder"></a>7.4&nbsp;The <code class="literal">MessageBuilder</code> Helper Class</h2></div></div></div>
+
+<p>You may notice that the <code class="literal">Message</code> interface defines retrieval methods for its payload and headers but provides no setters.
+The reason for this is that a <code class="literal">Message</code> cannot be modified after its initial creation.
+Therefore, when a <code class="literal">Message</code> instance is sent to multiple consumers (for example,
+through a publish-subscribe Channel), if one of those consumers needs to send a reply with a different payload type, it must create a new <code class="literal">Message</code>.
+As a result, the other consumers are not affected by those changes.
+Keep in mind that multiple consumers may access the same payload instance or header value, and whether such an instance is itself immutable is a decision left to you.
+In other words, the contract for <code class="literal">Message</code> instances is similar to that of an unmodifiable <code class="literal">Collection</code>, and the <code class="literal">MessageHeaders</code> map further exemplifies that.
+Even though the <code class="literal">MessageHeaders</code> class implements <code class="literal">java.util.Map</code>, any attempt to invoke a <code class="literal">put</code> operation (or <span class="emphasis"><em>remove</em></span> or <span class="emphasis"><em>clear</em></span>) on a <code class="literal">MessageHeaders</code> instance results in an <code class="literal">UnsupportedOperationException</code>.</p>
+<p>Rather than requiring the creation and population of a Map to pass into the GenericMessage constructor, Spring Integration does provide a far more convenient way to construct Messages: <code class="literal">MessageBuilder</code>.
+The <code class="literal">MessageBuilder</code> provides two factory methods for creating <code class="literal">Message</code> instances from either an existing <code class="literal">Message</code> or with a payload <code class="literal">Object</code>.
+When building from an existing <code class="literal">Message</code>, the headers and payload of that <code class="literal">Message</code> are copied to the new <code class="literal">Message</code>, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting">Message&lt;String&gt; message1 = MessageBuilder.withPayload(<span class="hl-string">"test"</span>)
+        .setHeader(<span class="hl-string">"foo"</span>, <span class="hl-string">"bar"</span>)
+        .build();
+
+Message&lt;String&gt; message2 = MessageBuilder.fromMessage(message1).build();
+
+assertEquals(<span class="hl-string">"test"</span>, message2.getPayload());
+assertEquals(<span class="hl-string">"bar"</span>, message2.getHeaders().get(<span class="hl-string">"foo"</span>));</pre>
+</div>
+<p>If you need to create a <code class="literal">Message</code> with a new payload but still want to copy the headers from an existing <code class="literal">Message</code>, you can use one of the <span class="emphasis"><em>copy</em></span> methods, as the following example shows:</p>
+<pre class="programlisting">Message&lt;String&gt; message3 = MessageBuilder.withPayload(<span class="hl-string">"test3"</span>)
+        .copyHeaders(message1.getHeaders())
+        .build();
+
+Message&lt;String&gt; message4 = MessageBuilder.withPayload(<span class="hl-string">"test4"</span>)
+        .setHeader(<span class="hl-string">"foo"</span>, <span class="hl-number">123</span>)
+        .copyHeadersIfAbsent(message1.getHeaders())
+        .build();
+
+assertEquals(<span class="hl-string">"bar"</span>, message3.getHeaders().get(<span class="hl-string">"foo"</span>));
+assertEquals(<span class="hl-number">123</span>, message4.getHeaders().get(<span class="hl-string">"foo"</span>));</pre>
+<p>Note that the <code class="literal">copyHeadersIfAbsent</code> method does not overwrite existing values.
+Also, in the preceding example, you can see how to set any user-defined header with <code class="literal">setHeader</code>.
+Finally, there are <code class="literal">set</code> methods available for the predefined headers as well as a non-destructive method for setting any header (<code class="literal">MessageHeaders</code> also defines constants for the pre-defined header names).</p>
+<p>You can also use <code class="literal">MessageBuilder</code> to set the priority of messages, as the following example shows:</p>
+<pre class="programlisting">Message&lt;Integer&gt; importantMessage = MessageBuilder.withPayload(<span class="hl-number">99</span>)
+        .setPriority(<span class="hl-number">5</span>)
+        .build();
+
+assertEquals(<span class="hl-number">5</span>, importantMessage.getHeaders().getPriority());
+
+Message&lt;Integer&gt; lessImportantMessage = MessageBuilder.fromMessage(importantMessage)
+        .setHeaderIfAbsent(IntegrationMessageHeaderAccessor.PRIORITY, <span class="hl-number">2</span>)
+        .build();
+
+assertEquals(<span class="hl-number">2</span>, lessImportantMessage.getHeaders().getPriority());</pre>
+<p>The <code class="literal">priority</code> header is considered only when using a <code class="literal">PriorityChannel</code> (as described in the next chapter).
+It is defined as a <code class="literal">java.lang.Integer</code>.</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="messaging-channels-section.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-core-messaging.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="messaging-routing-chapter.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">6.&nbsp;Messaging Channels&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;8.&nbsp;Message Routing</td></tr></table></div></body></html>

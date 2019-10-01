@@ -1,0 +1,245 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>19.&nbsp;Pivotal GemFire and Apache Geode Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="ftp.html" title="18.&nbsp;FTP/FTPS Adapters"><link rel="next" href="http.html" title="20.&nbsp;HTTP Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">19.&nbsp;Pivotal GemFire and Apache Geode Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ftp.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="http.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="gemfire" href="#gemfire"></a>19.&nbsp;Pivotal GemFire and Apache Geode Support</h2></div></div></div>
+
+<p>Spring Integration provides support for Pivotal GemFire and Apache Geode.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-gemfire<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-gemfire:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<p>GemFire is a distributed data management platform that provides a key-value data grid along with advanced distributed system features, such as event processing, continuous querying, and remote function execution.
+This guide assumes some familiarity with the commercial <a class="ulink" href="https://pivotal.io/pivotal-gemfire" target="_top">Pivotal GemFire</a> or Open Source <a class="ulink" href="http://geode.apache.org" target="_top">Apache Geode</a>.</p>
+<p>Spring integration provides support for GemFire by implementing inbound adapters for entry and continuous query events, an outbound adapter to write entries to the cache, and message and metadata stores and <code class="literal">GemfireLockRegistry</code> implementations.
+Spring integration leverages the <a class="ulink" href="http://projects.spring.io/spring-data-gemfire" target="_top">Spring Data for Pivotal GemFire</a> project, providing a thin wrapper over its components.</p>
+<p>Starting with version 5.1, the Spring Integration GemFire module uses the <a class="ulink" href="https://github.com/spring-projects/spring-data-geode" target="_top">Spring Data for Apache Geode</a> transitive dependency by default.
+To switch to the commercial Pivotal GemFire-based Spring Data for Pivotal GemFire, exclude <code class="literal">spring-data-geode</code> from dependencies and add <code class="literal">spring-data-gemfire</code>, as the following Maven snippet shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-gemfire<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;exclusions&gt;</span>
+        <span class="hl-tag">&lt;exclusion&gt;</span>
+            <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.data<span class="hl-tag">&lt;/groupId&gt;</span>
+            <span class="hl-tag">&lt;artifactId&gt;</span>spring-data-geode<span class="hl-tag">&lt;/artifactId&gt;</span>
+        <span class="hl-tag">&lt;/exclusion&gt;</span>
+    <span class="hl-tag">&lt;/exclusions&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span>
+
+<span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.data<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-data-gemfire<span class="hl-tag">&lt;/artifactId&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre>
+</div>
+<p>To configure the <span class="emphasis"><em>int-gfe</em></span> namespace, include the following elements within the headers of your XML configuration file:</p>
+<div class="informalexample">
+<pre class="programlisting">xmlns:int-gfe="http://www.springframework.org/schema/integration/gemfire"
+xsi:schemaLocation="http://www.springframework.org/schema/integration/gemfire
+	http://www.springframework.org/schema/integration/gemfire/spring-integration-gemfire.xsd"</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="gemfire-inbound" href="#gemfire-inbound"></a>19.1&nbsp;Inbound Channel Adapter</h2></div></div></div>
+
+<p>The inbound channel adapter produces messages on a channel when triggered by a GemFire <code class="literal">EntryEvent</code>.
+GemFire generates events whenever an entry is <code class="literal">CREATED</code>, <code class="literal">UPDATED</code>, <code class="literal">DESTROYED</code>, or <code class="literal">INVALIDATED</code> in the associated region.
+The inbound channel adapter lets you filter on a subset of these events.
+For example, you may want to produce messages only in response to an entry being created.
+In addition, the inbound channel adapter can evaluate a SpEL expression if, for example, you want your message payload to contain an event property such as the new entry value.
+The following example shows how to configure an inbound channel adapter with a SpEL language (in the <code class="literal">expression</code> attribute):</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;gfe:cache/&gt;</span>
+<span class="hl-tag">&lt;gfe:replicated-region</span> <span class="hl-attribute">id</span>=<span class="hl-value">"region"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int-gfe:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inputChannel"</span> <span class="hl-attribute">region</span>=<span class="hl-value">"region"</span>
+    <span class="hl-attribute">cache-events</span>=<span class="hl-value">"CREATED"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"newValue"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The preceding configuration creates a GemFire <code class="literal">Cache</code> and <code class="literal">Region</code> by using Spring GemFire&#8217;s <span class="emphasis"><em>gfe</em></span> namespace.
+The <code class="literal">inbound-channel-adapter</code> element requires a reference to the GemFire region on which the adapter listens for events.
+Optional attributes include <code class="literal">cache-events</code>, which can contain a comma-separated list of event types for which a message is produced on the input channel.
+By default, <code class="literal">CREATED</code> and <code class="literal">UPDATED</code> are enabled.
+If no <code class="literal">channel</code> attribute is provided, the channel is created from the <code class="literal">id</code> attribute.
+This adapter also supports an <code class="literal">error-channel</code>.
+The GemFire <a class="ulink" href="https://geode.apache.org/releases/latest/javadoc/org/apache/geode/cache/EntryEvent.html" target="_top"><code class="literal">EntryEvent</code></a> is the <code class="literal">#root</code> object of the <code class="literal">expression</code> evaluation.
+The following example shows an expression that replaces a value for a key:</p>
+<div class="informalexample">
+<pre class="screen">expression="new something.MyEvent(key, oldValue, newValue)"</pre>
+</div>
+<p>If the <code class="literal">expression</code> attribute is not provided, the message payload is the GemFire <code class="literal">EntryEvent</code> itself.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>This adapter conforms to Spring Integration conventions.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="gemfire-cq" href="#gemfire-cq"></a>19.2&nbsp;Continuous Query Inbound Channel Adapter</h2></div></div></div>
+
+<p>The continuous query inbound channel adapter produces messages on a channel when triggered by a GemFire continuous query or <code class="literal">CqEvent</code> event.
+In release <code class="literal">1.1</code>, Spring Data introduced continuous query support, including <code class="literal">ContinuousQueryListenerContainer</code>, which provides a nice abstraction over the GemFire native API.
+This adapter requires a reference to a <code class="literal">ContinuousQueryListenerContainer</code> instance, creates a listener for a given <code class="literal">query</code>, and executes the query.
+The continuous query acts as an event source that fires whenever its result set changes state.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>GemFire queries are written in OQL and are scoped to the entire cache (not just one region).
+Additionally, continuous queries require a remote (that is, running in a separate process or remote host) cache server.
+See the <a class="ulink" href="http://gemfire82.docs.pivotal.io/docs-gemfire/gemfire_nativeclient/continuous-querying/continuous-querying.html" target="_top">GemFire documentation</a> for more information on implementing continuous queries.</p>
+</td></tr></table></div>
+<p>The following configuration creates a GemFire client cache (recall that a remote cache server is required for this implementation and its address is configured as a child element of the pool), a client region, and a <code class="literal">ContinuousQueryListenerContainer</code> that uses Spring Data:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;gfe:client-cache</span> <span class="hl-attribute">id</span>=<span class="hl-value">"client-cache"</span> <span class="hl-attribute">pool-name</span>=<span class="hl-value">"client-pool"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;gfe:pool</span> <span class="hl-attribute">id</span>=<span class="hl-value">"client-pool"</span> <span class="hl-attribute">subscription-enabled</span>=<span class="hl-value">"true"</span><span class="hl-tag"> &gt;</span>
+    <span class="hl-comment">&lt;!--configure server or locator here required to address the cache server --&gt;</span>
+<span class="hl-tag">&lt;/gfe:pool&gt;</span>
+
+<span class="hl-tag">&lt;gfe:client-region</span> <span class="hl-attribute">id</span>=<span class="hl-value">"test"</span> <span class="hl-attribute">cache-ref</span>=<span class="hl-value">"client-cache"</span> <span class="hl-attribute">pool-name</span>=<span class="hl-value">"client-pool"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;gfe:cq-listener-container</span> <span class="hl-attribute">id</span>=<span class="hl-value">"queryListenerContainer"</span> <span class="hl-attribute">cache</span>=<span class="hl-value">"client-cache"</span>
+    <span class="hl-attribute">pool-name</span>=<span class="hl-value">"client-pool"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-gfe:cq-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inputChannel"</span>
+    <span class="hl-attribute">cq-listener-container</span>=<span class="hl-value">"queryListenerContainer"</span>
+    <span class="hl-attribute">query</span>=<span class="hl-value">"select * from /test"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The continuous query inbound channel adapter requires a <code class="literal">cq-listener-container</code> attribute, which must contain a reference to the <code class="literal">ContinuousQueryListenerContainer</code>.
+Optionally, it accepts an <code class="literal">expression</code> attribute that uses SpEL to transform the <code class="literal">CqEvent</code> or extract an individual property as needed.
+The <code class="literal">cq-inbound-channel-adapter</code> provides a <code class="literal">query-events</code> attribute that contains a comma-separated list of event types for which a message is produced on the input channel.
+The available event types are <code class="literal">CREATED</code>, <code class="literal">UPDATED</code>, <code class="literal">DESTROYED</code>, <code class="literal">REGION_DESTROYED</code>, and <code class="literal">REGION_INVALIDATED</code>.
+By default, <code class="literal">CREATED</code> and <code class="literal">UPDATED</code> are enabled.
+Additional optional attributes include <code class="literal">query-name</code> (which provides an optional query name), <code class="literal">expression</code> (which works as described in the preceding section), and <code class="literal">durable</code> (a boolean value indicating if the query is durable&#8201;&#8212;&#8201;it is false by default).
+If you do not provide a <code class="literal">channel</code>, the channel is created from the <code class="literal">id</code> attribute.
+This adapter also supports an <code class="literal">error-channel</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>This adapter conforms to Spring Integration conventions.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="gemfire-outbound" href="#gemfire-outbound"></a>19.3&nbsp;Outbound Channel Adapter</h2></div></div></div>
+
+<p>The outbound channel adapter writes cache entries that are mapped from the message payload.
+In its simplest form, it expects a payload of type <code class="literal">java.util.Map</code> and puts the map entries into its configured region.
+The following example shows how to configure an outbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-gfe:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"cacheChannel"</span> <span class="hl-attribute">region</span>=<span class="hl-value">"region"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Given the preceding configuration, an exception is thrown if the payload is not a <code class="literal">Map</code>.
+Additionally, you can configure the outbound channel adapter to create a map of cache entries by using SpEL.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-gfe:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"cacheChannel"</span> <span class="hl-attribute">region</span>=<span class="hl-value">"region"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-gfe:cache-entries&gt;</span>
+        <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"payload.toUpperCase()"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"payload.toLowerCase()"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"'thing1'"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"'thing2'"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/int-gfe:cache-entries&gt;</span>
+<span class="hl-tag">&lt;/int-gfe:outbound-channel-adapter&gt;</span></pre>
+</div>
+<p>In the preceding configuration, the inner element (<code class="literal">cache-entries</code>) is semantically equivalent to a Spring <span class="emphasis"><em>map</em></span> element.
+The adapter interprets the <code class="literal">key</code> and <code class="literal">value</code> attributes as SpEL expressions with the message as the evaluation context.
+Note that this can contain arbitrary cache entries (not only those derived from the message) and that literal values must be enclosed in single quotes.
+In the preceding example, if the message sent to <code class="literal">cacheChannel</code> has a <code class="literal">String</code> payload with a value <code class="literal">Hello</code>, two entries (<code class="literal">[HELLO:hello, thing1:thing2]</code>) are written (either created or updated) in the cache region.
+This adapter also supports the <code class="literal">order</code> attribute, which may be useful if it is bound to a <code class="literal">PublishSubscribeChannel</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="gemfire-message-store" href="#gemfire-message-store"></a>19.4&nbsp;Gemfire Message Store</h2></div></div></div>
+
+<p>As described in EIP, a <a class="ulink" href="http://www.eaipatterns.com/MessageStore.html" target="_top">message store</a> lets you persist messages.
+This can be useful when dealing with components that have a capability to buffer messages (<code class="literal">QueueChannel</code>, <code class="literal">Aggregator</code>, <code class="literal">Resequencer</code>, and others) if reliability is a concern.
+In Spring Integration, the <code class="literal">MessageStore</code> strategy interface also provides the foundation for the <a class="ulink" href="http://www.eaipatterns.com/StoreInLibrary.html" target="_top">claim check</a> pattern, which is described in EIP as well.</p>
+<p>Spring Integration&#8217;s Gemfire module provides <code class="literal">GemfireMessageStore</code>, which is an implementation of both the the <code class="literal">MessageStore</code> strategy (mainly used by the <code class="literal">QueueChannel</code> and <code class="literal">ClaimCheck</code> patterns) and the <code class="literal">MessageGroupStore</code> strategy (mainly used by the <code class="literal">Aggregator</code> and <code class="literal">Resequencer</code> patterns).</p>
+<p>The following example configures the cache and region by using the <code class="literal">spring-gemfire</code> namespace (not to be confused with the <code class="literal">spring-integration-gemfire</code> namespace):</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gemfireMessageStore"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.gemfire.store.GemfireMessageStore"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"myRegion"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;gfe:cache/&gt;</span>
+
+<span class="hl-tag">&lt;gfe:replicated-region</span> <span class="hl-attribute">id</span>=<span class="hl-value">"myRegion"</span><span class="hl-tag">/&gt;</span>
+
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"somePersistentQueueChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:queue</span> <span class="hl-attribute">message-store</span>=<span class="hl-value">"gemfireMessageStore"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int:channel&gt;</span>
+
+<span class="hl-tag">&lt;int:aggregator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputChannel"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputChannel"</span>
+    <span class="hl-attribute">message-store</span>=<span class="hl-value">"gemfireMessageStore"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Often, it is desirable for the message store to be maintained in one or more remote cache servers in a client-server configuration.
+In this case, you should configure a client cache, a client region, and a client pool and inject the region into the <code class="literal">MessageStore</code>.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gemfireMessageStore"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.gemfire.store.GemfireMessageStore"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"myRegion"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;gfe:client-cache/&gt;</span>
+
+<span class="hl-tag">&lt;gfe:client-region</span> <span class="hl-attribute">id</span>=<span class="hl-value">"myRegion"</span> <span class="hl-attribute">shortcut</span>=<span class="hl-value">"PROXY"</span> <span class="hl-attribute">pool-name</span>=<span class="hl-value">"messageStorePool"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;gfe:pool</span> <span class="hl-attribute">id</span>=<span class="hl-value">"messageStorePool"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;gfe:server</span> <span class="hl-attribute">host</span>=<span class="hl-value">"localhost"</span> <span class="hl-attribute">port</span>=<span class="hl-value">"40404"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/gfe:pool&gt;</span></pre>
+</div>
+<p>Note that the <code class="literal">pool</code> element is configured with the address of a cache server (you can substitute a locator here).
+The region is configured as a <span class="emphasis"><em>PROXY</em></span> so that no data is stored locally.
+The region&#8217;s <code class="literal">id</code> corresponds to a region with the same name in the cache server.</p>
+<p>Starting with version 4.3.12, the <code class="literal">GemfireMessageStore</code> supports the key <code class="literal">prefix</code> option to allow distinguishing between instances of the store on the same GemFire region.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="gemfire-lock-registry" href="#gemfire-lock-registry"></a>19.5&nbsp;Gemfire Lock Registry</h2></div></div></div>
+
+<p>Starting with version 4.0, the <code class="literal">GemfireLockRegistry</code> is available.
+Certain components (for example, the aggregator and the resequencer) use a lock obtained from a <code class="literal">LockRegistry</code> instance to ensure that only one thread is manipulating a group at any given time.
+The <code class="literal">DefaultLockRegistry</code> performs this function within a single component.
+You can now configure an external lock registry on these components.
+When you use a shared <code class="literal">MessageGroupStore</code> with the <code class="literal">GemfireLockRegistry</code>, it can provide this functionality across multiple application instances, such that only one instance can manipulate the group at a time.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>One of the <code class="literal">GemfireLockRegistry</code> constructors requires a <code class="literal">Region</code> as an argument.
+It is used to obtain a <code class="literal">Lock</code> from the <code class="literal">getDistributedLock()</code> method.
+This operation requires <code class="literal">GLOBAL</code> scope for the <code class="literal">Region</code>.
+Another constructor requires a <code class="literal">Cache</code>, and the <code class="literal">Region</code> is created with <code class="literal">GLOBAL</code> scope and with the name, <code class="literal">LockRegistry</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="gemfire-metadata-store" href="#gemfire-metadata-store"></a>19.6&nbsp;Gemfire Metadata Store</h2></div></div></div>
+
+<p>Version 4.0 introduced a new Gemfire-based <code class="literal">MetadataStore</code> (<a class="xref" href="system-management-chapter.html#metadata-store" title="12.5&nbsp;Metadata Store">Section&nbsp;12.5, &#8220;Metadata Store&#8221;</a>) implementation.
+You can use the <code class="literal">GemfireMetadataStore</code> to maintain metadata state across application restarts.
+This new <code class="literal">MetadataStore</code> implementation can be used with adapters such as:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="xref" href="feed.html#feed-inbound-channel-adapter" title="16.1&nbsp;Feed Inbound Channel Adapter">Section&nbsp;16.1, &#8220;Feed Inbound Channel Adapter&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="files.html#file-reading" title="17.1&nbsp;Reading Files">Section&nbsp;17.1, &#8220;Reading Files&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="ftp.html#ftp-inbound" title="18.4&nbsp;FTP Inbound Channel Adapter">Section&nbsp;18.4, &#8220;FTP Inbound Channel Adapter&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="sftp.html#sftp-inbound" title="30.6&nbsp;SFTP Inbound Channel Adapter">Section&nbsp;30.6, &#8220;SFTP Inbound Channel Adapter&#8221;</a>
+</li></ul></div>
+<p>To get these adapters to use the new <code class="literal">GemfireMetadataStore</code>, declare a Spring bean with a bean name of <code class="literal">metadataStore</code>.
+The feed inbound channel adapter automatically picks up and use the declared <code class="literal">GemfireMetadataStore</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">GemfireMetadataStore</code> also implements <code class="literal">ConcurrentMetadataStore</code>, letting it be reliably shared across multiple application instances, where only one instance can store or modify a key&#8217;s value.
+These methods give various levels of concurrency guarantees based on the scope and data policy of the region.
+They are implemented in the peer cache and client-server cache but are disallowed in peer regions that have <code class="literal">NORMAL</code> or <code class="literal">EMPTY</code> data policies.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Since version 5.0, the <code class="literal">GemfireMetadataStore</code> also implements <code class="literal">ListenableMetadataStore</code>, which lets you listen to cache events by providing <code class="literal">MetadataStoreListener</code> instances to the store, as the following example shows:</p>
+</td></tr></table></div>
+<div class="informalexample">
+<pre class="programlisting">GemfireMetadataStore metadataStore = <span class="hl-keyword">new</span> GemfireMetadataStore(cache);
+metadataStore.addListener(<span class="hl-keyword">new</span> MetadataStoreListenerAdapter() {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> onAdd(String key, String value) {
+         ...
+    }
+
+});</pre>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ftp.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="http.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">18.&nbsp;FTP/FTPS Adapters&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;20.&nbsp;HTTP Support</td></tr></table></div></body></html>

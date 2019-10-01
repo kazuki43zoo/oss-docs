@@ -1,0 +1,275 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>35.&nbsp;WebFlux Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="ip.html" title="34.&nbsp;TCP and UDP Support"><link rel="next" href="web-sockets.html" title="36.&nbsp;WebSockets Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">35.&nbsp;WebFlux Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ip.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="web-sockets.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="webflux" href="#webflux"></a>35.&nbsp;WebFlux Support</h2></div></div></div>
+
+<p>The WebFlux Spring Integration module (<code class="literal">spring-integration-webflux</code>) allows for the execution of HTTP requests and the processing of inbound HTTP requests in a reactive manner.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-webflux<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-webflux:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<p>The <code class="literal">io.projectreactor.netty:reactor-netty</code> dependency must be included in case of non-Servlet-based server configuration.</p>
+<p>The WebFlux support consists of the following gateway implementations: <code class="literal">WebFluxInboundEndpoint</code> and <code class="literal">WebFluxRequestExecutingMessageHandler</code>.
+The support is fully based on the Spring <a class="ulink" href="https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html#spring-webflux" target="_top">WebFlux</a> and <a class="ulink" href="https://projectreactor.io/" target="_top">Project Reactor</a> foundations.
+See <a class="xref" href="http.html" title="20.&nbsp;HTTP Support">Chapter&nbsp;20, <i>HTTP Support</i></a> for more information, since many options are shared between reactive and regular HTTP components.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webflux-inbound" href="#webflux-inbound"></a>35.1&nbsp;WebFlux Inbound Components</h2></div></div></div>
+
+<p>Starting with version 5.0, the <code class="literal">WebFluxInboundEndpoint</code> implementation of <code class="literal">WebHandler</code> is provided.
+This component is similar to the MVC-based <code class="literal">HttpRequestHandlingEndpointSupport</code>, with which it shares some common options through the newly extracted <code class="literal">BaseHttpInboundEndpoint</code>.
+It is used in the Spring WebFlux reactive environment (instead of MVC).
+The following example shows a simple implementation of a WebFlux endpoint:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableWebFlux</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> ReactiveHttpConfiguration {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> WebFluxInboundEndpoint simpleInboundEndpoint() {
+        WebFluxInboundEndpoint endpoint = <span class="hl-keyword">new</span> WebFluxInboundEndpoint();
+        RequestMapping requestMapping = <span class="hl-keyword">new</span> RequestMapping();
+        requestMapping.setPathPatterns(<span class="hl-string">"/test"</span>);
+        endpoint.setRequestMapping(requestMapping);
+        endpoint.setRequestChannelName(<span class="hl-string">"serviceChannel"</span>);
+        <span class="hl-keyword">return</span> endpoint;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "serviceChannel")</span></em>
+    String service() {
+        <span class="hl-keyword">return</span> <span class="hl-string">"It works!"</span>;
+    }
+
+}</pre>
+</div>
+<p>The configuration is similar to the <code class="literal">HttpRequestHandlingEndpointSupport</code> (mentioned prior to the example), except that we use <code class="literal">@EnableWebFlux</code> to add the WebFlux infrastructure to our integration application.
+Also, the <code class="literal">WebFluxInboundEndpoint</code> performs <code class="literal">sendAndReceive</code> operations to the downstream flow by using back-pressure, on-demand based capabilities, provided by the reactive HTTP server implementation.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The reply part is non-blocking as well and is based on the internal <code class="literal">FutureReplyChannel</code>, which is flat-mapped to a reply <code class="literal">Mono</code> for on-demand resolution.</p>
+</td></tr></table></div>
+<p>You can configure the <code class="literal">WebFluxInboundEndpoint</code> with a custom <code class="literal">ServerCodecConfigurer</code>, a <code class="literal">RequestedContentTypeResolver</code>, and even a <code class="literal">ReactiveAdapterRegistry</code>.
+The latter provides a mechanism you can use to return a reply as any reactive type: Reactor <code class="literal">Flux</code>, RxJava <code class="literal">Observable</code>, <code class="literal">Flowable</code>, and others.
+This way, we can implement <a class="ulink" href="https://en.wikipedia.org/wiki/Server-sent_events" target="_top">Server Sent Events</a> scenarios with Spring Integration components, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow sseFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows
+            .from(WebFlux.inboundGateway(<span class="hl-string">"/sse"</span>)
+                    .requestMapping(m -&gt; m.produces(MediaType.TEXT_EVENT_STREAM_VALUE)))
+            .handle((p, h) -&gt; Flux.just(<span class="hl-string">"foo"</span>, <span class="hl-string">"bar"</span>, <span class="hl-string">"baz"</span>))
+            .get();
+}</pre>
+</div>
+<p>See <a class="xref" href="http.html#http-request-mapping" title="20.3.2&nbsp;Request Mapping Support">Section&nbsp;20.3.2, &#8220;Request Mapping Support&#8221;</a> and <a class="xref" href="http.html#http-cors" title="20.3.3&nbsp;Cross-origin Resource Sharing (CORS) Support">Section&nbsp;20.3.3, &#8220;Cross-origin Resource Sharing (CORS) Support&#8221;</a> for more possible configuration options.</p>
+<p>When the request body is empty or <code class="literal">payloadExpression</code> returns <code class="literal">null</code>, the request params (<code class="literal">MultiValueMap&lt;String, String&gt;</code>) is used for a <code class="literal">payload</code> of the target message to process.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webflux-outbound" href="#webflux-outbound"></a>35.2&nbsp;WebFlux Outbound Components</h2></div></div></div>
+
+<p>The <code class="literal">WebFluxRequestExecutingMessageHandler</code> (starting with version 5.0) implementation is similar to <code class="literal">HttpRequestExecutingMessageHandler</code>.
+It uses a <code class="literal">WebClient</code> from the Spring Framework WebFlux module.
+To configure it, define a bean similar to the following:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpReactiveOutbound"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.webflux.outbound.WebFluxRequestExecutingMessageHandler"</span><span class="hl-tag">&gt;</span>
+     <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"http://localhost:8080/example"</span><span class="hl-tag"> /&gt;</span>
+     <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"outputChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"responseChannel"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<p>You can configure a <code class="literal">WebClient</code> instance to use, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"webClient"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.web.reactive.function.client.WebClient"</span>
+				<span class="hl-attribute">factory-method</span>=<span class="hl-value">"create"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"httpReactiveOutbound"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.webflux.outbound.WebFluxRequestExecutingMessageHandler"</span><span class="hl-tag">&gt;</span>
+     <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"http://localhost:8080/example"</span><span class="hl-tag"> /&gt;</span>
+     <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">re</span>=<span class="hl-value">"webClient"</span><span class="hl-tag"> /&gt;</span>
+     <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"outputChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"responseChannel"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<p>The <code class="literal">WebClient</code> <code class="literal">exchange()</code> operation returns a <code class="literal">Mono&lt;ClientResponse&gt;</code>, which is mapped (by using several <code class="literal">Mono.map()</code> steps) to an <code class="literal">AbstractIntegrationMessageBuilder</code> as the output from the <code class="literal">WebFluxRequestExecutingMessageHandler</code>.
+Together with the <code class="literal">ReactiveChannel</code> as an <code class="literal">outputChannel</code>, the <code class="literal">Mono&lt;ClientResponse&gt;</code> evaluation is deferred until a downstream subscription is made.
+Otherwise, it is treated as an <code class="literal">async</code> mode, and the <code class="literal">Mono</code> response is adapted to a <code class="literal">SettableListenableFuture</code> for an asynchronous reply from the <code class="literal">WebFluxRequestExecutingMessageHandler</code>.
+The target payload of the output message depends on the <code class="literal">WebFluxRequestExecutingMessageHandler</code> configuration.
+The <code class="literal">setExpectedResponseType(Class&lt;?&gt;)</code> or <code class="literal">setExpectedResponseTypeExpression(Expression)</code> identifies the target type of the response body element conversion.
+If <code class="literal">replyPayloadToFlux</code> is set to <code class="literal">true</code>, the response body is converted to a <code class="literal">Flux</code> with the provided <code class="literal">expectedResponseType</code> for each element, and this <code class="literal">Flux</code> is sent as the payload downstream.
+Afterwards, you can use a <a class="link" href="messaging-routing-chapter.html#splitter" title="8.3&nbsp;Splitter">splitter</a> to iterate over this <code class="literal">Flux</code> in a reactive manner.</p>
+<p>In addition a <code class="literal">BodyExtractor&lt;?, ClientHttpResponse&gt;</code> can be injected into the <code class="literal">WebFluxRequestExecutingMessageHandler</code> instead of the <code class="literal">expectedResponseType</code> and <code class="literal">replyPayloadToFlux</code> properties.
+It can be used for low-level access to the <code class="literal">ClientHttpResponse</code> and more control over body and HTTP headers conversion.
+Spring Integration provides <code class="literal">ClientHttpResponseBodyExtractor</code> as a identity function to produce (downstream) the whole <code class="literal">ClientHttpResponse</code> and any other possible custom logic.</p>
+<p>See <a class="xref" href="http.html#http-outbound" title="20.2&nbsp;HTTP Outbound Components">Section&nbsp;20.2, &#8220;HTTP Outbound Components&#8221;</a> for more possible configuration options.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webflux-namespace" href="#webflux-namespace"></a>35.3&nbsp;WebFlux Namespace Support</h2></div></div></div>
+
+<p>Spring Integration provides a <code class="literal">webflux</code> namespace and the corresponding schema definition.
+To include it in your configuration, include the following namespace declaration in your application context configuration file:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;beans</span> <span class="hl-attribute">xmlns</span>=<span class="hl-value">"http://www.springframework.org/schema/beans"</span>
+  <span class="hl-attribute">xmlns:xsi</span>=<span class="hl-value">"http://www.w3.org/2001/XMLSchema-instance"</span>
+  <span class="hl-attribute">xmlns:int</span>=<span class="hl-value">"http://www.springframework.org/schema/integration"</span>
+  <span class="hl-attribute">xmlns:int-webflux</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/webflux"</span>
+  <span class="hl-attribute">xsi:schemaLocation</span>=<span class="hl-value">"
+    http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/integration
+    http://www.springframework.org/schema/integration/spring-integration.xsd
+    http://www.springframework.org/schema/integration/webflux
+    http://www.springframework.org/schema/integration/webflux/spring-integration-webflux.xsd"</span><span class="hl-tag">&gt;</span>
+    ...
+<span class="hl-tag">&lt;/beans&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_inbound_3" href="#_inbound_3"></a>35.3.1&nbsp;Inbound</h3></div></div></div>
+
+<p>To configure Spring Integration WebFlux with XML, you caus use appropriate components from the <code class="literal">int-webflux</code> namespace: <code class="literal">inbound-channel-adapter</code> or <code class="literal">inbound-gateway</code>, corresponding to request and response requirements, respectively.
+The following example shows how to configure both an inbound channel adapter and an inbound gateway:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"reactiveFullConfig"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"requests"</span>
+                         <span class="hl-attribute">path</span>=<span class="hl-value">"test1"</span>
+                         <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span>
+                         <span class="hl-attribute">phase</span>=<span class="hl-value">"101"</span>
+                         <span class="hl-attribute">request-payload-type</span>=<span class="hl-value">"byte[]"</span>
+                         <span class="hl-attribute">error-channel</span>=<span class="hl-value">"errorChannel"</span>
+                         <span class="hl-attribute">payload-expression</span>=<span class="hl-value">"payload"</span>
+                         <span class="hl-attribute">supported-methods</span>=<span class="hl-value">"PUT"</span>
+                         <span class="hl-attribute">status-code-expression</span>=<span class="hl-value">"'202'"</span>
+                         <span class="hl-attribute">header-mapper</span>=<span class="hl-value">"headerMapper"</span>
+                         <span class="hl-attribute">codec-configurer</span>=<span class="hl-value">"codecConfigurer"</span>
+                         <span class="hl-attribute">reactive-adapter-registry</span>=<span class="hl-value">"reactiveAdapterRegistry"</span>
+                         <span class="hl-attribute">requested-content-type-resolver</span>=<span class="hl-value">"requestedContentTypeResolver"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;request-mapping</span> <span class="hl-attribute">headers</span>=<span class="hl-value">"foo"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;cross-origin</span> <span class="hl-attribute">origin</span>=<span class="hl-value">"foo"</span>
+                  <span class="hl-attribute">method</span>=<span class="hl-value">"PUT"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"foo"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"'foo'"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/inbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"reactiveFullConfig"</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requests"</span>
+                 <span class="hl-attribute">path</span>=<span class="hl-value">"test1"</span>
+                 <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span>
+                 <span class="hl-attribute">phase</span>=<span class="hl-value">"101"</span>
+                 <span class="hl-attribute">request-payload-type</span>=<span class="hl-value">"byte[]"</span>
+                 <span class="hl-attribute">error-channel</span>=<span class="hl-value">"errorChannel"</span>
+                 <span class="hl-attribute">payload-expression</span>=<span class="hl-value">"payload"</span>
+                 <span class="hl-attribute">supported-methods</span>=<span class="hl-value">"PUT"</span>
+                 <span class="hl-attribute">reply-timeout-status-code-expression</span>=<span class="hl-value">"'504'"</span>
+                 <span class="hl-attribute">header-mapper</span>=<span class="hl-value">"headerMapper"</span>
+                 <span class="hl-attribute">codec-configurer</span>=<span class="hl-value">"codecConfigurer"</span>
+                 <span class="hl-attribute">reactive-adapter-registry</span>=<span class="hl-value">"reactiveAdapterRegistry"</span>
+                 <span class="hl-attribute">requested-content-type-resolver</span>=<span class="hl-value">"requestedContentTypeResolver"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;request-mapping</span> <span class="hl-attribute">headers</span>=<span class="hl-value">"foo"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;cross-origin</span> <span class="hl-attribute">origin</span>=<span class="hl-value">"foo"</span>
+                  <span class="hl-attribute">method</span>=<span class="hl-value">"PUT"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"foo"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"'foo'"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/inbound-gateway&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_outbound_3" href="#_outbound_3"></a>35.3.2&nbsp;Outbound</h3></div></div></div>
+
+<p>If you want to execute the HTTP request in a reactive, non-blocking way, you can use the <code class="literal">outbound-gateway</code> or <code class="literal">outbound-channel-adapter</code>.
+The following example shows how to configure both an outbound gateway and an outbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-webflux:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"reactiveExample1"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requests"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"http://localhost/test"</span>
+    <span class="hl-attribute">http-method-expression</span>=<span class="hl-value">"headers.httpMethod"</span>
+    <span class="hl-attribute">extract-request-payload</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">expected-response-type-expression</span>=<span class="hl-value">"payload"</span>
+    <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span>
+    <span class="hl-attribute">reply-timeout</span>=<span class="hl-value">"1234"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"replies"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-webflux:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"reactiveExample2"</span>
+    <span class="hl-attribute">url</span>=<span class="hl-value">"http://localhost/example"</span>
+    <span class="hl-attribute">http-method</span>=<span class="hl-value">"GET"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"requests"</span>
+    <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span>
+    <span class="hl-attribute">extract-payload</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">expected-response-type</span>=<span class="hl-value">"java.lang.String"</span>
+    <span class="hl-attribute">order</span>=<span class="hl-value">"3"</span>
+    <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webflux-java-config" href="#webflux-java-config"></a>35.4&nbsp;Configuring WebFlux Endpoints with Java</h2></div></div></div>
+
+<p>The following example shows how to configure a WebFlux inbound endpoint with Java:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> WebFluxInboundEndpoint jsonInboundEndpoint() {
+    WebFluxInboundEndpoint endpoint = <span class="hl-keyword">new</span> WebFluxInboundEndpoint();
+    RequestMapping requestMapping = <span class="hl-keyword">new</span> RequestMapping();
+    requestMapping.setPathPatterns(<span class="hl-string">"/persons"</span>);
+    endpoint.setRequestMapping(requestMapping);
+    endpoint.setRequestChannel(fluxResultChannel());
+    <span class="hl-keyword">return</span> endpoint;
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MessageChannel fluxResultChannel() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> FluxMessageChannel();
+}
+
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "fluxResultChannel")</span></em>
+Flux&lt;Person&gt; getPersons() {
+    <span class="hl-keyword">return</span> Flux.just(<span class="hl-keyword">new</span> Person(<span class="hl-string">"Jane"</span>), <span class="hl-keyword">new</span> Person(<span class="hl-string">"Jason"</span>), <span class="hl-keyword">new</span> Person(<span class="hl-string">"John"</span>));
+}</pre>
+</div>
+<p>The following example shows how to configure a WebFlux inbound gateway with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow inboundChannelAdapterFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows
+        .from(WebFlux.inboundChannelAdapter(<span class="hl-string">"/reactivePost"</span>)
+            .requestMapping(m -&gt; m.methods(HttpMethod.POST))
+            .requestPayloadType(ResolvableType.forClassWithGenerics(Flux.<span class="hl-keyword">class</span>, String.<span class="hl-keyword">class</span>))
+            .statusCodeFunction(m -&gt; HttpStatus.ACCEPTED))
+        .channel(c -&gt; c.queue(<span class="hl-string">"storeChannel"</span>))
+        .get();
+}</pre>
+</div>
+<p>The following example shows how to configure a WebFlux outbound gateway with Java:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "reactiveHttpOutRequest")</span></em>
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> WebFluxRequestExecutingMessageHandler reactiveOutbound(WebClient client) {
+    WebFluxRequestExecutingMessageHandler handler =
+        <span class="hl-keyword">new</span> WebFluxRequestExecutingMessageHandler(<span class="hl-string">"http://localhost:8080/foo"</span>, client);
+    handler.setHttpMethod(HttpMethod.POST);
+    handler.setExpectedResponseType(String.<span class="hl-keyword">class</span>);
+    <span class="hl-keyword">return</span> handler;
+}</pre>
+</div>
+<p>The following example shows how to configure a WebFlux outbound gateway with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow outboundReactive() {
+    <span class="hl-keyword">return</span> f -&gt; f
+        .handle(WebFlux.&lt;MultiValueMap&lt;String, String&gt;&gt;outboundGateway(m -&gt;
+                UriComponentsBuilder.fromUriString(<span class="hl-string">"http://localhost:8080/foo"</span>)
+                        .queryParams(m.getPayload())
+                        .build()
+                        .toUri())
+                .httpMethod(HttpMethod.GET)
+                .expectedResponseType(String.<span class="hl-keyword">class</span>));
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="webflux-header-mapping" href="#webflux-header-mapping"></a>35.5&nbsp;WebFlux Header Mappings</h2></div></div></div>
+
+<p>Since WebFlux components are fully based on the HTTP protocol, there is no difference in the HTTP headers mapping.
+See <a class="xref" href="http.html#http-header-mapping" title="20.7&nbsp;HTTP Header Mappings">Section&nbsp;20.7, &#8220;HTTP Header Mappings&#8221;</a> for more possible options and components to use for mapping headers.</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ip.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="web-sockets.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">34.&nbsp;TCP and UDP Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;36.&nbsp;WebSockets Support</td></tr></table></div></body></html>

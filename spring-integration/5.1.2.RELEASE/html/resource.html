@@ -1,0 +1,63 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>28.&nbsp;Resource Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="redis.html" title="27.&nbsp;Redis Support"><link rel="next" href="rmi.html" title="29.&nbsp;RMI Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">28.&nbsp;Resource Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="redis.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="rmi.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="resource" href="#resource"></a>28.&nbsp;Resource Support</h2></div></div></div>
+
+<p>The resource inbound channel adapter builds upon Spring&#8217;s <code class="literal">Resource</code> abstraction to support greater flexibility across a variety of actual types of underlying resources, such as a file, a URL, or a class path resource.
+Therefore, it is similar to but more generic than the file inbound channel adapter.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="resource-inbound-channel-adapter" href="#resource-inbound-channel-adapter"></a>28.1&nbsp;Resource Inbound Channel Adapter</h2></div></div></div>
+
+<p>The resource inbound channel adapter is a polling adapter that creates a <code class="literal">Message</code> whose payload is a collection of <code class="literal">Resource</code> objects.</p>
+<p><code class="literal">Resource</code> objects are resolved based on the pattern specified by the <code class="literal">pattern</code> attribute.
+The collection of resolved <code class="literal">Resource</code> objects is then sent as a payload within a <code class="literal">Message</code> to the adapter&#8217;s channel.
+That is one major difference between resource inbound channel adapter and file inbound channel adapter: The latter buffers <code class="literal">File</code> objects and sends a single <code class="literal">File</code> object per <code class="literal">Message</code>.</p>
+<p>The following example shows a simple configuration that finds all files that end with the <span class="emphasis"><em>properties</em></span> extension in the <code class="literal">things.thing1</code> package available on the classpath and sends them as the payload of a <code class="literal">Message</code> to the channel named <span class="emphasis"><em><code class="literal">resultChannel</code></em></span>:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:resource-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"resourceAdapter"</span>
+               <span class="hl-attribute">channel</span>=<span class="hl-value">"resultChannel"</span>
+               <span class="hl-attribute">pattern</span>=<span class="hl-value">"classpath:things/thing1/*.properties"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:resource-inbound-channel-adapter&gt;</span></pre>
+</div>
+<p>The resource inbound channel adapter relies on the <code class="literal">org.springframework.core.io.support.ResourcePatternResolver</code> strategy interface to resolve the provided pattern.
+It defaults to an instance of the current <code class="literal">ApplicationContext</code>.
+However, you can provide a reference to an instance of your own implementation of <code class="literal">ResourcePatternResolver</code> by setting the <code class="literal">pattern-resolver</code> attribute, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:resource-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"resourceAdapter"</span>
+               <span class="hl-attribute">channel</span>=<span class="hl-value">"resultChannel"</span>
+               <span class="hl-attribute">pattern</span>=<span class="hl-value">"classpath:things/thing1/*.properties"</span>
+               <span class="hl-attribute">pattern-resolver</span>=<span class="hl-value">"myPatternResolver"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:resource-inbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"myPatternResolver"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.example.MyPatternResolver"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>You may have a use case where you need to further filter the collection of resources resolved by the <code class="literal">ResourcePatternResolver</code>.
+For example, you may want to prevent resources that were already resolved from appearing in a collection of resolved resources ever again.
+On the other hand, your resources might be updated rather often and you <span class="emphasis"><em>do</em></span> want them to be picked up again.
+In other words, both defining an additional filter and disabling filtering altogether are valid use cases.
+You can provide your own implementation of the <code class="literal">org.springframework.integration.util.CollectionFilter</code> strategy interface, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> CollectionFilter&lt;T&gt; {
+
+    Collection&lt;T&gt; filter(Collection&lt;T&gt; unfilteredElements);
+
+}</pre>
+</div>
+<p>The <code class="literal">CollectionFilter</code> receives a collection of un-filtered elements (which are <code class="literal">Resource</code> objects in the preceding example), and it returns a collection of filtered elements of that same type.</p>
+<p>If you define the adapter with XML but you do not specify a filter reference, the resource inbound channel adapter uses a default implementation of <code class="literal">CollectionFilter</code>.
+The implementation class of that default filter is <code class="literal">org.springframework.integration.util.AcceptOnceCollectionFilter</code>.
+It remembers the elements passed in the previous invocation in order to avoid returning those elements more than once.</p>
+<p>To inject your own implementation of <code class="literal">CollectionFilter</code> instead, use the <code class="literal">filter</code> attribute, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:resource-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"resourceAdapter"</span>
+               <span class="hl-attribute">channel</span>=<span class="hl-value">"resultChannel"</span>
+               <span class="hl-attribute">pattern</span>=<span class="hl-value">"classpath:things/thing1/*.properties"</span>
+               <span class="hl-attribute">filter</span>=<span class="hl-value">"myFilter"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:resource-inbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"myFilter"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.example.MyFilter"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>If you do not need any filtering and want to disable even the default <code class="literal">CollectionFilter</code> strategy, provide an empty value for the filter attribute (for example, <code class="literal">filter=""</code>)</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="redis.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="rmi.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">27.&nbsp;Redis Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;29.&nbsp;RMI Support</td></tr></table></div></body></html>

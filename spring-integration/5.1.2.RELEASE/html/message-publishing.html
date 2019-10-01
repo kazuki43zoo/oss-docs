@@ -1,0 +1,297 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Appendix&nbsp;B.&nbsp;Message Publishing</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-appendices.html" title="Part&nbsp;VI.&nbsp;Appendices"><link rel="prev" href="spel.html" title="Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)"><link rel="next" href="transactions.html" title="Appendix&nbsp;C.&nbsp;Transaction Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Appendix&nbsp;B.&nbsp;Message Publishing</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="spel.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;VI.&nbsp;Appendices</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="transactions.html">Next</a></td></tr></table><hr></div><div class="appendix"><div class="titlepage"><div><div><h2 class="title"><a name="message-publishing" href="#message-publishing"></a>Appendix&nbsp;B.&nbsp;Message Publishing</h2></div></div></div>
+
+<p>The (Aspect-oriented Programming) AOP message publishing feature lets you construct and send a message as a by-product of a method invocation.
+For example, imagine you have a component and, every time the state of this component changes, you want to be notified by a message.
+The easiest way to send such notifications is to send a message to a dedicated channel, but how would you connect the method invocation that changes the state of the object to a message sending process, and how should the notification message be structured?
+The AOP message publishing feature handles these responsibilities with a configuration-driven approach.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="message-publishing-config" href="#message-publishing-config"></a>B.1&nbsp;Message Publishing Configuration</h2></div></div></div>
+
+<p>Spring Integration provides two approaches: XML configuration and annotation-driven (Java) configuration.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="publisher-annotation" href="#publisher-annotation"></a>B.1.1&nbsp;Annotation-driven Configuration with the <code class="literal">@Publisher</code> Annotation</h3></div></div></div>
+
+<p>The annotation-driven approach lets you annotate any method with the <code class="literal">@Publisher</code> annotation to specify a <span class="emphasis"><em>channel</em></span> attribute.
+Starting with version 5.1, to switch this functionality on, you must use the <code class="literal">@EnablePublisher</code> annotation on some <code class="literal">@Configuration</code> class.
+See <a class="xref" href="overview.html#configuration-enable-integration" title="5.5&nbsp;Configuration and @EnableIntegration">Section&nbsp;5.5, &#8220;Configuration and <code class="literal">@EnableIntegration</code>&#8221;</a> for more information.
+The message is constructed from the return value of the method invocation and sent to the channel specified by the <span class="emphasis"><em>channel</em></span> attribute.
+To further manage message structure, you can also use a combination of both <code class="literal">@Payload</code> and <code class="literal">@Header</code> annotations.</p>
+<p>Internally, this message publishing feature of Spring Integration uses both Spring AOP by defining <code class="literal">PublisherAnnotationAdvisor</code> and the Spring Expression Language (SpEL), giving you considerable flexibility and control over the structure of the <code class="literal">Message</code> it publishes.</p>
+<p>The <code class="literal">PublisherAnnotationAdvisor</code> defines and binds the following variables:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">#return</code>: Binds to a return value, letting you reference it or its attributes (for example, <code class="literal">#return.something</code>, where <span class="emphasis"><em>something</em></span> is an attribute of the object bound to <code class="literal">#return</code>)
+</li><li class="listitem">
+<code class="literal">#exception</code>: Binds to an exception if one is thrown by the method invocation
+</li><li class="listitem">
+<code class="literal">#args</code>: Binds to method arguments so that you can extract individual arguments by name (for example, <code class="literal">#args.fname</code>)
+</li></ul></div>
+<p>Consider the following example:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Publisher</span></em>
+<span class="hl-keyword">public</span> String defaultPayload(String fname, String lname) {
+  <span class="hl-keyword">return</span> fname + <span class="hl-string">" "</span> + lname;
+}</pre>
+</div>
+<p>In the preceding example, the message is constructed with the following structure:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The message payload is the return type and value of the method.
+This is the default.
+</li><li class="listitem">
+A newly constructed message is sent to a default publisher channel that is configured with an annotation post processor (covered later in this section).
+</li></ul></div>
+<p>The following example is the same as the preceding example, except that it does not use a default publishing channel:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Publisher(channel="testChannel")</span></em>
+<span class="hl-keyword">public</span> String defaultPayload(String fname, <em><span class="hl-annotation" style="color: gray">@Header("last")</span></em> String lname) {
+  <span class="hl-keyword">return</span> fname + <span class="hl-string">" "</span> + lname;
+}</pre>
+</div>
+<p>Instead of using a default publishing channel, we specify the publishing channel by setting the <span class="emphasis"><em>channel</em></span> attribute of the <code class="literal">@Publisher</code> annotation.
+We also add a <code class="literal">@Header</code> annotation, which results in the message header named <span class="emphasis"><em>last</em></span> having the same value as the <span class="emphasis"><em>lname</em></span> method parameter.
+That header is added to the newly constructed message.</p>
+<p>The following example is almost identical to the preceding example:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Publisher(channel="testChannel")</span></em>
+<em><span class="hl-annotation" style="color: gray">@Payload</span></em>
+<span class="hl-keyword">public</span> String defaultPayloadButExplicitAnnotation(String fname, <em><span class="hl-annotation" style="color: gray">@Header</span></em> String lname) {
+  <span class="hl-keyword">return</span> fname + <span class="hl-string">" "</span> + lname;
+}</pre>
+</div>
+<p>The only difference is that we use a <code class="literal">@Payload</code> annotation on the method to explicitly specify that the return value of the method should be used as the payload of the message.</p>
+<p>The following example expands on the previous configuration by using the Spring Expression Language in the <code class="literal">@Payload</code> annotation to further instruct the framework about how the message should be constructed:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Publisher(channel="testChannel")</span></em>
+<em><span class="hl-annotation" style="color: gray">@Payload("#return + #args.lname")</span></em>
+<span class="hl-keyword">public</span> String setName(String fname, String lname, <em><span class="hl-annotation" style="color: gray">@Header("x")</span></em> <span class="hl-keyword">int</span> num) {
+  <span class="hl-keyword">return</span> fname + <span class="hl-string">" "</span> + lname;
+}</pre>
+</div>
+<p>In the preceding example, the message is a concatenation of the return value of the method invocation and the <span class="emphasis"><em>lname</em></span> input argument.
+The Message header named <span class="emphasis"><em>x</em></span> has its value determined by the <span class="emphasis"><em>num</em></span> input argument.
+That header is added to the newly constructed message.</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Publisher(channel="testChannel")</span></em>
+<span class="hl-keyword">public</span> String argumentAsPayload(<em><span class="hl-annotation" style="color: gray">@Payload</span></em> String fname, <em><span class="hl-annotation" style="color: gray">@Header</span></em> String lname) {
+  <span class="hl-keyword">return</span> fname + <span class="hl-string">" "</span> + lname;
+}</pre>
+</div>
+<p>In the preceding example, you see another usage of the <code class="literal">@Payload</code> annotation.
+Here, we annotate a method argument that becomes the payload of the newly constructed message.</p>
+<p>As with most other annotation-driven features in Spring, you need to register a post-processor (<code class="literal">PublisherAnnotationBeanPostProcessor</code>).
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.aop.PublisherAnnotationBeanPostProcessor"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>For a more concise configuration, you can instead use namespace support, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:annotation-config&gt;</span>
+    <span class="hl-tag">&lt;int:enable-publisher</span> <span class="hl-attribute">default-publisher-channel</span>=<span class="hl-value">"defaultChannel"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:annotation-config&gt;</span></pre>
+</div>
+<p>For Java configuration, you must use the <code class="literal">@EnablePublisher</code> annotation, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnablePublisher("defaultChannel")</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> IntegrationConfiguration {
+    ...
+}</pre>
+</div>
+<p>Similar to other Spring annotations (<code class="literal">@Component</code>, <code class="literal">@Scheduled</code>, and so on), you can also use <code class="literal">@Publisher</code> as a meta-annotation.
+This means that you can define your own annotations that are treated in the same way as the <code class="literal">@Publisher</code> itself.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Target({ElementType.METHOD, ElementType.TYPE})</span></em>
+<em><span class="hl-annotation" style="color: gray">@Retention(RetentionPolicy.RUNTIME)</span></em>
+<em><span class="hl-annotation" style="color: gray">@Publisher(channel="auditChannel")</span></em>
+<span class="hl-keyword">public</span> <em><span class="hl-annotation" style="color: gray">@interface</span></em> Audit {
+...
+}</pre>
+</div>
+<p>In the preceding example, we define the <code class="literal">@Audit</code> annotation, which is itself annotated with <code class="literal">@Publisher</code>.
+Also note that you can define a <code class="literal">channel</code> attribute on the meta-annotation to encapsulate where messages are sent inside of this annotation.
+Now you can annotate any method with the <code class="literal">@Audit</code> annotation, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Audit</span></em>
+<span class="hl-keyword">public</span> String test() {
+&nbsp;&nbsp; &nbsp;<span class="hl-keyword">return</span> <span class="hl-string">"Hello"</span>;
+}</pre>
+</div>
+<p>In the preceding example, every invocation of the <code class="literal">test()</code> method results in a message with a payload created from its return value.
+Each message is sent to&nbsp;the channel named <code class="literal">auditChannel</code>.
+One of the benefits of this technique is that you can avoid the duplication of the same channel name across multiple annotations.
+You also can provide a level of indirection between your own, potentially domain-specific, annotations and those provided by the framework.</p>
+<p>You can also annotate the class, which lets you apply the properties of this annotation on every public method of that class, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Audit</span></em>
+<span class="hl-keyword">static</span> <span class="hl-keyword">class</span> BankingOperationsImpl&nbsp;<span class="hl-keyword">implements</span>&nbsp;BankingOperations&nbsp;{
+
+&nbsp;&nbsp;<span class="hl-keyword">public</span> String debit(String amount) {
+&nbsp;&nbsp; &nbsp; . . .
+
+&nbsp;&nbsp;}
+
+&nbsp;&nbsp;<span class="hl-keyword">public</span>&nbsp;String credit(String amount) {
+&nbsp;&nbsp; &nbsp; . . .
+&nbsp;&nbsp;}
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="aop-based-interceptor" href="#aop-based-interceptor"></a>B.1.2&nbsp;XML-based Approach with the <code class="literal">&lt;publishing-interceptor&gt;</code> element</h3></div></div></div>
+
+<p>The XML-based approach lets you configure the same AOP-based message publishing functionality as a namespace-based configuration of a <code class="literal">MessagePublishingInterceptor</code>.
+It certainly has some benefits over the annotation-driven approach, since it lets you use AOP pointcut expressions, thus possibly intercepting multiple methods at once or intercepting and publishing methods to which you do not have the source code.</p>
+<p>To configure message publishing with XML, you need only do the following two things:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Provide configuration for <code class="literal">MessagePublishingInterceptor</code> by using the <code class="literal">&lt;publishing-interceptor&gt;</code> XML element.
+</li><li class="listitem">
+Provide AOP configuration to apply the <code class="literal">MessagePublishingInterceptor</code> to managed objects.
+</li></ul></div>
+<p>The following example shows how to configure a <code class="literal">publishing-interceptor</code> element:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;aop:config&gt;</span>
+  <span class="hl-tag">&lt;aop:advisor</span> <span class="hl-attribute">advice-ref</span>=<span class="hl-value">"interceptor"</span> <span class="hl-attribute">pointcut</span>=<span class="hl-value">"bean(testBean)"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/aop:config&gt;</span>
+<span class="hl-tag">&lt;publishing-interceptor</span> <span class="hl-attribute">id</span>=<span class="hl-value">"interceptor"</span> <span class="hl-attribute">default-channel</span>=<span class="hl-value">"defaultChannel"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;method</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"echo"</span> <span class="hl-attribute">payload</span>=<span class="hl-value">"'Echoing: ' + #return"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"echoChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"things"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"something"</span><span class="hl-tag">/&gt;</span>
+  <span class="hl-tag">&lt;/method&gt;</span>
+  <span class="hl-tag">&lt;method</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"repl*"</span> <span class="hl-attribute">payload</span>=<span class="hl-value">"'Echoing: ' + #return"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"echoChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"things"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"'something'.toUpperCase()"</span><span class="hl-tag">/&gt;</span>
+  <span class="hl-tag">&lt;/method&gt;</span>
+  <span class="hl-tag">&lt;method</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"echoDef*"</span> <span class="hl-attribute">payload</span>=<span class="hl-value">"#return"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/publishing-interceptor&gt;</span></pre>
+<p>The <code class="literal">&lt;publishing-interceptor&gt;</code> configuration looks rather similar to the annotation-based approach, and it also uses the power of the Spring Expression Language.</p>
+<p>In the preceding example, the execution of the <code class="literal">echo</code> method of a <code class="literal">testBean</code> renders a <code class="literal">Message</code> with the following structure:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The <code class="literal">Message</code> payload is of type <code class="literal">String</code> with the following content: <code class="literal">Echoing: [value]</code>, where <code class="literal">value</code> is the value returned by an executed method.
+</li><li class="listitem">
+The <code class="literal">Message</code> has a header with a name of <code class="literal">things</code> and a value of <code class="literal">something</code>.
+</li><li class="listitem">
+The <code class="literal">Message</code> is sent to <code class="literal">echoChannel</code>.
+</li></ul></div>
+<p>The second method is very similar to the first.
+Here, every method that begins with <span class="emphasis"><em>repl</em></span> renders a <code class="literal">Message</code> with the following structure:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The <code class="literal">Message</code> payload is the same as in the preceding sample.
+</li><li class="listitem">
+The <code class="literal">Message</code> has a header named <code class="literal">things</code> whose value is the result of the SpEL expression <code class="literal">'something'.toUpperCase()</code>.
+</li><li class="listitem">
+The <code class="literal">Message</code> is sent to <code class="literal">echoChannel</code>.
+</li></ul></div>
+<p>The second method, mapping the execution of any method that begins with <code class="literal">echoDef</code>, produces a <code class="literal">Message</code> with the following structure:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The <code class="literal">Message</code> payload is the value returned by an executed method.
+</li><li class="listitem">
+Since the <code class="literal">channel</code> attribute is not provided, the <code class="literal">Message</code> is sent to the <code class="literal">defaultChannel</code> defined by the <code class="literal">publisher</code>.
+</li></ul></div>
+<p>For simple mapping rules you can rely on the <code class="literal">publisher</code> defaults, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;publishing-interceptor</span> <span class="hl-attribute">id</span>=<span class="hl-value">"anotherInterceptor"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The preceding example maps the return value of every method that matches the pointcut expression to a payload and is sent to a <code class="literal">default-channel</code>.
+If you do not specify the <code class="literal">defaultChannel</code> (as the preceding example does not do), the messages are sent to the global <code class="literal">nullChannel</code> (the equivalent of <code class="literal">/dev/null</code>).</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_asynchronous_publishing" href="#_asynchronous_publishing"></a>Asynchronous Publishing</h4></div></div></div>
+
+<p>Publishing occurs in the same thread as your component&#8217;s execution.
+So, by default, it is synchronous.
+This means that the entire message flow has to wait until the publisher&#8217;s flow completes.&nbsp;
+However, developers often want the complete opposite: to use this message-publishing feature to initiate asynchronous flows.
+For example, you might host a service (HTTP, WS, and so on) which receives a remote request.
+You may want to send this request internally into a process that might take a while.
+However you may also want to reply to the user right away.
+So, instead of sending inbound requests for processing to the output channel (the conventional way), you can use <span class="emphasis"><em>output-channel</em></span> or a <span class="emphasis"><em>replyChannel</em></span> header to send a simple&nbsp;acknowledgment-like reply back to the caller while using the message-publisher feature to initiate a complex flow.</p>
+<p>The service in the following example receives a complex payload (which needs to be sent further for processing), but it also needs to reply to the caller with a simple acknowledgment:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> String echo(Object complexPayload) {
+&nbsp;&nbsp; &nbsp;&nbsp;<span class="hl-keyword">return</span> <span class="hl-string">"ACK"</span>;&nbsp;
+}</pre>
+</div>
+<p>So, instead of hooking up the complex flow to the output channel, we use the message-publishing feature instead.
+We configure it to create a new message, by using the input argument of the service method (shown in the preceding example), and send that to the <span class="emphasis"><em>localProcessChannel</em></span>.
+To make sure this flow is asynchronous, all we need to do is send it to any type of asynchronous channel (<code class="literal">ExecutorChannel</code> in the next example).
+The following example shows how to an asynchronous <code class="literal">publishing-interceptor</code>:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:service-activator</span> <span class="hl-attribute">&nbsp;input-channel</span>=<span class="hl-value">"inputChannel"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"sampleservice"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sampleservice"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"test.SampleService"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;aop:config&gt;</span>
+  <span class="hl-tag">&lt;aop:advisor</span> <span class="hl-attribute">advice-ref</span>=<span class="hl-value">"interceptor"</span> <span class="hl-attribute">pointcut</span>=<span class="hl-value">"bean(sampleservice)"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/aop:config&gt;</span>
+
+<span class="hl-tag">&lt;int:publishing-interceptor</span> <span class="hl-attribute">id</span>=<span class="hl-value">"interceptor"</span><span class="hl-tag"> &gt;</span>
+  <span class="hl-tag">&lt;int:method</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"echo"</span> <span class="hl-attribute">payload</span>=<span class="hl-value">"#args[0]"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"localProcessChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"sample_header"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"'some sample value'"</span><span class="hl-tag">/&gt;</span>
+  <span class="hl-tag">&lt;/int:method&gt;</span>
+<span class="hl-tag">&lt;/int:publishing-interceptor&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"localProcessChannel"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;int:dispatcher</span> <span class="hl-attribute">task-executor</span>=<span class="hl-value">"executor"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span>
+
+<span class="hl-tag">&lt;task:executor</span> <span class="hl-attribute">id</span>=<span class="hl-value">"executor"</span> <span class="hl-attribute">pool-size</span>=<span class="hl-value">"5"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Another way of handling this type of scenario is with a wire-tap. See <a class="xref" href="messaging-channels-section.html#channel-wiretap" title="Wire Tap">the section called &#8220;Wire Tap&#8221;</a>.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="scheduled-producer" href="#scheduled-producer"></a>B.1.3&nbsp;Producing and Publishing Messages Based on a Scheduled Trigger</h3></div></div></div>
+
+<p>In the preceding sections, we looked at the message-publishing feature, which constructs and publishes messages as by-products of method invocations.
+However, in those cases, you are still responsible for invoking the method.
+Spring Integration 2.0 added support for scheduled message producers and publishers with the new <code class="literal">expression</code> attribute on the <span class="emphasis"><em>inbound-channel-adapter</em></span> element.
+You can schedul based on several triggers, any one of which can be configured on the <span class="emphasis"><em>poller</em></span> element.
+Currently, we support <code class="literal">cron</code>, <code class="literal">fixed-rate</code>, <code class="literal">fixed-delay</code> and any custom trigger implemented by you and referenced by the <span class="emphasis"><em>trigger</em></span> attribute value.</p>
+<p>As mentioned earlier, support for scheduled producers and publishers is provided via the <code class="literal">&lt;inbound-channel-adapter&gt;</code> XML element.
+Consider the following example:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"fixedDelayProducer"</span>
+       <span class="hl-attribute">expression</span>=<span class="hl-value">"'fixedDelayTest'"</span>
+       <span class="hl-attribute">channel</span>=<span class="hl-value">"fixedDelayChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-delay</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:inbound-channel-adapter&gt;</span></pre>
+</div>
+<p>The preceding example creates an inbound channel adapter that constructs a <code class="literal">Message</code>, with its payload being the result of the expression&nbsp; defined in the <code class="literal">expression</code> attribute.
+Such messages are created and sent every time the delay specified by the <code class="literal">fixed-delay</code> attribute occurs.</p>
+<p>The following example is similar to the preceding example, except that it uses the <code class="literal">fixed-rate</code> attribute:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"fixedRateProducer"</span>
+       <span class="hl-attribute">expression</span>=<span class="hl-value">"'fixedRateTest'"</span>
+       <span class="hl-attribute">channel</span>=<span class="hl-value">"fixedRateChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:inbound-channel-adapter&gt;</span></pre>
+</div>
+<p>The <code class="literal">fixed-rate</code> attribute lets you send messages at a fixed rate (measuring from the start time of each task).</p>
+<p>The following example shows how you can apply a Cron trigger with a value specified in the <code class="literal">cron</code> attribute:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"cronProducer"</span>
+       <span class="hl-attribute">expression</span>=<span class="hl-value">"'cronTest'"</span>
+       <span class="hl-attribute">channel</span>=<span class="hl-value">"cronChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">cron</span>=<span class="hl-value">"7 6 5 4 3 ?"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:inbound-channel-adapter&gt;</span></pre>
+</div>
+<p>The following example shows how to insert additional headers into the message:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"headerExpressionsProducer"</span>
+       <span class="hl-attribute">expression</span>=<span class="hl-value">"'headerExpressionsTest'"</span>
+       <span class="hl-attribute">channel</span>=<span class="hl-value">"headerExpressionsChannel"</span>
+       <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-delay</span>=<span class="hl-value">"5000"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"foo"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"6 * 7"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:header</span> <span class="hl-attribute">name</span>=<span class="hl-value">"bar"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"x"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:inbound-channel-adapter&gt;</span></pre>
+<p>The additional message headers can take scalar values or the results of evaluating Spring expressions.</p>
+<p>If you need to implement your own custom trigger, you can use the <code class="literal">trigger</code> attribute to provide a reference to any spring configured bean that implements&nbsp;the <code class="literal">org.springframework.scheduling.Trigger</code> interface.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"triggerRefProducer"</span>
+       <span class="hl-attribute">expression</span>=<span class="hl-value">"'triggerRefTest'"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"triggerRefChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">trigger</span>=<span class="hl-value">"customTrigger"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:inbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"customTrigger"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.scheduling.support.PeriodicTrigger"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;beans:constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"9999"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/beans:bean&gt;</span></pre>
+</div>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="spel.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-appendices.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="transactions.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Appendix&nbsp;C.&nbsp;Transaction Support</td></tr></table></div></body></html>

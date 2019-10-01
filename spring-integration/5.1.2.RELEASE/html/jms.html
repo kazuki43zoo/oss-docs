@@ -1,0 +1,674 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>23.&nbsp;JMS Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="jpa.html" title="22.&nbsp;JPA Support"><link rel="next" href="mail.html" title="24.&nbsp;Mail Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">23.&nbsp;JMS Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="jpa.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="mail.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="jms" href="#jms"></a>23.&nbsp;JMS Support</h2></div></div></div>
+
+<p>Spring Integration provides channel adapters for receiving and sending JMS messages.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-jms<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-jms:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<p>The <code class="literal">javax.jms:javax.jms-api</code> must be added explicitly via some JMS vendor-specific implementation, e.g. Apache ActiveMQ.</p>
+<p>There are actually two JMS-based inbound Channel Adapters.
+The first uses Spring&#8217;s <code class="literal">JmsTemplate</code> to receive based on a polling period.
+The second is "<code class="literal">message-driven</code>" and relies on a Spring <code class="literal">MessageListener</code> container.
+The outbound channel adapter uses the <code class="literal">JmsTemplate</code> to convert and send a JMS message on demand.</p>
+<p>By using <code class="literal">JmsTemplate</code> and the <code class="literal">MessageListener</code> container, Spring Integration relies on Spring&#8217;s JMS support.
+This is important to understand, since most of the attributes exposed on these adapters configure the underlying <code class="literal">JmsTemplate</code> and <code class="literal">MessageListener</code> container.
+For more details about <code class="literal">JmsTemplate</code> and the <code class="literal">MessageListener</code> container, see the <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/jms.html" target="_top">Spring JMS documentation</a>.</p>
+<p>Whereas the JMS channel adapters are intended for unidirectional messaging (send-only or receive-only), Spring Integration also provides inbound and outbound JMS Gateways for request and reply operations.
+The inbound gateway relies on one of Spring&#8217;s <code class="literal">MessageListener</code> container implementations for message-driven reception.
+It is also capable of sending a return value to the <code class="literal">reply-to</code> destination, as provided by the received message.
+The outbound gateway sends a JMS message to a <code class="literal">request-destination</code> (or <code class="literal">request-destination-name</code> or <code class="literal">request-destination-expression</code>) and then receives a reply message.
+You can explicitly configure the <code class="literal">reply-destination</code> reference (or <code class="literal">reply-destination-name</code> or <code class="literal">reply-destination-expression</code>).
+Otherwise, the outbound gateway uses a JMS <a class="ulink" href="http://docs.oracle.com/javaee/6/api/javax/jms/TemporaryQueue.html" target="_top">TemporaryQueue</a>.</p>
+<p>Prior to Spring Integration 2.2, if necessary, a <code class="literal">TemporaryQueue</code> was created (and removed) for each request or reply.
+Beginning with Spring Integration 2.2, you can configure the outbound gateway to use a <code class="literal">MessageListener</code> container to receive replies instead of directly using a new (or cached) <code class="literal">Consumer</code> to receive the reply for each request.
+When so configured, and no explicit reply destination is provided, a single <code class="literal">TemporaryQueue</code> is used for each gateway instead of one for each request.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-inbound-channel-adapter" href="#jms-inbound-channel-adapter"></a>23.1&nbsp;Inbound Channel Adapter</h2></div></div></div>
+
+<p>The inbound channel adapter requires a reference to either a single <code class="literal">JmsTemplate</code> instance or both a <code class="literal">ConnectionFactory</code> and a <code class="literal">Destination</code> (you can provide a <span class="emphasis"><em>destinationName</em></span> in place of the <span class="emphasis"><em>destination</em></span> reference).
+The following example defines an inbound channel adapter with a <code class="literal">Destination</code> reference:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsIn"</span> <span class="hl-attribute">destination</span>=<span class="hl-value">"inQueue"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"30000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jms:inbound-channel-adapter&gt;</span></pre>
+</div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>Notice from the preceding configuration that the <code class="literal">inbound-channel-adapter</code> is a polling consumer.
+That means that it invokes <code class="literal">receive()</code> when triggered.
+You should use this should only in situations where polling is done relatively infrequently and timeliness is not important.
+For all other situations (a vast majority of JMS-based use-cases), the <code class="literal">message-driven-channel-adapter</code> (<a class="link" href="jms.html#jms-message-driven-channel-adapter" title="23.2&nbsp;Message-driven Channel Adapter">described later</a>) is a better option.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>By default, all of the JMS adapters that require a reference to the <code class="literal">ConnectionFactory</code> automatically look for a bean named <code class="literal">jmsConnectionFactory</code>.
+That is why you do not see a <code class="literal">connection-factory</code> attribute in many of the examples.
+However, if your JMS <code class="literal">ConnectionFactory</code> has a different bean name, you need to provide that attribute.</p>
+</td></tr></table></div>
+<p>If <code class="literal">extract-payload</code> is set to <code class="literal">true</code> (the default), the received JMS Message is passed through the <code class="literal">MessageConverter</code>.
+When relying on the default <code class="literal">SimpleMessageConverter</code>, this means that the resulting Spring Integration Message has the JMS message&#8217;s body as its payload.
+A JMS <code class="literal">TextMessage</code> produces a string-based payload, a JMS <code class="literal">BytesMessage</code> produces a byte array payload, and the serializable instance of a JMS <code class="literal">ObjectMessage</code> becomes the Spring Integration message&#8217;s payload.
+If you prefer to have the raw JMS message as the Spring Integration message&#8217;s payload, set <code class="literal">extract-payload</code> to <code class="literal">false</code>, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsIn"</span>
+    <span class="hl-attribute">destination</span>=<span class="hl-value">"inQueue"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"exampleChannel"</span>
+    <span class="hl-attribute">extract-payload</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"30000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jms:inbound-channel-adapter&gt;</span></pre>
+</div>
+<p>Starting with version 5.0.8, a default value of the <code class="literal">receive-timeout</code> is <code class="literal">-1</code> (no wait) for the <code class="literal">org.springframework.jms.connection.CachingConnectionFactory</code> and <code class="literal">cacheConsumers</code>, otherwise it is 1 second.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jms-ib-transactions" href="#jms-ib-transactions"></a>23.1.1&nbsp;Transactions</h3></div></div></div>
+
+<p>Starting with version 4.0, the inbound channel adapter supports the <code class="literal">session-transacted</code> attribute.
+In earlier versions, you had to inject a <code class="literal">JmsTemplate</code> with <code class="literal">sessionTransacted</code> set to <code class="literal">true</code>.
+(The adapter did let you set the <code class="literal">acknowledge</code> attribute to <code class="literal">transacted</code>, but this was incorrect and did not work).</p>
+<p>Note, however, that setting <code class="literal">session-transacted</code> to <code class="literal">true</code> has little value, because the transaction is committed
+immediately after the <code class="literal">receive()</code> operation and before the message is sent to the <code class="literal">channel</code>.</p>
+<p>If you want the entire flow to be transactional (for example, if there is a downstream outbound channel adapter), you must use a <code class="literal">transactional</code> poller with a <code class="literal">JmsTransactionManager</code>.
+Alternatively, consider using a <code class="literal">jms-message-driven-channel-adapter</code> with <code class="literal">acknowledge</code> set to <code class="literal">transacted</code> (the default).</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-message-driven-channel-adapter" href="#jms-message-driven-channel-adapter"></a>23.2&nbsp;Message-driven Channel Adapter</h2></div></div></div>
+
+<p>The <code class="literal">message-driven-channel-adapter</code> requires a reference to either an instance of a Spring <code class="literal">MessageListener</code> container (any subclass of <code class="literal">AbstractMessageListenerContainer</code>) or both <code class="literal">ConnectionFactory</code> and <code class="literal">Destination</code> (a <span class="emphasis"><em>destinationName</em></span> can be provided in place of the <span class="emphasis"><em>destination</em></span> reference).
+The following example defines a message-driven channel adapter with a <code class="literal">Destination</code> reference:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:message-driven-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsIn"</span> <span class="hl-attribute">destination</span>=<span class="hl-value">"inQueue"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The message-driven adapter also accepts several properties that pertain to the <code class="literal">MessageListener</code> container.
+These values are considered only if you do not provide a <code class="literal">container</code> reference.
+In that case, an instance of <code class="literal">DefaultMessageListenerContainer</code> is created and configured based on these properties.
+For example, you can specify the <code class="literal">transaction-manager</code> reference, the <code class="literal">concurrent-consumers</code> value, and several other property references and values.
+See the <a class="ulink" href="https://docs.spring.io/spring-integration/api/index.html" target="_top">Javadoc</a> and Spring Integration&#8217;s JMS schema (<code class="literal">spring-integration-jms.xsd</code>) for more details.</p>
+<p>If you have a custom listener container implementation (usually a subclass of <code class="literal">DefaultMessageListenerContainer</code>), you can either provide a reference to an instance of it by using the <code class="literal">container</code> attribute or provide its fully qualified class name by using the <code class="literal">container-class</code> attribute.
+In that case, the attributes on the adapter are transferred to an instance of your custom container.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>You can&#8217;t use the Spring JMS namespace element <code class="literal">&lt;jms:listener-container/&gt;</code> to configure a container reference for the <code class="literal">&lt;int-jms:message-driven-channel-adapter&gt;</code> since that element doesn&#8217;t actually reference a container.
+Each <code class="literal">&lt;jms:listener/&gt;</code> sub-element gets its own <code class="literal">DefaultMessageListenerContainer</code> (with shared attributes defined on the parent <code class="literal">&lt;jms:listener-container/&gt;</code> element).
+You can give each listener sub-element an <code class="literal">id</code>, and use that to inject into the channel adapter, however, the <code class="literal">&lt;jms:/&gt;</code> namespace requires a real listener.
+Since, for Spring Integration, the adapter itself needs to configure the listener, the configured listener will be overwritten.
+If you go this route, you will see a warning for each adapter.</p>
+<p>It is recommended to configure a regular <code class="literal">&lt;bean&gt;</code> for the <code class="literal">DefaultMessageListenerContainer</code> and use it as a reference in the channel adapter.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Starting with version 4.2, the default <code class="literal">acknowledge</code> mode is <code class="literal">transacted</code>, unless you provide an external
+container.
+In that case, you should configure the container as needed.
+We recommend using <code class="literal">transacted</code> with the <code class="literal">DefaultMessageListenerContainer</code> to avoid message loss.</p>
+</td></tr></table></div>
+<p>The <span class="emphasis"><em>extract-payload</em></span> property has the same effect, and its default value is <span class="emphasis"><em>true</em></span>.
+The <code class="literal">poller</code> element is not applicable for a message-driven channel adapter, as it is actively invoked.
+For most scenarios, the message-driven approach is better, since the messages are passed along to the <code class="literal">MessageChannel</code> as soon as they are received from the underlying JMS consumer.</p>
+<p>Finally, the <code class="literal">&lt;message-driven-channel-adapter&gt;</code> element also accepts the <span class="emphasis"><em>error-channel</em></span> attribute.
+This provides the same basic functionality, as described in <a class="xref" href="messaging-endpoints-chapter.html#gateway-proxy" title="10.4.1&nbsp;Enter the GatewayProxyFactoryBean">Section&nbsp;10.4.1, &#8220;Enter the <code class="literal">GatewayProxyFactoryBean</code>&#8221;</a>.
+The following example shows how to set an error channel on a message-driven channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:message-driven-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsIn"</span> <span class="hl-attribute">destination</span>=<span class="hl-value">"inQueue"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"exampleChannel"</span>
+    <span class="hl-attribute">error-channel</span>=<span class="hl-value">"exampleErrorChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>When comparing the preceding example to the generic gateway configuration or the JMS <span class="emphasis"><em>inbound-gateway</em></span> that we discuss later, the key difference is that we are in a one-way flow, since this is a <span class="emphasis"><em>channel-adapter</em></span>, not a gateway.
+Therefore, the flow downstream from the <span class="emphasis"><em>error-channel</em></span> should also be one-way.
+For example, it could send to a logging handler or it could connect to a different JMS <code class="literal">&lt;outbound-channel-adapter&gt;</code> element.</p>
+<p>When consuming from topics, set the <code class="literal">pub-sub-domain</code> attribute to true.
+Set <code class="literal">subscription-durable</code> to <code class="literal">true</code> for a durable subscription or <code class="literal">subscription-shared</code> for a shared subscription (which requires a JMS 2.0 broker and has been available since version 4.2).
+Use <code class="literal">subscription-name</code> to name the subscription.</p>
+<p>Starting with version 5.1, when the endpoint is stopped while the application remains running, the underlying listener container is shut down, closing its shared connection and consumers.
+Previously, the connection and consumers remained open.
+To revert to the previous behavior, set the <code class="literal">shutdownContainerOnStop</code> on the <code class="literal">JmsMessageDrivenEndpoint</code> to <code class="literal">false</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jms-md-conversion-errors" href="#jms-md-conversion-errors"></a>23.2.1&nbsp;Inbound Conversion Errors</h3></div></div></div>
+
+<p>Starting with version 4.2, the <span class="emphasis"><em>error-channel</em></span> is used for the conversion errors, too.
+Previously, if a JMS <code class="literal">&lt;message-driven-channel-adapter/&gt;</code> or <code class="literal">&lt;inbound-gateway/&gt;</code> could not deliver a message due to a conversion error, an exception would be thrown back to the container.
+If the container is configured to use transactions, the message is rolled back and redelivered repeatedly.
+The conversion process occurs before and during message construction so that such errors are not sent to the <span class="emphasis"><em>error-channel</em></span>.
+Now such conversion exceptions result in an <code class="literal">ErrorMessage</code> being sent to the <span class="emphasis"><em>error-channel</em></span>, with the exception as the <code class="literal">payload</code>.
+If you wish the transaction to roll back and you have an <span class="emphasis"><em>error-channel</em></span> defined, the integration flow on the <span class="emphasis"><em>error-channel</em></span> must re-throw the exception (or another exception).
+If the error flow does not throw an exception, the transaction is committed and the message is removed.
+If no <span class="emphasis"><em>error-channel</em></span> is defined, the exception is thrown back to the container, as before.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-outbound-channel-adapter" href="#jms-outbound-channel-adapter"></a>23.3&nbsp;Outbound Channel Adapter</h2></div></div></div>
+
+<p>The <code class="literal">JmsSendingMessageHandler</code> implements the <code class="literal">MessageHandler</code> interface and is capable of converting Spring Integration <code class="literal">Messages</code> to JMS messages and then sending to a JMS destination.
+It requires either a <code class="literal">jmsTemplate</code> reference or both <code class="literal">jmsConnectionFactory</code> and <code class="literal">destination</code> references (<code class="literal">destinationName</code> may be provided in place of <code class="literal">destination</code>).
+As with the inbound channel adapter, the easiest way to configure this adapter is with the namespace support.
+The following configuration produces an adapter that receives Spring Integration messages from the <code class="literal">exampleChannel</code>, converts those into JMS messages, and sends them to the JMS destination reference whose bean name is <code class="literal">outQueue</code>:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsOut"</span> <span class="hl-attribute">destination</span>=<span class="hl-value">"outQueue"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>As with the inbound channel adapters, there is an <span class="emphasis"><em>extract-payload</em></span> property.
+However, the meaning is reversed for the outbound adapter.
+Rather than applying to the JMS message, the boolean property applies to the Spring Integration message payload.
+In other words, the decision is whether to pass the Spring Integration message itself as the JMS message body or to pass the Spring Integration message payload as the JMS message body.
+The default value is <span class="emphasis"><em>true</em></span>.
+Therefore, if you pass a Spring Integration message whose payload is a <code class="literal">String</code>, a JMS <code class="literal">TextMessage</code> is created.
+If, on the other hand, you want to send the actual Spring Integration message to another system over JMS, set it to <span class="emphasis"><em>false</em></span>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Regardless of the boolean value for payload extraction, the Spring Integration <code class="literal">MessageHeaders</code> map to JMS properties, as long as you rely on the default converter or provide a reference to another instance of <code class="literal">HeaderMappingMessageConverter</code>.
+(The same holds true for <span class="emphasis"><em>inbound</em></span> adapters, except that, in those cases, the JMS properties map to Spring Integration <code class="literal">MessageHeaders</code>).</p>
+</td></tr></table></div>
+<p>Starting with version 5.1, the <code class="literal">&lt;int-jms:outbound-channel-adapter&gt;</code> (<code class="literal">JmsSendingMessageHandler</code>) can be configured with the <code class="literal">deliveryModeExpression</code> and <code class="literal">timeToLiveExpression</code> properties to evaluate an appropriate QoS values for JMS message to send at runtime against request Spring <code class="literal">Message</code>.
+The new <code class="literal">setMapInboundDeliveryMode(true)</code> and <code class="literal">setMapInboundExpiration(true)</code> options of the <code class="literal">DefaultJmsHeaderMapper</code> may facilitate as a source of the information for the dynamic <code class="literal">deliveryMode</code> and <code class="literal">timeToLive</code> from message headers:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:outbound-channel-adapter</span> <span class="hl-attribute">delivery-mode-expression</span>=<span class="hl-value">"headers.jms_deliveryMode"</span>
+                        <span class="hl-attribute">time-to-live-expression</span>=<span class="hl-value">"headers.jms_expiration - T(System).currentTimeMillis()"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jms-ob-transactions" href="#jms-ob-transactions"></a>23.3.1&nbsp;Transactions</h3></div></div></div>
+
+<p>Starting with version 4.0, the outbound channel adapter supports the <code class="literal">session-transacted</code> attribute.
+In earlier versions, you had to inject a <code class="literal">JmsTemplate</code> with <code class="literal">sessionTransacted</code> set to <code class="literal">true</code>.
+The attribute now sets the property on the built-in default <code class="literal">JmsTemplate</code>.
+If a transaction exists (perhaps from an upstream <code class="literal">message-driven-channel-adapter</code>), the send operation is performed within the same transaction.
+Otherwise, a new transaction is started.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-inbound-gateway" href="#jms-inbound-gateway"></a>23.4&nbsp;Inbound Gateway</h2></div></div></div>
+
+<p>Spring Integration&#8217;s message-driven JMS inbound-gateway delegates to a <code class="literal">MessageListener</code> container, supports dynamically adjusting concurrent consumers, and can also handle replies.
+The inbound gateway requires references to a <code class="literal">ConnectionFactory</code> and a request <code class="literal">Destination</code> (or <span class="emphasis"><em>requestDestinationName</em></span>).
+The following example defines a JMS <code class="literal">inbound-gateway</code> that receives from the JMS queue referenced by the bean id, <code class="literal">inQueue</code>, and sends to the Spring Integration channel named <code class="literal">exampleChannel</code>:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsInGateway"</span>
+    <span class="hl-attribute">request-destination</span>=<span class="hl-value">"inQueue"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Since the gateways provide request-reply behavior instead of unidirectional send or receive behavior, they also have two distinct properties for "<code class="literal">payload extraction</code>" (as <a class="link" href="jms.html#jms-inbound-channel-adapter" title="23.1&nbsp;Inbound Channel Adapter">discussed earlier</a> for the channel adapters' <span class="emphasis"><em>extract-payload</em></span> setting).
+For an inbound gateway, the <span class="emphasis"><em>extract-request-payload</em></span> property determines whether the received JMS Message body is extracted.
+If <span class="emphasis"><em>false</em></span>, the JMS message itself becomes the Spring Integration message payload.
+The default is <span class="emphasis"><em>true</em></span>.</p>
+<p>Similarly, for an inbound-gateway, the <span class="emphasis"><em>extract-reply-payload</em></span> property applies to the Spring Integration message that is to be converted into a reply JMS Message.
+If you want to pass the whole Spring Integration message (as the body of a JMS ObjectMessage), set value this to <span class="emphasis"><em>false</em></span>.
+By default, it is also <span class="emphasis"><em>true</em></span> that the Spring Integration message payload is converted into a JMS Message (for example, a
+<code class="literal">String</code> payload becomes a JMS TextMessage).</p>
+<p>As with anything else, gateway invocation might result in error.
+By default, a producer is not notified of the errors that might have occurred on the consumer side and times out waiting for the reply.
+However, there might be times when you want to communicate an error condition back to the consumer (in other words, you might want to treat the exception as a valid reply by mapping it to a message).
+To accomplish this, JMS inbound gateway provides support for a message channel to which errors can be sent for processing, potentially resulting in a reply message payload that conforms to some contract that defines what a caller may expect as an "<code class="literal">error</code>" reply.
+You can use the error-channel attribute to configure such a channel, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:inbound-gateway</span> <span class="hl-attribute">request-destination</span>=<span class="hl-value">"requestQueue"</span>
+          <span class="hl-attribute">request-channel</span>=<span class="hl-value">"jmsInputChannel"</span>
+          <span class="hl-attribute">error-channel</span>=<span class="hl-value">"errorTransformationChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:transformer</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"exceptionTransformationChannel"</span>
+        <span class="hl-attribute">ref</span>=<span class="hl-value">"exceptionTransformer"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"createErrorResponse"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>You might notice that this example looks very similar to that included within <a class="xref" href="messaging-endpoints-chapter.html#gateway-proxy" title="10.4.1&nbsp;Enter the GatewayProxyFactoryBean">Section&nbsp;10.4.1, &#8220;Enter the <code class="literal">GatewayProxyFactoryBean</code>&#8221;</a>.
+The same idea applies here: The <code class="literal">exceptionTransformer</code> could be a POJO that creates error-response objects, you could reference the <code class="literal">nullChannel</code> to suppress the errors, or you could leave <span class="emphasis"><em>error-channel</em></span> out to let the exception propagate.</p>
+<p>See <a class="xref" href="jms.html#jms-md-conversion-errors" title="23.2.1&nbsp;Inbound Conversion Errors">Section&nbsp;23.2.1, &#8220;Inbound Conversion Errors&#8221;</a>.</p>
+<p>When consuming from topics, set the <code class="literal">pub-sub-domain</code> attribute to true.
+Set <code class="literal">subscription-durable</code> to <code class="literal">true</code> for a durable subscription or <code class="literal">subscription-shared</code> for a shared subscription (requires a JMS 2.0 broker and has been available since version 4.2).
+Use <code class="literal">subscription-name</code> to name the subscription.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Starting with version 4.2, the default <code class="literal">acknowledge</code> mode is <code class="literal">transacted</code>, unless an external container is provided.
+In that case, you should configure the container as needed.
+We recommend that you use <code class="literal">transacted</code> with the <code class="literal">DefaultMessageListenerContainer</code> to avoid message loss.</p>
+</td></tr></table></div>
+<p>Starting with version 5.1, when the endpoint is stopped while the application remains running, the underlying listener container is shut down, closing its shared connection and consumers.
+Previously, the connection and consumers remained open.
+To revert to the previous behavior, set the <code class="literal">shutdownContainerOnStop</code> on the <code class="literal">JmsInboundGateway</code> to <code class="literal">false</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-outbound-gateway" href="#jms-outbound-gateway"></a>23.5&nbsp;Outbound Gateway</h2></div></div></div>
+
+<p>The outbound gateway creates JMS messages from Spring Integration messages and sends them to a <span class="emphasis"><em>request-destination</em></span>.
+It thens handle the JMS reply message either by using a selector to receive from the <span class="emphasis"><em>reply-destination</em></span> that you configure or, if no <span class="emphasis"><em>reply-destination</em></span> is provided, by creating JMS <code class="literal">TemporaryQueue</code> instances.</p>
+<div class="caution" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Caution"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="images/caution.png"></td><th align="left"><a name="jms-outbound-gateway-memory-caution" href="#jms-outbound-gateway-memory-caution"></a>Caution</th></tr><tr><td align="left" valign="top">
+<p>Using a <code class="literal">reply-destination</code> (or <code class="literal">reply-destination-name</code>) together with a <code class="literal">CachingConnectionFactory</code> that has cacheConsumers set to <code class="literal">true</code> can cause out-of-memory conditions.
+This is because each request gets a new consumer with a new selector (selecting on the <code class="literal">correlation-key</code> value or, when there is no <code class="literal">correlation-key</code>, on the sent JMSMessageID).
+Given that these selectors are unique, they remain in the cache (unused) after the current request completes.</p>
+<p>If you specify a reply destination, you are advised to not use cached consumers.
+Alternatively, consider using a <code class="literal">&lt;reply-listener/&gt;</code> as <a class="link" href="jms.html#jms-outbound-gateway-reply-listener" title="23.5.1&nbsp;Using a <reply-listener/&gt;">described below</a>.</p>
+</td></tr></table></div>
+<p>The following example shows how to configure an outbound gateway:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsOutGateway"</span>
+    <span class="hl-attribute">request-destination</span>=<span class="hl-value">"outQueue"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"outboundJmsRequests"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"jmsReplies"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The <span class="emphasis"><em>outbound-gateway</em></span> payload extraction properties are inversely related to those of the <span class="emphasis"><em>inbound-gateway</em></span> (see the <a class="link" href="jms.html#jms-message-driven-channel-adapter" title="23.2&nbsp;Message-driven Channel Adapter">earlier discussion</a>).
+That means that the <span class="emphasis"><em>extract-request-payload</em></span> property value applies to the Spring Integration message being converted into a JMS message to be sent as a request.
+The <span class="emphasis"><em>extract-reply-payload</em></span> property value applies to the JMS message received as a reply and is then converted into a Spring Integration message to be subsequently sent to the <span class="emphasis"><em>reply-channel</em></span>, as shown in the preceding configuration example.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jms-outbound-gateway-reply-listener" href="#jms-outbound-gateway-reply-listener"></a>23.5.1&nbsp;Using a <code class="literal">&lt;reply-listener/&gt;</code></h3></div></div></div>
+
+<p>Spring Integration 2.2 introduced an alternative technique for handling replies.
+If you add a <code class="literal">&lt;reply-listener/&gt;</code> child element to the gateway instead of creating a consumer for each reply, a <code class="literal">MessageListener</code> container is used to receive the replies and hand them over to the requesting thread.
+This provides a number of performance benefits as well as alleviating the cached consumer memory utilization problem described in the <a class="link" href="jms.html#jms-outbound-gateway-memory-caution" title="Caution">earlier caution</a>.</p>
+<p>When using a <code class="literal">&lt;reply-listener/&gt;</code> with an outbound gateway that has no <code class="literal">reply-destination</code>, instead of creating a <code class="literal">TemporaryQueue</code> for each request, a single <code class="literal">TemporaryQueue</code> is used.
+(The gateway creates an additional <code class="literal">TemporaryQueue</code>, as necessary, if the connection to the broker is lost and recovered).</p>
+<p>When using a <code class="literal">correlation-key</code>, multiple gateways can share the same reply destination, because the listener container uses a selector that is unique to each gateway.</p>
+<div class="caution" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Caution"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="images/caution.png"></td><th align="left">Caution</th></tr><tr><td align="left" valign="top">
+<p>If you specify a reply listener and specify a reply destination (or reply destination name) but provide no correlation key, the gateway logs a warning and falls back to pre-version 2.2 behavior.
+This is because there is no way to configure a selector in this case.
+Thus, there is no way to avoid a reply going to a different gateway that might be configured with the same reply destination.</p>
+<p>Note that, in this situation, a new consumer is used for each request, and consumers can build up in memory as described in the caution above; therefore cached consumers should not be used in this case.</p>
+</td></tr></table></div>
+<p>The following example shows a reply listener with default attributes:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsOutGateway"</span>
+        <span class="hl-attribute">request-destination</span>=<span class="hl-value">"outQueue"</span>
+        <span class="hl-attribute">request-channel</span>=<span class="hl-value">"outboundJmsRequests"</span>
+        <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"jmsReplies"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-jms:reply-listener /&gt;</span>
+<span class="hl-tag">&lt;/int-jms-outbound-gateway&gt;</span></pre>
+</div>
+<p>The listener is very lightweight, and we anticipate that, in most cases, you need only a single consumer.
+However, you can add attributes such as <code class="literal">concurrent-consumers</code>, <code class="literal">max-concurrent-consumers</code>, and others.
+See the schema for a complete list of supported attributes, together with the <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/jms.html" target="_top">Spring JMS documentation</a> for their meanings.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_idle_reply_listeners" href="#_idle_reply_listeners"></a>23.5.2&nbsp;Idle Reply Listeners</h3></div></div></div>
+
+<p>Starting with version 4.2, you can start the reply listener as needed (and stop it after an idle time) instead
+of running for the duration of the gateway&#8217;s lifecycle.
+This can be useful if you have many gateways in the application context where they are mostly idle.
+One such situation is a context with many (inactive) partitioned <a class="ulink" href="http://projects.spring.io/spring-batch/" target="_top">Spring Batch</a>
+jobs using Spring Integration and JMS for partition distribution.
+If all the reply listeners are active, the JMS broker has an active consumer for each gateway.
+By enabling the idle timeout, each consumer exists only while the corresponding batch job is running (and
+for a short time after it finishes).</p>
+<p>See <code class="literal">idle-reply-listener-timeout</code> in <a class="xref" href="jms.html#jms-og-attributes" title="23.5.5&nbsp;Attribute Reference">Section&nbsp;23.5.5, &#8220;Attribute Reference&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_gateway_reply_correlation" href="#_gateway_reply_correlation"></a>23.5.3&nbsp;Gateway Reply Correlation</h3></div></div></div>
+
+<p>This section describes the mechanisms used for reply correlation (ensuring the originating gateway receives replies
+to only its requests), depending on how the gateway is configured.
+See <a class="xref" href="jms.html#jms-og-attributes" title="23.5.5&nbsp;Attribute Reference">Section&nbsp;23.5.5, &#8220;Attribute Reference&#8221;</a> for complete description of the attributes discussed here.</p>
+<p>The following list describes the various scenarios (the numbers are for identification&#8201;&#8212;&#8201;order does not matter):</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+<p class="simpara">No <code class="literal">reply-destination*</code> properties and no <code class="literal">&lt;reply-listener&gt;</code></p>
+<p class="simpara">A <code class="literal">TemporaryQueue</code> is created for each request and deleted when the request is complete (successfully or otherwise).
+<code class="literal">correlation-key</code> is irrelevant.</p>
+</li><li class="listitem">
+<p class="simpara">A <code class="literal">reply-destination*</code> property is provided and neither a <code class="literal">&lt;reply-listener/&gt;</code> nor a <code class="literal">correlation-key</code> is provided</p>
+<p class="simpara">The <code class="literal">JMSCorrelationID</code> equal to the outgoing message IS is used as a message selector for the consumer:</p>
+<p class="simpara"><code class="literal">messageSelector = "JMSCorrelationID = '" + messageId + "'"</code></p>
+<p class="simpara">The responding system is expected to return the inbound <code class="literal">JMSMessageID</code> in the reply <code class="literal">JMSCorrelationID</code>.
+This is a common pattern and is implemented by the Spring Integration inbound gateway as well as Spring&#8217;s <code class="literal">MessageListenerAdapter</code> for message-driven POJOs.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When you use this configuration, you should not use a topic for replies.
+The reply may be lost.</p>
+</td></tr></table></div>
+</li><li class="listitem">
+<p class="simpara">A <code class="literal">reply-destination*</code> property is provided, no <code class="literal">&lt;reply-listener/&gt;</code> is provided, and <code class="literal">correlation-key="JMSCorrelationID"</code></p>
+<p class="simpara">The gateway generates a unique correlation IS and inserts it in the <code class="literal">JMSCorrelationID</code> header.
+The message selector is:</p>
+<p class="simpara"><code class="literal">messageSelector = "JMSCorrelationID = '" + uniqueId + "'"</code></p>
+<p class="simpara">The responding system is expected to return the inbound <code class="literal">JMSCorrelationID</code> in the reply <code class="literal">JMSCorrelationID</code>.
+This is a common pattern and is implemented by the Spring Integration inbound gateway as well as Spring&#8217;s <code class="literal">MessageListenerAdapter</code> for message-driven POJOs.</p>
+</li><li class="listitem">
+<p class="simpara">A <code class="literal">reply-destination*</code> property is provided, no <code class="literal">&lt;reply-listener/&gt;</code> is provided, and <code class="literal">correlation-key="myCorrelationHeader"</code></p>
+<p class="simpara">The gateway generates a unique correlation ID and inserts it in the <code class="literal">myCorrelationHeader</code> message property.
+The <code class="literal">correlation-key</code> can be any user-defined value.
+The message selector is:</p>
+<p class="simpara"><code class="literal">messageSelector = "myCorrelationHeader = '" + uniqueId + "'"</code></p>
+<p class="simpara">The responding system is expected to return the inbound <code class="literal">myCorrelationHeader</code> in the reply <code class="literal">myCorrelationHeader</code>.</p>
+</li><li class="listitem">
+<p class="simpara">A <code class="literal">reply-destination*</code> property is provided, no <code class="literal">&lt;reply-listener/&gt;</code> is provided, and <code class="literal">correlation-key="JMSCorrelationID*"</code>::
+(Note the <code class="literal">*</code> in the correlation key.)</p>
+<p class="simpara">The gateway uses the value in the <code class="literal">jms_correlationId</code> header (if present) from the request message and inserts it in
+the <code class="literal">JMSCorrelationID</code> header.
+The message selector is:</p>
+<p class="simpara"><code class="literal">messageSelector = "JMSCorrelationID = '" + headers['jms_correlationId'] + "'"</code></p>
+<p class="simpara">The user must ensure this value is unique.</p>
+<p class="simpara">If the header does not exist, the gateway behaves as in <code class="literal">3</code>.</p>
+<p class="simpara">The responding system is expected to return the inbound <code class="literal">JMSCorrelationID</code> in the reply <code class="literal">JMSCorrelationID</code>.
+This is a common pattern and is implemented by the Spring Integration inbound gateway as well as Spring&#8217;s <code class="literal">MessageListenerAdapter</code> for message-driven POJOs.</p>
+</li><li class="listitem">
+<p class="simpara">No <code class="literal">reply-destination*</code> properties is provided, and a <code class="literal">&lt;reply-listener&gt;</code> is provided</p>
+<p class="simpara">A temporary queue is created and used for all replies from this gateway instance.
+No correlation data is needed in the message, but the outgoing <code class="literal">JMSMessageID</code> is used internally in the gateway to direct the reply to the correct requesting thread.</p>
+</li><li class="listitem">
+<p class="simpara">A <code class="literal">reply-destination*</code> property is provided, a <code class="literal">&lt;reply-listener&gt;</code> is provided, and no <code class="literal">correlation-key</code> is provided</p>
+<p class="simpara">Not allowed.</p>
+<p class="simpara">The <code class="literal">&lt;reply-listener/&gt;</code> configuration is ignored, and the gateway behaves as in <code class="literal">2</code>.
+A warning log message is written to indicate this situation.</p>
+</li><li class="listitem">
+<p class="simpara">A <code class="literal">reply-destination*</code> property is provided, a <code class="literal">&lt;reply-listener&gt;</code> is provided, and <code class="literal">correlation-key="JMSCorrelationID"</code></p>
+<p class="simpara">The gateway has a unique correlation ID and inserts it, together with an incrementing value in the <code class="literal">JMSCorrelationID</code> header (<code class="literal">gatewayId + "_" + ++seq</code>).
+The message selector is:</p>
+<p class="simpara"><code class="literal">messageSelector = "JMSCorrelationID LIKE '" + gatewayId%'"</code></p>
+<p class="simpara">The responding system is expected to return the inbound <code class="literal">JMSCorrelationID</code> in the reply <code class="literal">JMSCorrelationID</code>.
+This is a common pattern and is implemented by the Spring Integration inbound gateway as well as Spring&#8217;s <code class="literal">MessageListenerAdapter</code> for message-driven POJOs.
+Since each gateway has a unique ID, each instance gets only its own replies.
+The complete correlation data is used to route the reply to the correct requesting thread.</p>
+</li><li class="listitem">
+<p class="simpara">A <code class="literal">reply-destination*</code> property is provided a <code class="literal">&lt;reply-listener/&gt;</code> is provided, and <code class="literal">correlation-key="myCorrelationHeader"</code></p>
+<p class="simpara">The gateway has a unique correlation ID and inserts it, together with an incrementing value in the <code class="literal">myCorrelationHeader</code>
+property (<code class="literal">gatewayId + "_" + ++seq</code>).
+The <code class="literal">correlation-key</code> can be any user-defined value.
+The message selector is:</p>
+<p class="simpara"><code class="literal">messageSelector = "myCorrelationHeader LIKE '" + gatewayId%'"</code></p>
+<p class="simpara">The responding system is expected to return the inbound <code class="literal">myCorrelationHeader</code> in the reply <code class="literal">myCorrelationHeader</code>.
+Since each gateway has a unique ID, each instance only gets its own replies.
+The complete correlation data is used to route the reply to the correct requesting thread.</p>
+</li><li class="listitem">
+<p class="simpara">A <code class="literal">reply-destination*</code> property is provided, a <code class="literal">&lt;reply-listener/&gt;</code> is provided, and <code class="literal">correlation-key="JMSCorrelationID*"</code>*</p>
+<p class="simpara">(Note the <code class="literal">*</code> in the correlation key)</p>
+<p class="simpara">Not allowed.</p>
+<p class="simpara">User-supplied correlation IDs are not permitted with a reply listener.
+The gateway does not initialize with this configuration.</p>
+</li></ol></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jms-async-gateway" href="#jms-async-gateway"></a>23.5.4&nbsp;Async Gateway</h3></div></div></div>
+
+<p>Starting with version 4.3, you can now specify <code class="literal">async="true"</code> (or <code class="literal">setAsync(true)</code> in Java) when configuring the outbound
+gateway.</p>
+<p>By default, when a request is sent to the gateway, the requesting thread is suspended until the reply is received.
+The flow then continues on that thread.
+If <code class="literal">async</code> is <code class="literal">true</code>, the requesting thread is released immediately after the send completes, and the reply is returned
+(and the flow continues) on the listener container thread.
+This can be useful when the gateway is invoked on a poller thread.
+The thread is released and is available for other tasks within the framework.</p>
+<p><code class="literal">async</code> requires a <code class="literal">&lt;reply-listener/&gt;</code> (or <code class="literal">setUseReplyContainer(true)</code> when using Java configuration).
+It also requires a <code class="literal">correlationKey</code> (usually <code class="literal">JMSCorrelationID</code>) to be specified.
+If either of these conditions are not met, <code class="literal">async</code> is ignored.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jms-og-attributes" href="#jms-og-attributes"></a>23.5.5&nbsp;Attribute Reference</h3></div></div></div>
+
+<p>The following listing shows all the available attributes for an <code class="literal">outbound-gateway</code>:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:outbound-gateway</span>
+    <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"connectionFactory"</span> <a name="CO40-1" href="#CO40-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    correlation-key="" <a name="CO40-2" href="#CO40-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    delivery-persistent="" <a name="CO40-3" href="#CO40-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    destination-resolver="" <a name="CO40-4" href="#CO40-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    explicit-qos-enabled="" <a name="CO40-5" href="#CO40-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    extract-reply-payload="true" <a name="CO40-6" href="#CO40-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+    extract-request-payload="true" <a name="CO40-7" href="#CO40-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+    header-mapper="" <a name="CO40-8" href="#CO40-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+    message-converter="" <a name="CO40-9" href="#CO40-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+    priority="" <a name="CO40-10" href="#CO40-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+    receive-timeout="" <a name="CO40-11" href="#CO40-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+    reply-channel="" <a name="CO40-12" href="#CO40-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+    reply-destination="" <a name="CO40-13" href="#CO40-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+    reply-destination-expression="" <a name="CO40-14" href="#CO40-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span>
+    reply-destination-name="" <a name="CO40-15" href="#CO40-15"></a><span><img src="images/callouts/15.png" alt="15" border="0"></span>
+    reply-pub-sub-domain="" <a name="CO40-16" href="#CO40-16"></a>(16)
+    reply-timeout="" <a name="CO40-17" href="#CO40-17"></a>(17)
+    request-channel="" <a name="CO40-18" href="#CO40-18"></a>(18)
+    request-destination="" <a name="CO40-19" href="#CO40-19"></a>(19)
+    request-destination-expression="" <a name="CO40-20" href="#CO40-20"></a>(20)
+    request-destination-name="" <a name="CO40-21" href="#CO40-21"></a>(21)
+    request-pub-sub-domain="" <a name="CO40-22" href="#CO40-22"></a>(22)
+    time-to-live="" <a name="CO40-23" href="#CO40-23"></a>(23)
+    requires-reply="" <a name="CO40-24" href="#CO40-24"></a>(24)
+    idle-reply-listener-timeout="" <a name="CO40-25" href="#CO40-25"></a>(25)
+    async=""&gt; <a name="CO40-26" href="#CO40-26"></a>(26)
+  <span class="hl-tag">&lt;int-jms:reply-listener /&gt;</span> <a name="CO40-27" href="#CO40-27"></a>(27)
+<span class="hl-tag">&lt;/int-jms:outbound-gateway&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Reference to a <code class="literal">javax.jms.ConnectionFactory</code>.
+The default <code class="literal">jmsConnectionFactory</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of a property that contains correlation data to correlate responses with replies.
+If omitted, the gateway expects the responding system to return the value of the outbound <code class="literal">JMSMessageID</code> header in the <code class="literal">JMSCorrelationID</code> header.
+If specified, the gateway generates a correlation ID and populates the specified property with it.
+The responding system must echo back that value in the same property.
+It can be set to <code class="literal">JMSCorrelationID</code>, in which case the standard header is used instead of a <code class="literal">String</code> property to hold the correlation data.
+When you use a <code class="literal">&lt;reply-container/&gt;</code>, you must specify the <code class="literal">correlation-key</code> if you provide an explicit <code class="literal">reply-destination</code>.
+Starting with version 4.0.1, this attribute also supports the value <code class="literal">JMSCorrelationID*</code>, which means that if the outbound message already has a <code class="literal">JMSCorrelationID</code> (mapped from the <code class="literal">jms_correlationId</code>) header, it is used instead of generating a new one.
+Note, the <code class="literal">JMSCorrelationID*</code> key is not allowed when you use a <code class="literal">&lt;reply-container/&gt;</code>, because the container needs to set up a message selector during initialization.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>You should understand that the gateway has no way to ensure uniqueness, and unexpected side effects can occur if the provided correlation ID is not unique.</p>
+</td></tr></table></div>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A boolean value indicating whether the delivery mode should be <code class="literal">DeliveryMode.PERSISTENT</code> (<code class="literal">true</code>) or <code class="literal">DeliveryMode.NON_PERSISTENT</code> (<code class="literal">false</code>).
+This setting takes effect only if <code class="literal">explicit-qos-enabled</code> is <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A <code class="literal">DestinationResolver</code>.
+The default is a <code class="literal">DynamicDestinationResolver</code>, which maps the destination name to a queue or topic of that name.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When set to <code class="literal">true</code>, it enables the use of quality of service attributes: <code class="literal">priority</code>, <code class="literal">delivery-mode</code>, and <code class="literal">time-to-live</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When set to <code class="literal">true</code> (the default), the payload of the Spring Integration reply message is created from the JMS Reply message&#8217;s body (by using the <code class="literal">MessageConverter</code>).
+When set to <code class="literal">false</code>, the entire JMS message becomes the payload of the Spring Integration message.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When set to <code class="literal">true</code> (the default), the payload of the Spring Integration message is converted to a <code class="literal">JMSMessage</code> (by using the <code class="literal">MessageConverter</code>).
+When set to <code class="literal">false</code>, the entire Spring Integration Message is converted to the <code class="literal">JMSMessage</code>.
+In both cases, the Spring Integration message headers are mapped to JMS headers and properties by using the <code class="literal">HeaderMapper</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A <code class="literal">HeaderMapper</code> used to map Spring Integration message headers to and from JMS message headers and properties.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">MessageConverter</code> for converting between JMS messages and the Spring Integration message payloads (or messages if <code class="literal">extract-request-payload</code> is <code class="literal">false</code>).
+The default is a <code class="literal">SimpleMessageConverter</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The default priority of request messages.
+Overridden by the message priority header, if present.
+Its range is <code class="literal">0</code> to <code class="literal">9</code>.
+This setting takes effect only if <code class="literal">explicit-qos-enabled</code> is <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The time (in milliseconds) to wait for a reply.
+The default is <code class="literal">5000</code> (five seconds).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which the reply message is sent.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">Destination</code>, which is set as the <code class="literal">JMSReplyTo</code> header.
+At most, only one of <code class="literal">reply-destination</code>, <code class="literal">reply-destination-expression</code>, or <code class="literal">reply-destination-name</code> is allowed.
+If none is provided, a <code class="literal">TemporaryQueue</code> is used for replies to this gateway.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A SpEL expression evaluating to a <code class="literal">Destination</code>, which will be set as the <code class="literal">JMSReplyTo</code> header.
+The expression can result in a <code class="literal">Destination</code> object or a <code class="literal">String</code>.
+It is used by the <code class="literal">DestinationResolver</code> to resolve the actual <code class="literal">Destination</code>.
+At most, only one of <code class="literal">reply-destination</code>, <code class="literal">reply-destination-expression</code>, or <code class="literal">reply-destination-name</code> is allowed.
+If none is provided, a <code class="literal">TemporaryQueue</code> is used for replies to this gateway.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-15"><span><img src="images/callouts/15.png" alt="15" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of the destination that is set as the JMSReplyTo header.
+It is used by the <code class="literal">DestinationResolver</code> to resolve the actual <code class="literal">Destination</code>.
+At most, only one of <code class="literal">reply-destination</code>, <code class="literal">reply-destination-expression</code>, or <code class="literal">reply-destination-name</code> is allowed.
+If none is provided, a <code class="literal">TemporaryQueue</code> is used for replies to this gateway.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-16">(16)</a> </p></td><td valign="top" align="left">
+<p>When set to <code class="literal">true</code>, it indicates that any reply <code class="literal">Destination</code> resolved by the <code class="literal">DestinationResolver</code> should be a <code class="literal">Topic</code> rather then a <code class="literal">Queue</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-17">(17)</a> </p></td><td valign="top" align="left">
+<p>The time the gateway waits when sending the reply message to the <code class="literal">reply-channel</code>.
+This only has an effect if the <code class="literal">reply-channel</code> can block&#8201;&#8212;&#8201;such as a <code class="literal">QueueChannel</code> with a capacity limit that is currently full.
+The default is infinity.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-18">(18)</a> </p></td><td valign="top" align="left">
+<p>The channel on which this gateway receives request messages.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-19">(19)</a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">Destination</code> to which request messages are sent.
+One of <code class="literal">reply-destination</code>, <code class="literal">reply-destination-expression</code>, or <code class="literal">reply-destination-name</code> is required.
+You can use only one of those three attributes.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-20">(20)</a> </p></td><td valign="top" align="left">
+<p>A SpEL expression evaluating to a <code class="literal">Destination</code> to which request messages are sent.
+The expression can result in a <code class="literal">Destination</code> object or a <code class="literal">String</code>.
+It is used by the <code class="literal">DestinationResolver</code> to resolve the actual <code class="literal">Destination</code>.
+Oneof <code class="literal">reply-destination</code>, <code class="literal">reply-destination-expression</code>, or <code class="literal">reply-destination-name</code> is required.
+You can use only one of those three attributes.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-21">(21)</a> </p></td><td valign="top" align="left">
+<p>The name of the destination to which request messages are sent.
+It is used by the <code class="literal">DestinationResolver</code> to resolve the actual <code class="literal">Destination</code>.
+One of <code class="literal">reply-destination</code>, <code class="literal">reply-destination-expression</code>, or <code class="literal">reply-destination-name</code> is required.
+You can use only one of those three attributes.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-22">(22)</a> </p></td><td valign="top" align="left">
+<p>When set to <code class="literal">true</code>, it indicates that any request <code class="literal">Destination</code> resolved by the <code class="literal">DestinationResolver</code> should be a <code class="literal">Topic</code> rather then a <code class="literal">Queue</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-23">(23)</a> </p></td><td valign="top" align="left">
+<p>Specifies the message time to live.
+This setting takes effect only if <code class="literal">explicit-qos-enabled</code> is <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-24">(24)</a> </p></td><td valign="top" align="left">
+<p>Specifies whether this outbound gateway must return a non-null value.
+By default, this value is <code class="literal">true</code>, and a <code class="literal">MessageTimeoutException</code> is thrown when the underlying service does not return a value after the <code class="literal">receive-timeout</code>.
+Note that, if the service is never expected to return a reply, it would be better to use a <code class="literal">&lt;int-jms:outbound-channel-adapter/&gt;</code> instead of a <code class="literal">&lt;int-jms:outbound-gateway/&gt;</code> with <code class="literal">requires-reply="false"</code>.
+With the latter, the sending thread is blocked, waiting for a reply for the <code class="literal">receive-timeout</code> period.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-25">(25)</a> </p></td><td valign="top" align="left">
+<p>When you use a <code class="literal">&lt;reply-listener /&gt;</code>, its lifecycle (start and stop) matches that of the gateway by default.
+When this value is greater than <code class="literal">0</code>, the container is started on demand (when a request is sent).
+The container continues to run until at least this time elapses with no requests being received (and until no replies are outstanding).
+The container is started again on the next request.
+The stop time is a minimum and may actually be up to 1.5x this value.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-26">(26)</a> </p></td><td valign="top" align="left">
+<p>See <a class="xref" href="jms.html#jms-async-gateway" title="23.5.4&nbsp;Async Gateway">Section&nbsp;23.5.4, &#8220;Async Gateway&#8221;</a>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO40-27">(27)</a> </p></td><td valign="top" align="left">
+<p>When this element is included, replies are received by an asynchronous <code class="literal">MessageListenerContainer</code> rather than creating a consumer for each reply.
+This can be more efficient in many cases.</p>
+</td></tr></table></div>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-header-mapping" href="#jms-header-mapping"></a>23.6&nbsp;Mapping Message Headers to and from JMS Message</h2></div></div></div>
+
+<p>JMS messages can contain meta-information such as JMS API headers and simple properties.
+You can map those to and from Spring Integration message headers by using <code class="literal">JmsHeaderMapper</code>.
+The JMS API headers are passed to the appropriate setter methods (such as <code class="literal">setJMSReplyTo</code>), whereas other headers are copied to the general properties of the JMS Message.
+JMS outbound gateway is bootstrapped with the default implementation of <code class="literal">JmsHeaderMapper</code>, which will map standard JMS API Headers as well as primitive or <code class="literal">String</code> message headers.
+You could also provide a custom header mapper by using the <code class="literal">header-mapper</code> attribute of inbound and outbound gateways.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Since version 4.0, the <code class="literal">JMSPriority</code> header is mapped to the standard <code class="literal">priority</code> header for inbound messages.
+(previously, the <code class="literal">priority</code> header was only used for outbound messages).
+To revert to the previous behavior (that is, to not map the inbound priority), set the <code class="literal">mapInboundPriority</code> property of <code class="literal">DefaultJmsHeaderMapper</code> to <code class="literal">false</code>.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Since version 4.3, the <code class="literal">DefaultJmsHeaderMapper</code> maps the standard <code class="literal">correlationId</code> header as a message
+property by invoking its <code class="literal">toString()</code> method (<code class="literal">correlationId</code> is often a <code class="literal">UUID</code>, which is not supported by JMS).
+On the inbound side, it is mapped as a <code class="literal">String</code>.
+This is independent of the <code class="literal">jms_correlationId</code> header, which is mapped to and from the <code class="literal">JMSCorrelationID</code> header.
+The <code class="literal">JMSCorrelationID</code> is generally used to correlate requests and replies, whereas the <code class="literal">correlationId</code> is often used to combine related messages into a group (such as with an aggregator or a resequencer).</p>
+</td></tr></table></div>
+<p>Starting with version 5.1, the <code class="literal">DefaultJmsHeaderMapper</code> can be configured for mapping inbound <code class="literal">JMSDeliveryMode</code> and <code class="literal">JMSExpiration</code> properties:
+ ====
+ [source,java]
+ ----
+ @Bean
+ public DefaultJmsHeaderMapper jmsHeaderMapper() {
+     DefaultJmsHeaderMapper mapper = new DefaultJmsHeaderMapper();
+     mapper.setMapInboundDeliveryMode(true)
+     mapper.setMapInboundExpiration(true)
+     return mapper;
+ }
+ ----
+ ====</p>
+<p>These JMS properties are mapped to the <code class="literal">JmsHeaders.DELIVERY_MODE</code> and <code class="literal">JmsHeaders.EXPIRATION</code> Spring Message headers respectively.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-conversion-and-marshalling" href="#jms-conversion-and-marshalling"></a>23.7&nbsp;Message Conversion, Marshalling, and Unmarshalling</h2></div></div></div>
+
+<p>If you need to convert the message, all JMS adapters and gateways let you provide a <code class="literal">MessageConverter</code> by setting the <code class="literal">message-converter</code> attribute.
+To do so, provide the bean name of an instance of <code class="literal">MessageConverter</code> that is available within the same ApplicationContext.
+Also, to provide some consistency with marshaller and unmarshaller interfaces, Spring provides <code class="literal">MarshallingMessageConverter</code>, which you can configure with your own custom marshallers and unmarshallers.
+The following example shows how to do so</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:inbound-gateway</span> <span class="hl-attribute">request-destination</span>=<span class="hl-value">"requestQueue"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"inbound-gateway-channel"</span>
+    <span class="hl-attribute">message-converter</span>=<span class="hl-value">"marshallingMessageConverter"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"marshallingMessageConverter"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.jms.support.converter.MarshallingMessageConverter"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.bar.SampleMarshaller"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.bar.SampleUnmarshaller"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When you provide your own <code class="literal">MessageConverter</code> instance, it is still wrapped within the <code class="literal">HeaderMappingMessageConverter</code>.
+This means that the <span class="emphasis"><em>extract-request-payload</em></span> and <span class="emphasis"><em>extract-reply-payload</em></span> properties can affect the actual objects passed to your converter.
+The <code class="literal">HeaderMappingMessageConverter</code> itself delegates to a target <code class="literal">MessageConverter</code> while also mapping the Spring Integration <code class="literal">MessageHeaders</code> to JMS message properties and back again.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-channel" href="#jms-channel"></a>23.8&nbsp;JMS-backed Message Channels</h2></div></div></div>
+
+<p>The channel adapters and gateways featured earlier are all intended for applications that integrate with other external systems.
+The inbound options assume that some other system is sending JMS messages to the JMS destination, and the outbound options assume that some other system is receiving from the destination.
+The other system may or may not be a Spring Integration application.
+Of course, when sending a Spring Integration message instance as the body of the JMS message itself (with <span class="emphasis"><em>extract-payload</em></span> value set to <code class="literal">false</code>), it is assumed that the other system is based on Spring Integration.
+However, that is by no means a requirement.
+That flexibility is one of the benefits of using a message-based integration option with the abstraction of "<code class="literal">channels</code>"( or destinations in the case of JMS).</p>
+<p>Sometimes, both the producer and consumer for a given JMS Destination are intended to be part of the same application, running within the same process.
+You can accomplish this by using a pair of inbound and outbound channel adapters.
+The problem with that approach is that you need two adapters, even though, conceptually, the goal is to have a single message channel.
+A better option is supported as of Spring Integration version 2.0.
+Now it is possible to define a single "<code class="literal">channel</code>" when using the JMS namespace, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsChannel"</span> <span class="hl-attribute">queue</span>=<span class="hl-value">"exampleQueue"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The channel in the preceding example behaves much like a normal <code class="literal">&lt;channel/&gt;</code> element from the main Spring Integration namespace.
+It can be referenced by both the <code class="literal">input-channel</code> and <code class="literal">output-channel</code> attributes of any endpoint.
+The difference is that this channel is backed by a JMS Queue instance named <code class="literal">exampleQueue</code>.
+This means that asynchronous messaging is possible between the producing and consuming endpoints.
+However, unlike the simpler asynchronous message channels created by adding a <code class="literal">&lt;queue/&gt;</code> element within a non-JMS <code class="literal">&lt;channel/&gt;</code> element, the messages are not stored in an in-memory queue.
+Instead, those messages are passed within a JMS message body, and the full power of the underlying JMS provider is then available for that channel.
+Probably the most common rationale for using this alternative is to take advantage of the persistence made available by the store-and-forward approach of JMS messaging.</p>
+<p>If configured properly, the JMS-backed message channel also supports transactions.
+In other words, a producer would not actually write to a transactional JMS-backed channel if its send operation is part of a transaction that rolls back.
+Likewise, a consumer would not physically remove a JMS message from the channel if the reception of that message is part of a transaction that rolls back.
+Note that the producer and consumer transactions are separate in such a scenario.
+This is significantly different than the propagation of a transactional context across a simple, synchronous <code class="literal">&lt;channel/&gt;</code> element that has no <code class="literal">&lt;queue/&gt;</code> child element.</p>
+<p>Since the preceding example above references a JMS Queue instance, it acts as a point-to-point channel.
+If, on the other hand, you need publish-subscribe behavior, you can use a separate element and reference a JMS Topic instead.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:publish-subscribe-channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsChannel"</span> <span class="hl-attribute">topic</span>=<span class="hl-value">"exampleTopic"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>For either type of JMS-backed channel, the name of the destination may be provided instead of a reference, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsQueueChannel"</span> <span class="hl-attribute">queue-name</span>=<span class="hl-value">"exampleQueueName"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;jms:publish-subscribe-channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsTopicChannel"</span> <span class="hl-attribute">topic-name</span>=<span class="hl-value">"exampleTopicName"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>In the preceding examples, the destination names are resolved by Spring&#8217;s default <code class="literal">DynamicDestinationResolver</code> implementation, but you could provide any implementation of the <code class="literal">DestinationResolver</code> interface.
+Also, the JMS <code class="literal">ConnectionFactory</code> is a required property of the channel, but, by default, the expected bean name would be <code class="literal">jmsConnectionFactory</code>.
+The following example provides both a custom instance for resolution of the JMS destination names and a different name for the <code class="literal">ConnectionFactory</code>:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jms:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jmsChannel"</span> <span class="hl-attribute">queue-name</span>=<span class="hl-value">"exampleQueueName"</span>
+    <span class="hl-attribute">destination-resolver</span>=<span class="hl-value">"customDestinationResolver"</span>
+    <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"customConnectionFactory"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>For the <code class="literal">&lt;publish-subscribe-channel /&gt;</code>, set the <code class="literal">durable</code> attribute to <code class="literal">true</code> for a durable subscription or <code class="literal">subscription-shared</code> for a shared subscription (requires a JMS 2.0 broker and has been available since version 4.2).
+Use <code class="literal">subscription</code> to name the subscription.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-selectors" href="#jms-selectors"></a>23.9&nbsp;Using JMS Message Selectors</h2></div></div></div>
+
+<p>With JMS message selectors, you can filter <a class="ulink" href="http://docs.oracle.com/javaee/6/api/javax/jms/Message.html" target="_top">JMS Messages</a> based on JMS headers as well as JMS properties.
+For example, if you want to listen to messages whose custom JMS header property, <code class="literal">myHeaderProperty</code>, equals <code class="literal">something</code>, you can specify the following expression:</p>
+<div class="informalexample">
+<pre class="programlisting">myHeaderProperty = 'something'</pre>
+</div>
+<p>Message selector expressions are a subset of the <a class="ulink" href="http://en.wikipedia.org/wiki/SQL-92" target="_top">SQL-92</a> conditional expression syntax and are defined as part of the <a class="ulink" href="http://download.oracle.com/otn-pub/jcp/7195-jms-1.1-fr-spec-oth-JSpec/jms-1_1-fr-spec.pdf" target="_top">Java Message Service</a> specification (Version 1.1, April 12, 2002).
+Specifically, see chapter "3.8, Message Selection".
+It contains a detailed explanation of the expressions syntax.</p>
+<p>You can specify the JMS message <code class="literal">selector</code> attribute by using XML namespace configuration for the following Spring Integration JMS components:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+JMS Channel
+</li><li class="listitem">
+JMS Publish Subscribe Channel
+</li><li class="listitem">
+JMS Inbound Channel Adapter
+</li><li class="listitem">
+JMS Inbound Gateway
+</li><li class="listitem">
+JMS Message-driven Channel Adapter
+</li></ul></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>You cannot reference message body values by using JMS Message selectors.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jms-samples" href="#jms-samples"></a>23.10&nbsp;JMS Samples</h2></div></div></div>
+
+<p>To experiment with these JMS adapters, check out the JMS samples available in the Spring Integration Samples Git repository at <a class="ulink" href="https://github.com/SpringSource/spring-integration-samples/tree/master/basic/jms" target="_top">https://github.com/SpringSource/spring-integration-samples/tree/master/basic/jms</a>.</p>
+<p>That repository includes two samples.
+One provides inbound and outbound channel adapters, and the other provides inbound and outbound gateways.
+They are configured to run with an embedded <a class="ulink" href="http://activemq.apache.org/" target="_top">ActiveMQ</a> process, but you can modify the <a class="ulink" href="https://github.com/SpringSource/spring-integration-samples/blob/master/basic/jms/src/main/resources/META-INF/spring/integration/common.xml" target="_top">common.xml</a> Spring application context file of each sample to support either a different JMS provider or a standalone ActiveMQ process.</p>
+<p>In other words, you can split the configuration so that the inbound and outbound adapters run in separate JVMs.
+If you have ActiveMQ installed,  modify the <code class="literal">brokerURL</code> property within the common.xml file to use <code class="literal">tcp://localhost:61616</code> (instead of <code class="literal">vm://localhost</code>).
+Both of the samples accept input from stdin and echo back to stdout.
+Look at the configuration to see how these messages are routed over JMS.</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="jpa.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="mail.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">22.&nbsp;JPA Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;24.&nbsp;Mail Support</td></tr></table></div></body></html>

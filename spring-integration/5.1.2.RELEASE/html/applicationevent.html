@@ -1,0 +1,78 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>15.&nbsp;Spring ApplicationEvent Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="amqp.html" title="14.&nbsp;AMQP Support"><link rel="next" href="feed.html" title="16.&nbsp;Feed Adapter"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">15.&nbsp;Spring <code class="literal">ApplicationEvent</code> Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="amqp.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="feed.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="applicationevent" href="#applicationevent"></a>15.&nbsp;Spring <code class="literal">ApplicationEvent</code> Support</h2></div></div></div>
+
+<p>Spring Integration provides support for inbound and outbound <code class="literal">ApplicationEvents</code>, as defined by the underlying Spring Framework.
+For more information about Spring&#8217;s support for events and listeners, see the <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/beans.html#context-functionality-events" target="_top">Spring Reference Manual</a>.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-event<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-event:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="appevent-inbound" href="#appevent-inbound"></a>15.1&nbsp;Receiving Spring Application Events</h2></div></div></div>
+
+<p>To receive events and send them to a channel, you can define an instance of Spring Integration&#8217;s <code class="literal">ApplicationEventListeningMessageProducer</code>.
+This class is an implementation of Spring&#8217;s <code class="literal">ApplicationListener</code> interface.
+By default, it passes all received events as Spring Integration messages.
+To limit based on the type of event, you can use the <span class="emphasis"><em>eventTypes</em></span> property to configure the list of event types that you want to receive.
+If a received event has a <code class="literal">Message</code> instance as its <span class="emphasis"><em>source</em></span>, that <code class="literal">Message</code> is passed as-is.
+Otherwise, if a SpEL-based <code class="literal">payloadExpression</code> has been provided, that is evaluated against the <code class="literal">ApplicationEvent</code> instance.
+If the event&#8217;s source is not a <code class="literal">Message</code> instance and no <code class="literal">payloadExpression</code> has been provided, the <code class="literal">ApplicationEvent</code> itself is passed as the payload.</p>
+<p>Starting with version 4.2, the <code class="literal">ApplicationEventListeningMessageProducer</code> implements <code class="literal">GenericApplicationListener</code> and can be configured to accept not only <code class="literal">ApplicationEvent</code> types but any type for treating payload events (which are also supported since Spring Framework 4.2).
+When the accepted event is an instance of <code class="literal">PayloadApplicationEvent</code>, its <code class="literal">payload</code> is used for the message to send.</p>
+<p>For convenience, namespace support is provided to configure&nbsp;an <code class="literal">ApplicationEventListeningMessageProducer</code> with the <code class="literal">inbound-channel-adapter</code> element, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-event:inbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"eventChannel"</span>
+                                   <span class="hl-attribute">error-channel</span>=<span class="hl-value">"eventErrorChannel"</span>
+                                   <span class="hl-attribute">event-types</span>=<span class="hl-value">"example.FooEvent, example.BarEvent, java.util.Date"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:publish-subscribe-channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"eventChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>In the preceding example, all application context events that match one of the types specified by the <span class="emphasis"><em>event-types</em></span> (optional) attribute are delivered as Spring Integration messages to the message channel named <span class="emphasis"><em>eventChannel</em></span>.
+If a downstream component throws an exception, a <code class="literal">MessagingException</code> that contains the failed message and exception is sent to the channel named <span class="emphasis"><em>eventErrorChannel</em></span>.
+If no <code class="literal">error-channel</code> is specified and the downstream channels are synchronous, the exception is propagated to the caller.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="appevent-outbound" href="#appevent-outbound"></a>15.2&nbsp;Sending Spring Application Events</h2></div></div></div>
+
+<p>To send Spring <code class="literal">ApplicationEvents</code>, create an instance of the <code class="literal">ApplicationEventPublishingMessageHandler</code> and register it within an endpoint.
+This implementation of the <code class="literal">MessageHandler</code> interface also implements Spring&#8217;s <code class="literal">ApplicationEventPublisherAware</code> interface and consequently acts as a bridge between Spring Integration messages and <code class="literal">ApplicationEvents</code>.</p>
+<p>For convenience, namespace support is provided to configure&nbsp;an <code class="literal">ApplicationEventPublishingMessageHandler</code> with the <code class="literal">outbound-channel-adapter</code> element, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"eventChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-event:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"eventChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>If you use a <code class="literal">PollableChannel</code> (such as a <code class="literal">Queue</code>), you can also provide <code class="literal">poller</code> as a child element of the <code class="literal">outbound-channel-adapter</code> element.
+You can also optionally provide a <code class="literal">task-executor</code> reference for that poller.
+The following example demonstrates both:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"eventChannel"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;int:queue/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span>
+
+<span class="hl-tag">&lt;int-event:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"eventChannel"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"1"</span> <span class="hl-attribute">task-executor</span>=<span class="hl-value">"executor"</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"100"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-event:outbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;task:executor</span> <span class="hl-attribute">id</span>=<span class="hl-value">"executor"</span> <span class="hl-attribute">pool-size</span>=<span class="hl-value">"5"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>In the preceding example, all messages sent to the <span class="emphasis"><em>eventChannel</em></span> channel are published as <code class="literal">ApplicationEvent</code> instances to any relevant <code class="literal">ApplicationListener</code> instances that are registered within the same Spring <code class="literal">ApplicationContext</code>.
+If the payload of the message is an <code class="literal">ApplicationEvent</code>, it is passed as-is.
+Otherwise, the message itself is wrapped in a <code class="literal">MessagingEvent</code> instance.</p>
+<p>Starting with version 4.2, you can configure the <code class="literal">ApplicationEventPublishingMessageHandler</code> (<code class="literal">&lt;int-event:outbound-channel-adapter&gt;</code>) with the <code class="literal">publish-payload</code> boolean attribute to publish to the application context <code class="literal">payload</code> as is, instead of wrapping it to a <code class="literal">MessagingEvent</code> instance.</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="amqp.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="feed.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">14.&nbsp;AMQP Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;16.&nbsp;Feed Adapter</td></tr></table></div></body></html>

@@ -1,0 +1,1238 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>12.&nbsp;System Management</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-core-messaging.html" title="Part&nbsp;IV.&nbsp;Core Messaging"><link rel="prev" href="java-dsl.html" title="11.&nbsp;Java DSL"><link rel="next" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">12.&nbsp;System Management</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="java-dsl.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;IV.&nbsp;Core Messaging</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="spring-integration-endpoints.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="system-management-chapter" href="#system-management-chapter"></a>12.&nbsp;System Management</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="metrics-management" href="#metrics-management"></a>12.1&nbsp;Metrics and Management</h2></div></div></div>
+
+<p>This section describes how to capture metrics for Spring Integration. In recent versions, we have relied more on Micrometer (see <a class="ulink" href="http://micrometer.io" target="_top">http://micrometer.io</a>), and we plan to use Micrometer even more in future releases.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="configuring-metrics-capture" href="#configuring-metrics-capture"></a>12.1.1&nbsp;Configuring Metrics Capture</h3></div></div></div>
+
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Prior to version 4.2, metrics were only available when JMX was enabled.
+See <a class="xref" href="system-management-chapter.html#jmx" title="12.2&nbsp;JMX Support">Section&nbsp;12.2, &#8220;JMX Support&#8221;</a>.</p>
+</td></tr></table></div>
+<p>To enable <code class="literal">MessageSource</code>, <code class="literal">MessageChannel</code>, and <code class="literal">MessageHandler</code> metrics, add an <code class="literal">&lt;int:management/&gt;</code> bean to the application context (in XML) or annotate one of your <code class="literal">@Configuration</code> classes with <code class="literal">@EnableIntegrationManagement</code> (in Java).
+<code class="literal">MessageSource</code> instances maintain only counts, <code class="literal">MessageChannel</code> instances and <code class="literal">MessageHandler</code> instances maintain duration statistics in addition to counts.
+See <a class="xref" href="system-management-chapter.html#mgmt-channel-features" title="12.1.3&nbsp;MessageChannel Metric Features">Section&nbsp;12.1.3, &#8220;<code class="literal">MessageChannel</code> Metric Features&#8221;</a> and <a class="xref" href="system-management-chapter.html#mgmt-handler-features" title="12.1.4&nbsp;MessageHandler Metric Features">Section&nbsp;12.1.4, &#8220;MessageHandler Metric Features&#8221;</a>, later in this chapter.</p>
+<p>Doing so causes the automatic registration of the <code class="literal">IntegrationManagementConfigurer</code> bean in the application context.
+Only one such bean can exist in the context, and, if registered manually via a <code class="literal">&lt;bean/&gt;</code> definition, it must have the bean name set to <code class="literal">integrationManagementConfigurer</code>.
+This bean applies its configuration to beans after all beans in the context have been instantiated.</p>
+<p>In addition to metrics, you can control debug logging in the main message flow.
+In very high volume applications, even calls to <code class="literal">isDebugEnabled()</code> can be quite expensive with some logging subsystems.
+You can disable all such logging to avoid this overhead.
+Exception logging (debug or otherwise) is not affected by this setting.</p>
+<p>The following listing shows the available options for controlling logging:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:management</span>
+    <span class="hl-attribute">default-logging-enabled</span>=<span class="hl-value">"true"</span> <a name="CO17-1" href="#CO17-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    default-counts-enabled="false" <a name="CO17-2" href="#CO17-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    default-stats-enabled="false" <a name="CO17-3" href="#CO17-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    counts-enabled-patterns="foo, !baz, ba*" <a name="CO17-4" href="#CO17-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    stats-enabled-patterns="fiz, buz" <a name="CO17-5" href="#CO17-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    metrics-factory="myMetricsFactory" /&gt; <a name="CO17-6" href="#CO17-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span></pre>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+@EnableIntegrationManagement(
+    defaultLoggingEnabled = <span class="hl-string">"true"</span>, <a name="CO17-7" href="#CO17-7"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+    defaultCountsEnabled = <span class="hl-string">"false"</span>, <a name="CO17-8" href="#CO17-8"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+    defaultStatsEnabled = <span class="hl-string">"false"</span>, <a name="CO17-9" href="#CO17-9"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    countsEnabled = { <span class="hl-string">"foo"</span>, <span class="hl-string">"${count.patterns}"</span> }, <a name="CO17-10" href="#CO17-10"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    statsEnabled = { <span class="hl-string">"qux"</span>, <span class="hl-string">"!*"</span> }, <a name="CO17-11" href="#CO17-11"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    MetricsFactory = <span class="hl-string">"myMetricsFactory"</span>) <a name="CO17-12" href="#CO17-12"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+<span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">class</span> ContextConfiguration {
+...
+}</pre>
+</div>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO17-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> <a href="#CO17-7"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Set to <code class="literal">false</code> to disable all logging in the main message flow, regardless of the log system category settings.
+Set to <span class="emphasis"><em>true</em></span> to enable debug logging (if also enabled by the logging subsystem).
+Only applied if you have not explicitly configured the setting in a bean definition.
+The default is <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO17-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> <a href="#CO17-8"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Enable or disable count metrics for components that do not match one of the patterns in &lt;4&gt;.
+Only applied if you have not explicitly configured the setting in a bean definition.
+The default is <code class="literal">false</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO17-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> <a href="#CO17-9"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Enable or disable statistical metrics for components that do not match one of the patterns in &lt;5&gt;.
+Only applied if you have not explicitly configured the setting in a bean definition.
+The default is <span class="emphasis"><em>false</em></span>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO17-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> <a href="#CO17-10"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A comma-delimited list of patterns for beans for which counts should be enabled.
+You can negate the pattern with <code class="literal">!</code>.
+First match (positive or negative) wins.
+In the unlikely event that you have a bean name starting with <code class="literal">!</code>, escape the <code class="literal">!</code> in the pattern.
+For example, <code class="literal">\!something</code> positively matches a bean named <code class="literal">!something</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO17-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> <a href="#CO17-11"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A comma-delimited list of patterns for beans for which statistical metrics should be enabled.
+You can negate the pattern\ with <code class="literal">!</code>.
+First match (positive or negative) wins.
+In the unlikely event that you have a bean name starting with <code class="literal">!</code>, escape the <code class="literal">!</code> in the pattern.
+<code class="literal">\!something</code> positively matches a bean named <code class="literal">!something</code>.
+The collection of statistics implies the collection of counts.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO17-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> <a href="#CO17-12"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to a <code class="literal">MetricsFactory</code>.
+See <a class="xref" href="system-management-chapter.html#mgmt-metrics-factory" title="12.1.6&nbsp;Metrics Factory">Section&nbsp;12.1.6, &#8220;Metrics Factory&#8221;</a>.</p>
+</td></tr></table></div>
+<p>At runtime, counts and statistics can be obtained by calling <code class="literal">getChannelMetrics</code>, <code class="literal">getHandlerMetrics</code> and <code class="literal">getSourceMetrics</code> (all from the <code class="literal">IntegrationManagementConfigurer</code> class), which return <code class="literal">MessageChannelMetrics</code>, <code class="literal">MessageHandlerMetrics</code>, and <code class="literal">MessageSourceMetrics</code>, respectively.</p>
+<p>See the <a class="ulink" href="https://docs.spring.io/spring-integration/api/index.html" target="_top">Javadoc</a> for complete information about these classes.</p>
+<p>When JMX is enabled (see <a class="xref" href="system-management-chapter.html#jmx" title="12.2&nbsp;JMX Support">Section&nbsp;12.2, &#8220;JMX Support&#8221;</a>), <code class="literal">IntegrationMBeanExporter</code> also exposes these metrics.</p>
+<p>IMPORTANT:
+<code class="literal">defaultLoggingEnabled</code>, <code class="literal">defaultCountsEnabled</code>, and <code class="literal">defaultStatsEnabled</code> are applied only if you have not explicitly configured the corresponding setting in a bean definition.</p>
+<p>Starting with version 5.0.2, the framework automatically detects whether the application context has a single <code class="literal">MetricsFactory</code> bean and, if so, uses it instead of the default metrics factory.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="micrometer-integration" href="#micrometer-integration"></a>12.1.2&nbsp;Micrometer Integration</h3></div></div></div>
+
+<p>Starting with version 5.0.3, the presence of a <a class="ulink" href="https://micrometer.io/" target="_top">Micrometer</a> <code class="literal">MeterRegistry</code> in the application context triggers support for Micrometer metrics in addition to the built-in metrics (note that built-in metrics will be removed in a future release).</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Micrometer was first supported in version 5.0.2, but changes were made to the Micrometer <code class="literal">Meters</code> in version 5.0.3 to make them more suitable for use in dimensional systems.
+Further changes were made in 5.0.4.
+If you use Micrometer, a minimum of version 5.0.4 is recommended, since some of the changes in 5.0.4 were breaking API changes.</p>
+</td></tr></table></div>
+<p>To use Micrometer, add one of the <code class="literal">MeterRegistry</code> beans to the application context.
+If the <code class="literal">IntegrationManagementConfigurer</code> detects exactly one <code class="literal">MeterRegistry</code> bean, it configures a <code class="literal">MicrometerMetricsCaptor</code> bean with a name of <code class="literal">integrationMicrometerMetricsCaptor</code>.</p>
+<p>For each <code class="literal">MessageHandler</code> and <code class="literal">MessageChannel</code>, timers are registered.
+For each <code class="literal">MessageSource</code>, a counter is registered.</p>
+<p>This only applies to objects that extend <code class="literal">AbstractMessageHandler</code>, <code class="literal">AbstractMessageChannel</code>, and <code class="literal">AbstractMessageSource</code> (which is the case for most framework components).</p>
+<p>With Micrometer metrics, the <code class="literal">statsEnabled</code> flag has no effect, since statistics capture is delegated to Micrometer.
+The <code class="literal">countsEnabled</code> flag controls whether the Micrometer <code class="literal">Meter</code> instances are updated when processing each message.</p>
+<p>The <code class="literal">Timer</code> Meters for send operations on message channels have the following names or tags:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">name</code>: <code class="literal">spring.integration.send</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">type:channel</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">name:&lt;componentName&gt;</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">result:(success|failure)</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">exception:(none|exception simple class name)</code>
+</li><li class="listitem">
+<code class="literal">description</code>: <code class="literal">Send processing time</code>
+</li></ul></div>
+<p>(A <code class="literal">failure</code> result with a <code class="literal">none</code> exception means the channel&#8217;s <code class="literal">send()</code> operation returned <code class="literal">false</code>.)</p>
+<p>The <code class="literal">Counter</code> Meters for receive operations on pollable message channels have the following names or tags:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">name</code>: <code class="literal">spring.integration.receive</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">type:channel</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">name:&lt;componentName&gt;</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">result:(success|failure)</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">exception:(none|exception simple class name)</code>
+</li><li class="listitem">
+<code class="literal">description</code>: <code class="literal">Messages received</code>
+</li></ul></div>
+<p>The <code class="literal">Timer</code> Meters for operations on message handlers have the following names or tags:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">name</code>: <code class="literal">spring.integration.send</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">type:handler</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">name:&lt;componentName&gt;</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">result:(success|failure)</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">exception:(none|exception simple class name)</code>
+</li><li class="listitem">
+<code class="literal">description</code>: <code class="literal">Send processing time</code>
+</li></ul></div>
+<p>The <code class="literal">Counter</code> meters for message sources have the following names/tags:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">name</code>: <code class="literal">spring.integration.receive</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">type:source</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">name:&lt;componentName&gt;</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">result:success</code>
+</li><li class="listitem">
+<code class="literal">tag</code>: <code class="literal">exception:none</code>
+</li><li class="listitem">
+<code class="literal">description</code>: <code class="literal">Messages received</code>
+</li></ul></div>
+<p>In addition, there are three <code class="literal">Gauge</code> Meters:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">spring.integration.channels</code>: The number of <code class="literal">MessageChannels</code> in the application.
+</li><li class="listitem">
+<code class="literal">spring.integration.handlers</code>: The number of <code class="literal">MessageHandlers</code> in the application.
+</li><li class="listitem">
+<code class="literal">spring.integration.sources</code>: The number of <code class="literal">MessageSources</code> in the application.
+</li></ul></div>
+<p>It is possible to customize the names and tags of <code class="literal">Meters</code> created by integration components by providing a subclass of <code class="literal">MicrometerMetricsCaptor</code>.
+The <a class="ulink" href="https://github.com/spring-projects/spring-integration/blob/master/spring-integration-core/src/test/java/org/springframework/integration/support/management/micrometer/MicrometerCustomMetricsTests.java" target="_top">MicrometerCustomMetricsTests</a> test case shows a simple example of how to do that.
+You can also further customize the meters by overloading the <code class="literal">build()</code> methods on builder subclasses.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="mgmt-channel-features" href="#mgmt-channel-features"></a>12.1.3&nbsp;<code class="literal">MessageChannel</code> Metric Features</h3></div></div></div>
+
+<p>These legacy metrics will be removed in a future release.
+See <a class="xref" href="system-management-chapter.html#micrometer-integration" title="12.1.2&nbsp;Micrometer Integration">Section&nbsp;12.1.2, &#8220;Micrometer Integration&#8221;</a>.</p>
+<p>Message channels report metrics according to their concrete type.
+If you are looking at a <code class="literal">DirectChannel</code>, you see statistics for the send operation.
+If it is a <code class="literal">QueueChannel</code>, you also see statistics for the receive operation as well as the count of messages that are currently buffered by this <code class="literal">QueueChannel</code>.
+In both cases, some metrics are simple counters (message count and error count), and some are estimates of averages of interesting quantities.
+The algorithms used to calculate these estimates are described briefly in the following table.</p>
+<div class="table"><a name="d5e9573" href="#d5e9573"></a><p class="title"><b>Table&nbsp;12.1.&nbsp;MessageChannel Metrics</b></p><div class="table-contents">
+
+<table summary="MessageChannel Metrics" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Metric Type</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Example</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Algorithm</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Count</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Send Count</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Simple incrementer.
+Increases by one when an event occurs.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Error Count</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Send Error Count</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Simple incrementer.
+Increases by one when an send results in an error.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Duration</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Send Duration (method execution time in milliseconds)</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Exponential moving average with decay factor (ten by default).
+Average of the method execution time over roughly the last ten (by default) measurements.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Rate</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Send Rate (number of operations per second)</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Inverse of Exponential moving average of the interval between events with decay in time (lapsing over 60 seconds by default) and per measurement (last ten events by default).</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Error Rate</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Send Error Rate (number of errors per second)</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Inverse of exponential moving average of the interval between error events with decay in time (lapsing over 60 seconds by default) and per measurement (last ten events by default).</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p>Ratio</p></td><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p>Send Success Ratio (ratio of successful to total sends)</p></td><td style="" align="left" valign="top"><p>Estimate the success ratio as the exponential moving average of the series composed of values (1 for success and 0 for failure, decaying as per the rate measurement over time and events by default).
+The error ratio is: 1 - success ratio.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="mgmt-handler-features" href="#mgmt-handler-features"></a>12.1.4&nbsp;MessageHandler Metric Features</h3></div></div></div>
+
+<p>These legacy metrics will be removed in a future release. See <a class="xref" href="system-management-chapter.html#micrometer-integration" title="12.1.2&nbsp;Micrometer Integration">Section&nbsp;12.1.2, &#8220;Micrometer Integration&#8221;</a>.</p>
+<p>The following table shows the statistics maintained for message handlers.
+Some metrics are simple counters (message count and error count), and one is an estimate of averages of send duration.
+The algorithms used to calculate these estimates are described briefly in the following table:</p>
+<div class="table"><a name="d5e9632" href="#d5e9632"></a><p class="title"><b>Table&nbsp;12.2.&nbsp;MessageHandlerMetrics</b></p><div class="table-contents">
+
+<table summary="MessageHandlerMetrics" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Metric Type</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Example</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Algorithm</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Count</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Handle Count</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Simple incrementer.
+Increases by one when an event occurs.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Error Count</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Handler Error Count</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Simple incrementer.
+Increases by one when an invocation results in an error.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Active Count</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Handler Active Count</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Indicates the number of currently active threads currently invoking the handler (or any downstream synchronous flow).</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p>Duration</p></td><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p>Handle Duration (method execution time in milliseconds)</p></td><td style="" align="left" valign="top"><p>Exponential moving average with decay factor (ten by default).
+Average of the method execution time over roughly the last ten (default) measurements.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="mgmt-statistics" href="#mgmt-statistics"></a>12.1.5&nbsp;Time-Based Average Estimates</h3></div></div></div>
+
+<p>A feature of the time-based average estimates is that they decay with time if no new measurements arrive.
+To help interpret the behavior over time, the time (in seconds) since the last measurement is also exposed as a metric.</p>
+<p>There are two basic exponential models: decay per measurement (appropriate for duration and anything where the number of measurements is part of the metric) and decay per time unit (more suitable for rate measurements where the time in between measurements is part of the metric).
+Both models depend on the fact that <code class="literal">S(n) = sum(i=0,i=n) w(i) x(i)</code> has a special form when <code class="literal">w(i) = r^i</code>, with <code class="literal">r=constant</code>: <code class="literal">S(n) = x(n) + r S(n-1)</code> (so you only have to store <code class="literal">S(n-1)</code> (not the whole series <code class="literal">x(i)</code>) to generate a new metric estimate from the last measurement).
+The algorithms used in the duration metrics use <code class="literal">r=exp(-1/M)</code> with <code class="literal">M=10</code>.
+The net effect is that the estimate, <code class="literal">S(n)</code>, is more heavily weighted to recent measurements and is composed roughly of the last <code class="literal">M</code> measurements.
+So <code class="literal">M</code> is the "<code class="literal">window</code>" or lapse rate of the estimate.
+For the vanilla moving average, <code class="literal">i</code> is a counter over the number of measurements.
+For the rate, we interpret <code class="literal">i</code> as the elapsed time or a combination of elapsed time and a counter (so the metric estimate contains contributions roughly from the last <code class="literal">M</code> measurements and the last <code class="literal">T</code> seconds).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="mgmt-metrics-factory" href="#mgmt-metrics-factory"></a>12.1.6&nbsp;Metrics Factory</h3></div></div></div>
+
+<p>A strategy interface <code class="literal">MetricsFactory</code> has been introduced to let you provide custom channel metrics for your <code class="literal">MessageChannel</code> instances and <code class="literal">MessageHandler</code> instances.
+By default, a <code class="literal">DefaultMetricsFactory</code> provides a default implementation of <code class="literal">MessageChannelMetrics</code> and <code class="literal">MessageHandlerMetrics</code>, <a class="link" href="system-management-chapter.html#configuring-metrics-capture" title="12.1.1&nbsp;Configuring Metrics Capture">described earlier</a>.
+To override the default <code class="literal">MetricsFactory</code>, configure it as <a class="link" href="system-management-chapter.html#configuring-metrics-capture" title="12.1.1&nbsp;Configuring Metrics Capture">described earlier</a>, by providing a reference to your <code class="literal">MetricsFactory</code> bean instance.
+You can either customize the default implementations, as described in the next section, or provide completely different
+implementations by extending <code class="literal">AbstractMessageChannelMetrics</code> or <code class="literal">AbstractMessageHandlerMetrics</code>.</p>
+<p>See also <a class="xref" href="system-management-chapter.html#micrometer-integration" title="12.1.2&nbsp;Micrometer Integration">Section&nbsp;12.1.2, &#8220;Micrometer Integration&#8221;</a>.</p>
+<p>In addition to the default metrics factory <a class="link" href="system-management-chapter.html#configuring-metrics-capture" title="12.1.1&nbsp;Configuring Metrics Capture">described earlier</a>, the framework provides the <code class="literal">AggregatingMetricsFactory</code>.
+This factory creates <code class="literal">AggregatingMessageChannelMetrics</code> and <code class="literal">AggregatingMessageHandlerMetrics</code> instances.
+In very high volume scenarios, the cost of capturing statistics can be prohibitive (the time to make two calls to the system and
+store the data for each message).
+The aggregating metrics aggregate the response time over a sample of messages.
+This can save significant CPU time.</p>
+<div class="caution" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Caution"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="images/caution.png"></td><th align="left">Caution</th></tr><tr><td align="left" valign="top">
+<p>The statistics are likely to be skewed if messages arrive in bursts.
+These metrics are intended for use with high, constant-volume, message rates.</p>
+</td></tr></table></div>
+<p>The following example shows how to define an aggregrating metrics factory:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"aggregatingMetricsFactory"</span>
+            <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.support.management.AggregatingMetricsFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"1000"</span><span class="hl-tag"> /&gt;</span> <span class="hl-comment">&lt;!-- sample size --&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<p>The preceding configuration aggregates the duration over 1000 messages.
+Counts (send and error) are maintained per-message, but the statistics are per 1000 messages.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_customizing_the_default_channel_and_handler_statistics" href="#_customizing_the_default_channel_and_handler_statistics"></a>Customizing the Default Channel and Handler Statistics</h4></div></div></div>
+
+<p>See <a class="xref" href="system-management-chapter.html#mgmt-statistics" title="12.1.5&nbsp;Time-Based Average Estimates">Section&nbsp;12.1.5, &#8220;Time-Based Average Estimates&#8221;</a> and the <a class="ulink" href="https://docs.spring.io/spring-integration/api/index.html" target="_top">Javadoc</a> for the <code class="literal">ExponentialMovingAverage*</code> classes for more information about these values.</p>
+<p>By default, the <code class="literal">DefaultMessageChannelMetrics</code> and <code class="literal">DefaultMessageHandlerMetrics</code> use a "<code class="literal">window</code>" of ten measurements,
+a rate period of one second (meaning rate per second) and a decay lapse period of one minute.</p>
+<p>If you wish to override these defaults, you can provide a custom <code class="literal">MetricsFactory</code> that returns appropriately configured
+metrics and provide a reference to it in the MBean exporter, as <a class="link" href="system-management-chapter.html#mgmt-metrics-factory" title="12.1.6&nbsp;Metrics Factory">described earlier</a>.</p>
+<p>The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">class</span> CustomMetrics <span class="hl-keyword">implements</span> MetricsFactory {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> AbstractMessageChannelMetrics createChannelMetrics(String name) {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DefaultMessageChannelMetrics(name,
+                <span class="hl-keyword">new</span> ExponentialMovingAverage(<span class="hl-number">20</span>, <span class="hl-number">1000000.</span>),
+                <span class="hl-keyword">new</span> ExponentialMovingAverageRate(<span class="hl-number">2000</span>, <span class="hl-number">120000</span>, <span class="hl-number">30</span>, true),
+                <span class="hl-keyword">new</span> ExponentialMovingAverageRatio(<span class="hl-number">130000</span>, <span class="hl-number">40</span>, true),
+                <span class="hl-keyword">new</span> ExponentialMovingAverageRate(<span class="hl-number">3000</span>, <span class="hl-number">140000</span>, <span class="hl-number">50</span>, true));
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> AbstractMessageHandlerMetrics createHandlerMetrics(String name) {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DefaultMessageHandlerMetrics(name, <span class="hl-keyword">new</span> ExponentialMovingAverage(<span class="hl-number">20</span>, <span class="hl-number">1000000.</span>));
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_advanced_customization" href="#_advanced_customization"></a>Advanced Customization</h4></div></div></div>
+
+<p>The customizations described earlier are wholesale and apply to all appropriate beans exported by the MBean exporter.
+This is the extent of customization available when you use XML configuration.</p>
+<p>Individual beans can be provided with different implementations using by Java <code class="literal">@Configuration</code> or programmatically at
+runtime (after the application context has been refreshed) by invoking the <code class="literal">configureMetrics</code> methods on
+<code class="literal">AbstractMessageChannel</code> and <code class="literal">AbstractMessageHandler</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_performance_improvement" href="#_performance_improvement"></a>Performance Improvement</h4></div></div></div>
+
+<p>Previously, the time-based metrics (see <a class="xref" href="system-management-chapter.html#mgmt-statistics" title="12.1.5&nbsp;Time-Based Average Estimates">Section&nbsp;12.1.5, &#8220;Time-Based Average Estimates&#8221;</a>) were calculated in real time.
+The statistics are now calculated when retrieved instead.
+This resulted in a significant performance improvement, at the expense of a small amount of additional memory for each statistic.
+As <a class="link" href="system-management-chapter.html#configuring-metrics-capture" title="12.1.1&nbsp;Configuring Metrics Capture">discussed earlier</a>, you can disable the statistics altogether while retaining the MBean that allows the invocation of <code class="literal">Lifecycle</code> methods.</p>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jmx" href="#jmx"></a>12.2&nbsp;JMX Support</h2></div></div></div>
+
+<p>Spring Integration provides channel Adapters for receiving and publishing JMX Notifications.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-jmx<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-jmx:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<p>An inbound channel adapter allows for polling JMX MBean attribute values, and an outbound channel adapter allows for invoking JMX MBean operations.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jmx-notification-listening-channel-adapter" href="#jmx-notification-listening-channel-adapter"></a>12.2.1&nbsp;Notification-listening Channel Adapter</h3></div></div></div>
+
+<p>The notification-listening channel adapter requires a JMX <code class="literal">ObjectName</code> for the MBean that publishes notifications to which this listener should be registered.
+A very simple configuration might resemble the following:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jmx:notification-listening-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"channel"</span>
+    <span class="hl-attribute">object-name</span>=<span class="hl-value">"example.domain:name=publisher"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">notification-listening-channel-adapter</code> registers with an <code class="literal">MBeanServer</code> at startup, and the default bean name is <code class="literal">mbeanServer</code>, which happens to be the same bean name generated when using Spring&#8217;s <code class="literal">&lt;context:mbean-server/&gt;</code> element.
+If you need to use a different name, be sure to include the <code class="literal">mbean-server</code> attribute.</p>
+</td></tr></table></div>
+<p>The adapter can also accept a reference to a <code class="literal">NotificationFilter</code> and a "<code class="literal">handback</code>" object to provide some context that is passed back with each notification.
+Both of those attributes are optional.
+Extending the preceding example to include those attributes as well as an explicit <code class="literal">MBeanServer</code> bean name produces the following example:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jmx:notification-listening-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"channel"</span>
+    <span class="hl-attribute">mbean-server</span>=<span class="hl-value">"someServer"</span>
+    <span class="hl-attribute">object-name</span>=<span class="hl-value">"example.domain:name=somePublisher"</span>
+    <span class="hl-attribute">notification-filter</span>=<span class="hl-value">"notificationFilter"</span>
+    <span class="hl-attribute">handback</span>=<span class="hl-value">"myHandback"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The _Notification-listening channel adapter is event-driven and registered with the <code class="literal">MBeanServer</code> directly.
+It does not require any poller configuration.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>For this component only, the <code class="literal">object-name</code> attribute can contain an object name pattern (for example,
+"org.something:type=MyType,name=*").
+In that case, the adapter receives notifications from all MBeans with object names that match the pattern.
+In addition, the <code class="literal">object-name</code> attribute can contain a SpEL reference to a <code class="literal">&lt;util:list&gt;</code> of object name patterns, as the following example shows:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;jmx:notification-listening-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"manyNotificationsAdapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"manyNotificationsChannel"</span>
+    <span class="hl-attribute">object-name</span>=<span class="hl-value">"#{patterns}"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;util:list</span> <span class="hl-attribute">id</span>=<span class="hl-value">"patterns"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;value&gt;</span>org.foo:type=Foo,name=*<span class="hl-tag">&lt;/value&gt;</span>
+    <span class="hl-tag">&lt;value&gt;</span>org.foo:type=Bar,name=*<span class="hl-tag">&lt;/value&gt;</span>
+<span class="hl-tag">&lt;/util:list&gt;</span></pre>
+<p>The names of the located MBean(s) are logged when DEBUG level logging is enabled.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jmx-notification-publishing-channel-adapter" href="#jmx-notification-publishing-channel-adapter"></a>12.2.2&nbsp;Notification-publishing Channel Adapter</h3></div></div></div>
+
+<p>The notification-publishing channel adapter is relatively simple.
+It requires only a JMX object name in its configuration, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;context:mbean-export/&gt;</span>
+
+<span class="hl-tag">&lt;int-jmx:notification-publishing-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"channel"</span>
+    <span class="hl-attribute">object-name</span>=<span class="hl-value">"example.domain:name=publisher"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>It also requires that an <code class="literal">MBeanExporter</code> be present in the context.
+That is why the <code class="literal">&lt;context:mbean-export/&gt;</code> element is also shown in the preceding example.</p>
+<p>When messages are sent to the channel for this adapter, the notification is created from the message content.
+If the payload is a <code class="literal">String</code>, it is passed as the <code class="literal">message</code> text for the notification.
+Any other payload type is passed as the <code class="literal">userData</code> of the notification.</p>
+<p>JMX notifications also have a <code class="literal">type</code>, and it should be a dot-delimited <code class="literal">String</code>.
+There are two ways to provide the <code class="literal">type</code>.
+Precedence is always given to a message header value associated with the <code class="literal">JmxHeaders.NOTIFICATION_TYPE</code> key.
+Alternatively, you can provide a fallback <code class="literal">default-notification-type</code> attribute in the configuration, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;context:mbean-export/&gt;</span>
+
+<span class="hl-tag">&lt;int-jmx:notification-publishing-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"channel"</span>
+    <span class="hl-attribute">object-name</span>=<span class="hl-value">"example.domain:name=publisher"</span>
+    <span class="hl-attribute">default-notification-type</span>=<span class="hl-value">"some.default.type"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jmx-attribute-polling-channel-adapter" href="#jmx-attribute-polling-channel-adapter"></a>12.2.3&nbsp;Attribute-polling Channel Adapter</h3></div></div></div>
+
+<p>The attribute-polling channel adapter is useful when you need to periodically check on some value that is available through an MBean as a managed attribute.
+You can configured the poller in the same way as any other polling adapter in Spring Integration (or you can rely on the default poller).
+The <code class="literal">object-name</code> and the <code class="literal">attribute-name</code> are required.
+An MBeanServer reference is also required.
+However, by default, it automatically checks for a bean named <code class="literal">mbeanServer</code>, same as the notification-listening channel adapter <a class="link" href="system-management-chapter.html#jmx-notification-listening-channel-adapter" title="12.2.1&nbsp;Notification-listening Channel Adapter">described earlier</a>.
+The following example shows how to configure an attribute-polling channel adapter with XML:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jmx:attribute-polling-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"channel"</span>
+    <span class="hl-attribute">object-name</span>=<span class="hl-value">"example.domain:name=someService"</span>
+    <span class="hl-attribute">attribute-name</span>=<span class="hl-value">"InvocationCount"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"1"</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"5000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jmx:attribute-polling-channel-adapter&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="tree-polling-channel-adapter" href="#tree-polling-channel-adapter"></a>12.2.4&nbsp;Tree-polling Channel Adapter</h3></div></div></div>
+
+<p>The tree-polling channel adapter queries the JMX MBean tree and sends a message with a payload that is the graph of objects that matches the query.
+By default, the MBeans are mapped to primitives and simple objects, such as <code class="literal">Map</code>, <code class="literal">List</code>, and arrays. Doing so permits simple transformation to (for example) JSON.
+An MBeanServer reference is also required.
+However, by default, it automatically checks for a bean named <code class="literal">mbeanServer</code>, same as the notification-listening channel adapter <a class="link" href="system-management-chapter.html#jmx-notification-listening-channel-adapter" title="12.2.1&nbsp;Notification-listening Channel Adapter">described earlier</a>.
+The following example shows how to configure an tree-polling channel adapter with XML:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jmx:tree-polling-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"channel"</span>
+    <span class="hl-attribute">query-name</span>=<span class="hl-value">"example.domain:type=*"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"1"</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"5000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jmx:tree-polling-channel-adapter&gt;</span></pre>
+</div>
+<p>The preceding example includes all of the attributes on the selected MBeans.
+You can filter the attributes by providing an <code class="literal">MBeanObjectConverter</code> that has an appropriate filter configured.
+You can provide the converter as a reference to a bean definition by using the <code class="literal">converter</code> attribute, or you can use an inner <code class="literal">&lt;bean/&gt;</code> definition.
+Spring Integration provides a <code class="literal">DefaultMBeanObjectConverter</code> that can take a <code class="literal">MBeanAttributeFilter</code> in its constructor argument.</p>
+<p>Spring Integration provides two standard filters.
+The <code class="literal">NamedFieldsMBeanAttributeFilter</code> lets you specify a list of attributes to include.
+The <code class="literal">NotNamedFieldsMBeanAttributeFilter</code> lets you specify a list of attributes to exclude.
+You can also implement your own filter.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jmx-operation-invoking-channel-adapter" href="#jmx-operation-invoking-channel-adapter"></a>12.2.5&nbsp;Operation-invoking Channel Adapter</h3></div></div></div>
+
+<p>The operation-invoking channel adapter enables message-driven invocation of any managed operation exposed by an MBean.
+Each invocation requires the operation name to be invoked and the object name of the target MBean.
+Both of these must be explicitly provided by adapter configuration, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jmx:operation-invoking-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"adapter"</span>
+    <span class="hl-attribute">object-name</span>=<span class="hl-value">"example.domain:name=TestBean"</span>
+    <span class="hl-attribute">operation-name</span>=<span class="hl-value">"ping"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Then the adapter only needs to be able to discover the <code class="literal">mbeanServer</code> bean.
+If a different bean name is required, then provide the <code class="literal">mbean-server</code> attribute with a reference.</p>
+<p>The payload of the message is mapped to the parameters of the operation, if any.
+A <code class="literal">Map</code>-typed payload with <code class="literal">String</code> keys is treated as name/value pairs, whereas a <code class="literal">List</code> or array is passed as a simple argument list (with no explicit parameter names).
+If the operation requires a single parameter value, the payload can represent that single value.
+Also, if the operation requires no parameters, the payload would be ignored.</p>
+<p>If you want to expose a channel for a single common operation to be invoked by messages that need not contain headers, that last option works well.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jmx-operation-invoking-outbound-gateway" href="#jmx-operation-invoking-outbound-gateway"></a>12.2.6&nbsp;Operation-invoking Outbound Gateway</h3></div></div></div>
+
+<p>Similarly to the operation-invoking channel adapter, Spring Integration also provides an operation-invoking outbound gateway, which you can use when dealing with non-void operations when a return value is required.
+The return value is sent as the message payload to the <code class="literal">reply-channel</code> specified by the gateway.
+The following example shows how to configure an operation-invoking outbound gateway with XML:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jmx:operation-invoking-outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"requestChannel"</span>
+   <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"replyChannel"</span>
+   <span class="hl-attribute">object-name</span>=<span class="hl-value">"o.s.i.jmx.config:type=TestBean,name=testBeanGateway"</span>
+   <span class="hl-attribute">operation-name</span>=<span class="hl-value">"testWithReturn"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>If you do not provide the <code class="literal">reply-channel</code> attribute, the reply message is sent to the channel identified by the <code class="literal">IntegrationMessageHeaderAccessor.REPLY_CHANNEL</code> header.
+That header is typically auto-created by the entry point into a message flow, such as any gateway component.
+However, if the message flow was started by manually creating a Spring Integration message and sending it directly to a channel, you must specify the message header explicitly or use the <code class="literal">reply-channel</code> attribute.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jmx-mbean-exporter" href="#jmx-mbean-exporter"></a>12.2.7&nbsp;MBean Exporter</h3></div></div></div>
+
+<p>Spring Integration components may  themselvesbe exposed as MBeans when the <code class="literal">IntegrationMBeanExporter</code> is configured.
+To create an instance of the <code class="literal">IntegrationMBeanExporter</code>, define a bean and provide a reference to an <code class="literal">MBeanServer</code> and a domain name (if desired).
+You can leave out the domain, in which case the default domain is <code class="literal">org.springframework.integration</code>.
+The following example shows how to declare an instance of an <code class="literal">IntegrationMBeanExporter</code> and an associated <code class="literal">MBeanServer</code> instance:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jmx:mbean-export</span> <span class="hl-attribute">id</span>=<span class="hl-value">"integrationMBeanExporter"</span>
+            <span class="hl-attribute">default-domain</span>=<span class="hl-value">"my.company.domain"</span> <span class="hl-attribute">server</span>=<span class="hl-value">"mbeanServer"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"mbeanServer"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.jmx.support.MBeanServerFactoryBean"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"locateExistingServerIfPossible"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The MBean exporter is orthogonal to the one provided in Spring core.
+It registers message channels and message handlers but does not register itself.
+You can expose the exporter itself (and certain other components in Spring Integration) by using the standard <code class="literal">&lt;context:mbean-export/&gt;</code> tag.
+The exporter has some metrics attached to it&#8201;&#8212;&#8201;for instance, a count of the number of active handlers and the number of queued messages.</p>
+<p>It also has a useful operation, as discussed in <a class="xref" href="system-management-chapter.html#jmx-mbean-shutdown" title="Orderly Shutdown Managed Operation">the section called &#8220;Orderly Shutdown Managed Operation&#8221;</a>.</p>
+</td></tr></table></div>
+<p>Spring Integration 4.0 introduced the <code class="literal">@EnableIntegrationMBeanExport</code> annotation to allow for convenient configuration of a default <code class="literal">integrationMbeanExporter</code> bean of type <code class="literal">IntegrationMBeanExporter</code> with several useful options at the <code class="literal">@Configuration</code> class level.
+The following example shows how to configure this bean:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegrationMBeanExport(server = "mbeanServer", managedComponents = "input")</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> ContextConfiguration {
+
+	<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+	<span class="hl-keyword">public</span> MBeanServerFactoryBean mbeanServer() {
+		<span class="hl-keyword">return</span> <span class="hl-keyword">new</span> MBeanServerFactoryBean();
+	}
+}</pre>
+</div>
+<p>If you need to provide more options or have several <code class="literal">IntegrationMBeanExporter</code> beans (such as
+for different MBean Servers or to avoid conflicts with the standard Spring <code class="literal">MBeanExporter</code>&#8201;&#8212;&#8201;such as through
+<code class="literal">@EnableMBeanExport</code>), you can configure an <code class="literal">IntegrationMBeanExporter</code> as a generic bean.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="jmx-mbean-features" href="#jmx-mbean-features"></a>MBean Object Names</h4></div></div></div>
+
+<p>All the <code class="literal">MessageChannel</code>, <code class="literal">MessageHandler</code>, and <code class="literal">MessageSource</code> instances in the application are wrapped by the MBean exporter to provide management and monitoring features.
+The generated JMX object names for each component type are listed in the following table:</p>
+<div class="table"><a name="d5e9896" href="#d5e9896"></a><p class="title"><b>Table&nbsp;12.3.&nbsp;MBean Object Names</b></p><div class="table-contents">
+
+<table summary="MBean Object Names" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Component Type</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Object Name</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>MessageChannel</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> `o.s.i:type=MessageChannel,name=&lt;channelName&gt;`</pre></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>MessageSource</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><pre class="literallayout"> `o.s.i:type=MessageSource,name=&lt;channelName&gt;,bean=&lt;source&gt;`</pre></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p>MessageHandler</p></td><td style="" align="left" valign="top"><pre class="literallayout"> `o.s.i:type=MessageSource,name=&lt;channelName&gt;,bean=&lt;source&gt;`</pre></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>The <code class="literal">bean</code> attribute in the object names for sources and handlers takes one of the values in the following table:</p>
+<div class="table"><a name="d5e9923" href="#d5e9923"></a><p class="title"><b>Table&nbsp;12.4.&nbsp;bean ObjectName Part</b></p><div class="table-contents">
+
+<table summary="bean ObjectName Part" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Bean Value</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>endpoint</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The bean name of the enclosing endpoint (for example <code class="literal">&lt;service-activator&gt;</code>), if there is one</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>anonymous</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>An indication that the enclosing endpoint did not have a user-specified bean name, so the JMX name is the input channel name.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>internal</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>For well known Spring Integration default components</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p>handler/source</p></td><td style="" align="left" valign="top"><p>None of the above. Fall back to the <code class="literal">toString()</code> method of the object being monitored (handler or source)</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>You can append custom elements to the object name by providing a reference to a <code class="literal">Properties</code> object in the <code class="literal">object-name-static-properties</code> attribute.</p>
+<p>Also, since Spring Integration 3.0, you can use a custom <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/jmx/export/naming/ObjectNamingStrategy.html" target="_top"><code class="literal">ObjectNamingStrategy</code></a> by setting the <code class="literal">object-naming-strategy</code> attribute.
+Doing so permits greater control over the naming of the MBeans, such as grouping all integration MBeans under an <span class="emphasis"><em>Integration</em></span> type.
+The following example shows one possible custom naming strategy implementation:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> Namer <span class="hl-keyword">implements</span> ObjectNamingStrategy {
+
+	<span class="hl-keyword">private</span> <span class="hl-keyword">final</span> ObjectNamingStrategy realNamer = <span class="hl-keyword">new</span> KeyNamingStrategy();
+	<em><span class="hl-annotation" style="color: gray">@Override</span></em>
+	<span class="hl-keyword">public</span> ObjectName getObjectName(Object managedBean, String beanKey) <span class="hl-keyword">throws</span> MalformedObjectNameException {
+		String actualBeanKey = beanKey.replace(<span class="hl-string">"type="</span>, <span class="hl-string">"type=Integration,componentType="</span>);
+		<span class="hl-keyword">return</span> realNamer.getObjectName(managedBean, actualBeanKey);
+	}
+
+}</pre>
+</div>
+<p>The <code class="literal">beanKey</code> argument is a <code class="literal">String</code> that contain the standard object name, beginning with the <code class="literal">default-domain</code> and including any additional static properties.
+The preceding example moves the standard <code class="literal">type</code> part to <code class="literal">componentType</code> and sets the <code class="literal">type</code> to <span class="emphasis"><em>Integration</em></span>, enabling selection of all Integration MBeans in one query:<code class="literal">"my.domain:type=Integration,*</code>.
+Doing so also groups the beans under one tree entry under the domain in such tools as VisualVM.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The default naming strategy is a <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/jmx/export/naming/MetadataNamingStrategy.html" target="_top"><code class="literal">MetadataNamingStrategy</code></a>.
+The exporter propagates the <code class="literal">default-domain</code> to that object to let it generate a fallback object name if parsing of the bean key fails.
+If your custom naming strategy is a <code class="literal">MetadataNamingStrategy</code> (or a subclass of it), the exporter does not propagate the <code class="literal">default-domain</code>.
+You must configure it on your strategy bean.</p>
+</td></tr></table></div>
+<p>Starting with version 5.1; any bean names (represented by the <code class="literal">name</code> key in the object name) will be quoted if they contain any characters that are not allowed in a Java identifier (or period <code class="literal">.</code>).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="jmx-42-improvements" href="#jmx-42-improvements"></a>JMX Improvements</h4></div></div></div>
+
+<p>Version 4.2 introduced some important improvements, representing a fairly major overhaul to the JMX support in the framework.
+These resulted in a significant performance improvement of the JMX statistics collection and much more control thereof.
+However, it has some implications for user code in a few specific (uncommon) situations.
+These changes are detailed below, with a caution where necessary.</p>
+<div class="variablelist"><dl class="variablelist"><dt><span class="term">Metrics Capture</span></dt><dd>
+<p class="simpara">Previously, <code class="literal">MessageSource</code>, <code class="literal">MessageChannel</code>, and <code class="literal">MessageHandler</code> metrics were captured by wrapping the object in a JDK dynamic proxy to intercept appropriate method calls and capture the statistics.
+The proxy was added when an integration MBean exporter was declared in the context.</p>
+<p class="simpara">Now, the statistics are captured by the beans themselves.
+See <a class="xref" href="system-management-chapter.html#metrics-management" title="12.1&nbsp;Metrics and Management">Section&nbsp;12.1, &#8220;Metrics and Management&#8221;</a> for more information.</p>
+<div class="warning" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Warning"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="images/warning.png"></td><th align="left">Warning</th></tr><tr><td align="left" valign="top">
+<p>This change means that you no longer automatically get an MBean or statistics for custom <code class="literal">MessageHandler</code> implementations, unless those custom handlers extend <code class="literal">AbstractMessageHandler</code>.
+The simplest way to resolve this is to extend <code class="literal">AbstractMessageHandler</code>.
+If you cannot do so, another work around is to implement the <code class="literal">MessageHandlerMetrics</code> interface.
+For convenience, a <code class="literal">DefaultMessageHandlerMetrics</code> is provided to capture and report statistics.
+You should invoke the <code class="literal">beforeHandle</code> and <code class="literal">afterHandle</code> at the appropriate times.
+Your <code class="literal">MessageHandlerMetrics</code> methods can then delegate to this object to obtain each statistic.
+Similarly, <code class="literal">MessageSource</code> implementations must extend <code class="literal">AbstractMessageSource</code> or implement <code class="literal">MessageSourceMetrics</code>.
+Message sources capture only a count, so there is no provided convenience class.
+You should maintain the count in an <code class="literal">AtomicLong</code> field.</p>
+</td></tr></table></div>
+<p class="simpara">The removal of the proxy has two additional benefits:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Stack traces in exceptions are reduced (when JMX is enabled) because the proxy is not on the stack
+</li><li class="listitem">
+Cases where two MBeans were exported for the same bean now only export a single MBean with consolidated attributes and operations (see the MBean consolidation bullet, later).
+</li></ul></div>
+</dd><dt><span class="term">Resolution</span></dt><dd>
+<code class="literal">System.nanoTime()</code> (rather than <code class="literal">System.currentTimeMillis()</code>) is now used to capture times .
+This may provide more accuracy on some JVMs, espcially when you expect durations of less than one millisecond.
+</dd><dt><span class="term">Setting Initial Statistics Collection State</span></dt><dd>
+<p class="simpara">Previously, when JMX was enabled, all sources, channels, and handlers captured statistics.
+You can now control whether the statistics are enabled on an individual component.
+Further, you can capture simple counts on <code class="literal">MessageChannel</code> instances and <code class="literal">MessageHandler</code> instances instead of capturing the complete time-based statistics.
+This can have significant performance implications, because you can selectively configure where you need detailed statistics and enable and disable collection at runtime.</p>
+<p class="simpara">See <a class="xref" href="system-management-chapter.html#metrics-management" title="12.1&nbsp;Metrics and Management">Section&nbsp;12.1, &#8220;Metrics and Management&#8221;</a>.</p>
+</dd><dt><span class="term">@IntegrationManagedResource</span></dt><dd>
+<p class="simpara">Similar to the <code class="literal">@ManagedResource</code> annotation, the <code class="literal">@IntegrationManagedResource</code> marks a class as being eligible to be exported as an MBean.
+However, it is exported only if the application context has an <code class="literal">IntegrationMBeanExporter</code>.</p>
+<p class="simpara">Certain Spring Integration classes (in the <code class="literal">org.springframework.integration</code>) package) that were previously annotated with`@ManagedResource` are now annotated with both <code class="literal">@ManagedResource</code> and <code class="literal">@IntegrationManagedResource</code>.
+This is for backwards compatibility (see the next item).
+Such MBeans are exported by any context <code class="literal">MBeanServer</code> or by an <code class="literal">IntegrationMBeanExporter</code> (but not both&#8201;&#8212;&#8201;if both exporters are present, the bean is exported by the integration exporter if the bean matches a <code class="literal">managed-components</code> pattern).</p>
+</dd><dt><span class="term">Consolidated MBeans</span></dt><dd>
+<p class="simpara">Certain classes within the framework (mapping routers, for example) have additional attributes and operations over and above those provided by metrics and <code class="literal">Lifecycle</code>.
+We use a <code class="literal">Router</code> as an example here.</p>
+<p class="simpara">Previously, beans of these types were exported as two distinct MBeans:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+The metrics MBean (with an object name such as <code class="literal">intDomain:type=MessageHandler,name=myRouter,bean=endpoint</code>).
+This MBean had metrics attributes and metrics/Lifecycle operations.
+</li><li class="listitem">
+<p class="simpara">A second MBean (with an object name such as <code class="literal">ctxDomain:name=org.springframework.integration.config.</code> <code class="literal">RouterFactoryBean#0</code>,type=MethodInvokingRouter`) was exported with the channel mappings attribute and operations.</p>
+<p class="simpara">Now the attributes and operations are consolidated into a single MBean.
+The object name depends on the exporter.
+If exported by the integration MBean exporter, the object name is, for example: <code class="literal">intDomain:type=MessageHandler,name=myRouter,bean=endpoint</code>.
+If exported by another exporter, the object name is, for example: <code class="literal">ctxDomain:name=org.springframework.integration.config.</code> <code class="literal">RouterFactoryBean#0,type=MethodInvokingRouter</code>.
+There is no difference between these MBeans (aside from the object name), except that the statistics are not enabled (the attributes are <code class="literal">0</code>) by exporters other than the integration exporter.
+You can enable statistics at runtime by using the JMX operations.
+When exported by the integration MBean exporter, the initial state can be managed as described earlier.</p>
+<div class="warning" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Warning"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="images/warning.png"></td><th align="left">Warning</th></tr><tr><td align="left" valign="top">
+<p>If you currently use the second MBean to change, for example, channel mappings and you use the integration MBean exporter, note that the object name has changed because of the MBean consolidation.
+There is no change if you are not using the integration MBean exporter.</p>
+</td></tr></table></div>
+</li></ul></div>
+</dd><dt><span class="term">MBean Exporter Bean Name Patterns</span></dt><dd>
+<p class="simpara">Previously, the <code class="literal">managed-components</code> patterns were inclusive only.
+If a bean name matched one of the patterns, it would be included.
+Now, the pattern can be negated by prefixing it with <code class="literal">!</code>.
+For example, <code class="literal">!thing*, things</code> matches all bean names that do not start with <code class="literal">thing</code> except <code class="literal">things</code>.
+Patterns are evaluated left to right.
+The first match (positive or negative) wins, and then no further patterns are applied.</p>
+<div class="warning" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Warning"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="images/warning.png"></td><th align="left">Warning</th></tr><tr><td align="left" valign="top">
+<p>The addition of this syntax to the pattern causes one possible (although perhaps unlikely) problem.
+If you have a bean named <code class="literal">"!thing"</code> and you included a pattern of <code class="literal">!thing</code> in your MBean exporter&#8217;s <code class="literal">managed-components</code> patterns, it no longer matches; the pattern now matches all beans not named <code class="literal">thing</code>.
+In this case, you can escape the <code class="literal">!</code> in the pattern with <code class="literal">\</code>.
+The <code class="literal">\!thing</code> pattern matches a bean named <code class="literal">!thing</code>.</p>
+</td></tr></table></div>
+</dd><dt><span class="term">IntegrationMBeanExporter changes</span></dt><dd>
+The <code class="literal">IntegrationMBeanExporter</code> no longer implements <code class="literal">SmartLifecycle</code>.
+This means that <code class="literal">start()</code> and <code class="literal">stop()</code> operations are no longer available to registerand unregister MBeans.
+The MBeans are now registered during context initialization and unregistered when the context is destroyed.
+</dd></dl></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="jmx-mbean-shutdown" href="#jmx-mbean-shutdown"></a>Orderly Shutdown Managed Operation</h4></div></div></div>
+
+<p>The MBean exporter provides a JMX operation to shut down the application in an orderly manner, intended for use before terminating the JVM.
+The following example shows how to use it:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">void</span> stopActiveComponents(<span class="hl-keyword">long</span> howLong)</pre>
+</div>
+<p>Its use and operation are described in <a class="xref" href="system-management-chapter.html#jmx-shutdown" title="12.7&nbsp;Orderly Shutdown">Section&nbsp;12.7, &#8220;Orderly Shutdown&#8221;</a>.</p>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="message-history" href="#message-history"></a>12.3&nbsp;Message History</h2></div></div></div>
+
+<p>The key benefit of a messaging architecture is loose coupling such that participating components do not maintain any awareness about one another.
+This fact alone makes an application extremely flexible, letting you change components without affecting the rest of the flow, change messaging routes, change message consuming styles (polling versus event driven), and so on.
+However, this unassuming style of architecture could prove to be difficult when things go wrong.
+When debugging, you probably want as much information (its origin, the channels it has traversed, and other details) about the message as you can get.</p>
+<p>Message history is one of those patterns that helps by giving you an option to maintain some level of awareness of a message path either for debugging purposes or for maintaining an audit trail.
+Spring integration provides a simple way to configure your message flows to maintain the message history by adding a header to the message and updating that header every time a message passes through a tracked component.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="message-history-config" href="#message-history-config"></a>12.3.1&nbsp;Message History Configuration</h3></div></div></div>
+
+<p>To enable message history, you need only define the <code class="literal">message-history</code> element in your configuration, as shown in the following example:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:message-history/&gt;</span></pre>
+</div>
+<p>Now every named component (component that has an <span class="emphasis"><em>id</em></span> defined) is tracked.
+The framework sets the <span class="emphasis"><em>history</em></span> header in your message.
+Its value a <code class="literal">List&lt;Properties&gt;</code>.</p>
+<p>Consider the following configuration example:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:gateway&nbsp;id="sampleGateway"&nbsp;</span>
+    <span class="hl-attribute">service-interface</span>=<span class="hl-value">"org.springframework.integration.history.sample.SampleGateway"</span>
+    <span class="hl-attribute">default-request-channel</span>=<span class="hl-value">"bridgeInChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:chain&nbsp;id="sampleChain"&nbsp;input-channel="chainChannel"&nbsp;output-channel="filterChannel"&gt;</span>
+  <span class="hl-tag">&lt;int:header-enricher&gt;</span>
+    <span class="hl-tag">&lt;int:header&nbsp;name="baz"&nbsp;value="baz"/&gt;</span>
+  <span class="hl-tag">&lt;/int:header-enricher&gt;</span>
+<span class="hl-tag">&lt;/int:chain&gt;</span></pre>
+</div>
+<p>The preceding configuration produces a simple message history structure, with output similar to the following:</p>
+<pre class="programlisting">[{name=sampleGateway, type=gateway, timestamp=<span class="hl-number">1283281668091</span>},
+ {name=sampleChain, type=chain, timestamp=<span class="hl-number">1283281668094</span>}]</pre>
+<p>To get access to message history, you need only access the <code class="literal">MessageHistory</code> header.
+The folloiwng example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting">Iterator&lt;Properties&gt; historyIterator =
+    message.getHeaders().get(MessageHistory.HEADER_NAME, MessageHistory.<span class="hl-keyword">class</span>).iterator();
+assertTrue(historyIterator.hasNext());
+Properties gatewayHistory = historyIterator.next();
+assertEquals(<span class="hl-string">"sampleGateway"</span>, gatewayHistory.get(<span class="hl-string">"name"</span>));
+assertTrue(historyIterator.hasNext());
+Properties chainHistory = historyIterator.next();
+assertEquals(<span class="hl-string">"sampleChain"</span>, chainHistory.get(<span class="hl-string">"name"</span>));</pre>
+</div>
+<p>You might not want to track all of the components.
+To limit the history to certain components based on their names, you can provide the <code class="literal">tracked-components</code> attribute and specify a comma-delimited list of component names and patterns that match the components you want to track.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:message-history</span> <span class="hl-attribute">tracked-components</span>=<span class="hl-value">"*Gateway, sample*, aName"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>In the preceding example, message history is maintained only for the components that end with <span class="emphasis"><em>Gateway</em></span>, start with <span class="emphasis"><em>sample</em></span>, or match the name, <span class="emphasis"><em>aName</em></span>, exactly.</p>
+<p>Starting with version 4.0, you can also use the <code class="literal">@EnableMessageHistory</code> annotation in a <code class="literal">@Configuration</code> class.
+In addition, the <code class="literal">MessageHistoryConfigurer</code> bean is now exposed as a JMX MBean by the <code class="literal">IntegrationMBeanExporter</code> (see <a class="xref" href="system-management-chapter.html#jmx-mbean-exporter" title="12.2.7&nbsp;MBean Exporter">Section&nbsp;12.2.7, &#8220;MBean Exporter&#8221;</a>), letting you change the patterns at runtime.
+Note, however, that the bean must be stopped (turning off message history) in order to change the patterns.
+This feature might be useful to temporarily turn on history to analyze a system.
+The MBean&#8217;s object name is <code class="literal">&lt;domain&gt;:name=messageHistoryConfigurer,type=MessageHistoryConfigurer</code>.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If multiple beans (declared by <code class="literal">@EnableMessageHistory</code> and <code class="literal">&lt;message-history/&gt;</code>) exist, they must all have identical component name patterns (when trimmed and sorted).
+Do not use a generic <code class="literal">&lt;bean/&gt;</code> definition for the <code class="literal">MessageHistoryConfigurer</code>.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>By definition, the message history header is immutable (you cannot re-write history).
+Therefore, when writing message history values, the components either create new messages (when the component is an origin) or they copy the history from a request message, modifying it and setting the new list on a reply message.
+In either case, the values can be appended even if the message itself is crossing thread boundaries.
+That means that the history values can greatly simplify debugging in an asynchronous message flow.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="message-store" href="#message-store"></a>12.4&nbsp;Message Store</h2></div></div></div>
+
+<p>The <a class="ulink" href="http://www.eaipatterns.com" target="_top"><span class="emphasis"><em>Enterprise Integration Patterns</em></span></a> (EIP) book identifies several patterns that have the ability to buffer messages.
+For example, an aggregator buffers messages until they can be released, and a <code class="literal">QueueChannel</code> buffers messages until consumers explicitly receive those messages from that channel.
+Because of the failures that can occur at any point within your message flow, EIP components that buffer messages also introduce a point where messages could be lost.</p>
+<p>To mitigate the risk of losing messages, EIP defines the <a class="ulink" href="http://eaipatterns.com/MessageStore.html" target="_top">message store</a> pattern, which lets EIP components store messages, typically in some type of persistent store (such as an RDBMS).</p>
+<p>Spring Integration provides support for the message store pattern by:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Defining an <code class="literal">org.springframework.integration.store.MessageStore</code> strategy interface
+</li><li class="listitem">
+Providing several implementations of this interface
+</li><li class="listitem">
+Exposing a <code class="literal">message-store</code> attribute on all components that have the capability to buffer messages so that you can inject any instance that implements the <code class="literal">MessageStore</code> interface.
+</li></ul></div>
+<p>Details on how to configure a specific message store implementation and how to inject a <code class="literal">MessageStore</code> implementation into a specific buffering component are described throughout the manual (see the specific component, such as <a class="link" href="messaging-channels-section.html#channel-configuration-queuechannel" title="QueueChannel Configuration">QueueChannel</a>, <a class="link" href="messaging-routing-chapter.html#aggregator" title="8.4&nbsp;Aggregator">Aggregator</a>, <a class="link" href="messaging-endpoints-chapter.html#delayer" title="10.6&nbsp;Delayer">Delayer</a>, and others).
+The following pair of examples show how to add a reference to a message store for a <code class="literal">QueueChannel</code> and for an aggregator:</p>
+<div class="example"><a name="d5e10172" href="#d5e10172"></a><p class="title"><b>Example&nbsp;12.1.&nbsp;QueueChannel</b></p><div class="example-contents">
+
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"myQueueChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:queue</span> <span class="hl-attribute">message-store</span>=<span class="hl-value">"refToMessageStore"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int:channel&gt;</span></pre>
+</div></div><br class="example-break">
+<div class="example"><a name="d5e10175" href="#d5e10175"></a><p class="title"><b>Example&nbsp;12.2.&nbsp;Aggregator</b></p><div class="example-contents">
+
+<pre class="programlisting"><span class="hl-tag">&lt;int:aggregator</span> <span class="hl-attribute">&#8230;</span> <span class="hl-attribute">message-store</span>=<span class="hl-value">"refToMessageStore"</span><span class="hl-tag">/&gt;</span></pre>
+</div></div><br class="example-break">
+<p>By default, messages are stored in-memory by using <code class="literal">o.s.i.store.SimpleMessageStore</code>, an implementation of <code class="literal">MessageStore</code>.
+That might be fine for development or simple low-volume environments where the potential loss of non-persistent messages is not a concern.
+However, the typical production application needs a more robust option, not only to mitigate the risk of message loss but also to avoid potential out-of-memory errors.
+Therefore, we also provide <code class="literal">MessageStore</code> implementations for a variety of data-stores.
+The following is a complete list of supported implementations:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="xref" href="jdbc.html#jdbc-message-store" title="21.4&nbsp;JDBC Message Store">Section&nbsp;21.4, &#8220;JDBC Message Store&#8221;</a>: Uses an RDBMS to store messages
+</li><li class="listitem">
+<a class="xref" href="redis.html#redis-message-store" title="27.3&nbsp;Redis Message Store">Section&nbsp;27.3, &#8220;Redis Message Store&#8221;</a>: Uses a Redis key/value datastore to store messages
+</li><li class="listitem">
+<a class="xref" href="mongodb.html#mongodb-message-store" title="25.2&nbsp;MongoDB Message Store">Section&nbsp;25.2, &#8220;MongoDB Message Store&#8221;</a>: Uses a MongoDB document store to store messages
+</li><li class="listitem">
+<a class="xref" href="gemfire.html#gemfire-message-store" title="19.4&nbsp;Gemfire Message Store">Section&nbsp;19.4, &#8220;Gemfire Message Store&#8221;</a>: Uses a Gemfire distributed cache to store messages
+</li></ul></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>However, be aware of some limitations while using persistent implementations of the <code class="literal">MessageStore</code>.</p>
+<p>The Message data (payload and headers) is serialized and deserialized by using different serialization strategies, depending on the implementation of the <code class="literal">MessageStore</code>.
+For example, when using <code class="literal">JdbcMessageStore</code>, only <code class="literal">Serializable</code> data is persisted by default.
+In this case, non-Serializable headers are removed before serialization occurs.
+Also, be aware of the protocol-specific headers that are injected by transport adapters (such as FTP, HTTP, JMS, and others).
+For example, <code class="literal">&lt;http:inbound-channel-adapter/&gt;</code> maps HTTP headers into message headers, and one of them is an <code class="literal">ArrayList</code> of non-serializable <code class="literal">org.springframework.http.MediaType</code> instances.
+However, you can inject your own implementation of the <code class="literal">Serializer</code> and <code class="literal">Deserializer</code> strategy interfaces into some <code class="literal">MessageStore</code> implementations (such as <code class="literal">JdbcMessageStore</code>) to change the behavior of serialization and deserialization.</p>
+<p>Pay special attention to the headers that represent certain types of data.
+For example, if one of the headers contains an instance of some Spring bean, upon deserialization, you may end up with a different instance of that bean, which directly affects some of the implicit headers created by the framework (such as <code class="literal">REPLY_CHANNEL</code> or <code class="literal">ERROR_CHANNEL</code>).
+Currently, they are not serializable, but, even if they were, the deserialized channel would not represent the expected instance.</p>
+<p>Beginning with Spring Integration version 3.0, you can resolve this issue with a header enricher configured to replace these headers with a name after registering the channel with the <code class="literal">HeaderChannelRegistry</code>.</p>
+<p>Also, consider what happens when you configure a message-flow as follows: gateway &#8594; queue-channel (backed by a persistent Message Store) &#8594; service-activator. That gateway creates a temporary reply channel, which is lost by the time the service-activator&#8217;s poller reads from the queue.
+Again, you can use the header enricher to replace the headers with a <code class="literal">String</code> representation.</p>
+<p>For more information, see <a class="xref" href="messaging-transformation-chapter.html#header-enricher" title="9.2.1&nbsp;Header Enricher">Section&nbsp;9.2.1, &#8220;Header Enricher&#8221;</a>.</p>
+</td></tr></table></div>
+<p>Spring Integration 4.0 introduced two new interfaces:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">ChannelMessageStore</code>: To implement operations specific for <code class="literal">QueueChannel</code> instances
+</li><li class="listitem">
+<code class="literal">PriorityCapableChannelMessageStore</code>: To mark <code class="literal">MessageStore</code> implementations to be used for <code class="literal">PriorityChannel</code> instances and to provide priority order for persisted messages.
+</li></ul></div>
+<p>The real behavior depends on the implementation.
+The framework provides the following implementations, which can be used as a persistent <code class="literal">MessageStore</code> for <code class="literal">QueueChannel</code> and <code class="literal">PriorityChannel</code>:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="xref" href="redis.html#redis-cms" title="27.3.1&nbsp;Redis Channel Message Stores">Section&nbsp;27.3.1, &#8220;Redis Channel Message Stores&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="mongodb.html#mongodb-priority-channel-message-store" title="25.2.1&nbsp;MongoDB Channel Message Store">Section&nbsp;25.2.1, &#8220;MongoDB Channel Message Store&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="jdbc.html#jdbc-message-store-channels" title="21.4.3&nbsp;Backing Message Channels">Section&nbsp;21.4.3, &#8220;Backing Message Channels&#8221;</a>
+</li></ul></div>
+<div class="warning" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Warning: Caution about SimpleMessageStore"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="images/warning.png"></td><th align="left"><a name="sms-caution" href="#sms-caution"></a>Caution about <code class="literal">SimpleMessageStore</code></th></tr><tr><td align="left" valign="top">
+
+<p>Starting with version 4.1, the <code class="literal">SimpleMessageStore</code> no longer copies the message group when calling <code class="literal">getMessageGroup()</code>.
+For large message groups, this was a significant performance problem.
+4.0.1 introduced a boolean <code class="literal">copyOnGet</code> property that lets you control this behavior.
+When used internally by the aggregator, this property was set to <code class="literal">false</code> to improve performance.
+It is now <code class="literal">false</code> by default.</p>
+<p>Users accessing the group store outside of components such as aggregators now get a direct reference to the group being used by the aggregator instead of a copy.
+Manipulation of the group outside of the aggregator may cause unpredictable results.</p>
+<p>For this reason, you should either not perform such manipulation or set the <code class="literal">copyOnGet</code> property to <code class="literal">true</code>.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="message-group-factory" href="#message-group-factory"></a>12.4.1&nbsp;Using <code class="literal">MessageGroupFactory</code></h3></div></div></div>
+
+<p>Starting with version 4.3, some <code class="literal">MessageGroupStore</code> implementations can be injected with a custom
+<code class="literal">MessageGroupFactory</code> strategy to create and customize the <code class="literal">MessageGroup</code> instances used by the <code class="literal">MessageGroupStore</code>.
+This defaults to a <code class="literal">SimpleMessageGroupFactory</code>, which produces <code class="literal">SimpleMessageGroup</code> instances based on the <code class="literal">GroupType.HASH_SET</code>
+(<code class="literal">LinkedHashSet</code>) internal collection.
+Other possible options are <code class="literal">SYNCHRONISED_SET</code> and <code class="literal">BLOCKING_QUEUE</code>, where the last one can be used to reinstate the
+previous <code class="literal">SimpleMessageGroup</code> behavior.
+Also the <code class="literal">PERSISTENT</code> option is available. See the next section for more information.
+Starting with version 5.0.1, the <code class="literal">LIST</code> option is also available for when the order and uniqueness of messages in the group does not matter.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="lazy-load-message-group" href="#lazy-load-message-group"></a>12.4.2&nbsp;Persistent <code class="literal">MessageGroupStore</code> and Lazy-load</h3></div></div></div>
+
+<p>Starting with version 4.3, all persistent <code class="literal">MessageGroupStore</code> instances retrieve <code class="literal">MessageGroup</code> instances and their <code class="literal">messages</code>
+from the store in the lazy-load manner.
+In most cases, it is useful for the correlation <code class="literal">MessageHandler</code> instances (see <a class="xref" href="messaging-routing-chapter.html#aggregator" title="8.4&nbsp;Aggregator">Section&nbsp;8.4, &#8220;Aggregator&#8221;</a> and <a class="xref" href="messaging-routing-chapter.html#resequencer" title="8.5&nbsp;Resequencer">Section&nbsp;8.5, &#8220;Resequencer&#8221;</a>),
+when it would add overhead to load entire the <code class="literal">MessageGroup</code> from the store on each correlation operation.</p>
+<p>You can use the <code class="literal">AbstractMessageGroupStore.setLazyLoadMessageGroups(false)</code> option to switch off the lazy-load behavior from the configuration.</p>
+<p>Our performance tests for lazy-load on MongoDB <code class="literal">MessageStore</code> (<a class="xref" href="mongodb.html#mongodb-message-store" title="25.2&nbsp;MongoDB Message Store">Section&nbsp;25.2, &#8220;MongoDB Message Store&#8221;</a>) and
+<code class="literal">&lt;aggregator&gt;</code> (<a class="xref" href="messaging-routing-chapter.html#aggregator" title="8.4&nbsp;Aggregator">Section&nbsp;8.4, &#8220;Aggregator&#8221;</a>)
+use a custom <code class="literal">release-strategy</code> similar to the following:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:aggregator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputChannel"</span>
+                <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputChannel"</span>
+                <span class="hl-attribute">message-store</span>=<span class="hl-value">"mongoStore"</span>
+                <span class="hl-attribute">release-strategy-expression</span>=<span class="hl-value">"size() == 1000"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>It produces results similar to the following for 1000 simple messages:</p>
+<div class="informalexample">
+<pre class="screen">...
+StopWatch 'Lazy-Load Performance': running time (millis) = 38918
+-----------------------------------------
+ms     %     Task name
+-----------------------------------------
+02652  007%  Lazy-Load
+36266  093%  Eager
+...</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="metadata-store" href="#metadata-store"></a>12.5&nbsp;Metadata Store</h2></div></div></div>
+
+<p>Many external systems, services, or resources are not transactional (Twitter, RSS, file systems, and so on), and there is no any ability to mark the data as read.
+Also, sometimes, you may need to implement the Enterprise Integration Pattern <a class="ulink" href="http://eaipatterns.com/IdempotentReceiver.html" target="_top">idempotent receiver</a> in some integration solutions.
+To achieve this goal and store some previous state of the endpoint before the next interaction with external system or to deal with the next message, Spring Integration provides the metadata store component as an an implementation of the <code class="literal">org.springframework.integration.metadata.MetadataStore</code> interface with a general key-value contract.</p>
+<p>The metadata store is designed to store various types of generic metadata (for example, the published date of the last feed entry that has been processed) to help components such as the feed adapter deal with duplicates.
+If a component is not directly provided with a reference to a <code class="literal">MetadataStore</code>, the algorithm for locating a metadata store is as follows: First, look for a bean with a <code class="literal">metadataStore</code> ID in the application context.
+If one is found, use it.
+Otherwise, create a new instance of <code class="literal">SimpleMetadataStore</code>, which is an in-memory implementation that persists only metadata within the lifecycle of the currently running application context.
+This means that, upon restart, you may end up with duplicate entries.</p>
+<p>If you need to persist metadata between application context restarts, the framework provides the following persistent <code class="literal">MetadataStores</code>:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">PropertiesPersistingMetadataStore</code>
+</li><li class="listitem">
+<a class="xref" href="gemfire.html#gemfire-metadata-store" title="19.6&nbsp;Gemfire Metadata Store">Section&nbsp;19.6, &#8220;Gemfire Metadata Store&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="jdbc.html#jdbc-metadata-store" title="21.7&nbsp;JDBC Metadata Store">Section&nbsp;21.7, &#8220;JDBC Metadata Store&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="mongodb.html#mongodb-metadata-store" title="25.2.2&nbsp;MongoDB Metadata Store">Section&nbsp;25.2.2, &#8220;MongoDB Metadata Store&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="redis.html#redis-metadata-store" title="27.4&nbsp;Redis Metadata Store">Section&nbsp;27.4, &#8220;Redis Metadata Store&#8221;</a>
+</li><li class="listitem">
+<a class="xref" href="zookeeper.html#zk-metadata-store" title="40.1&nbsp;Zookeeper Metadata Store">Section&nbsp;40.1, &#8220;Zookeeper Metadata Store&#8221;</a>
+</li></ul></div>
+<p>The <code class="literal">PropertiesPersistingMetadataStore</code> is backed by a properties file and a <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/util/PropertiesPersister.html" target="_top"><code class="literal">PropertiesPersister</code></a>.</p>
+<p>By default, it persists only the state when the application context is closed normally. It implements <code class="literal">Flushable</code> so that you
+can persist the state at will, by invoking <code class="literal">flush()</code>.
+The following example shows how to configure a <span class="emphasis"><em>PropertiesPersistingMetadataStore</em></span> with XML:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"metadataStore"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.metadata.PropertiesPersistingMetadataStore"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Alternatively, you can provide your own implementation of the <code class="literal">MetadataStore</code> interface (for example,
+<code class="literal">JdbcMetadataStore</code>) and configure it as a bean in the application context.</p>
+<p>Starting with version 4.0, <code class="literal">SimpleMetadataStore</code>, <code class="literal">PropertiesPersistingMetadataStore</code>, and <code class="literal">RedisMetadataStore</code> implement <code class="literal">ConcurrentMetadataStore</code>.
+These provide for atomic updates and can be used across multiple component or application instances.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="idempotent-receiver-pattern" href="#idempotent-receiver-pattern"></a>12.5.1&nbsp;Idempotent Receiver and Metadata Store</h3></div></div></div>
+
+<p>The metadata store is useful for implementing the EIP <a class="ulink" href="http://eaipatterns.com/IdempotentReceiver.html" target="_top">idempotent receiver</a> pattern when there is need to filter an incoming message if it has already been processed and you can discard it or perform some other logic on discarding.
+The following configuration shows an example of how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:filter</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"serviceChannel"</span>
+			<span class="hl-attribute">output-channel</span>=<span class="hl-value">"idempotentServiceChannel"</span>
+			<span class="hl-attribute">discard-channel</span>=<span class="hl-value">"discardChannel"</span>
+			<span class="hl-attribute">expression</span>=<span class="hl-value">"@metadataStore.get(headers.businessKey) == null"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:publish-subscribe-channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"idempotentServiceChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"idempotentServiceChannel"</span>
+                              <span class="hl-attribute">expression</span>=<span class="hl-value">"@metadataStore.put(headers.businessKey, '')"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:service-activator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"idempotentServiceChannel"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"service"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The <code class="literal">value</code> of the idempotent entry may be an expiration date, after which that entry should be removed from metadata store by some scheduled reaper.</p>
+<p>See also <a class="xref" href="messaging-endpoints-chapter.html#idempotent-receiver" title="10.9.10&nbsp;Idempotent Receiver Enterprise Integration Pattern">Section&nbsp;10.9.10, &#8220;Idempotent Receiver Enterprise Integration Pattern&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="metadatastore-listener" href="#metadatastore-listener"></a>12.5.2&nbsp;<code class="literal">MetadataStoreListener</code></h3></div></div></div>
+
+<p>Some metadata stores (currently only zookeeper) support registering a listener to receive events when items change, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MetadataStoreListener {
+
+	<span class="hl-keyword">void</span> onAdd(String key, String value);
+
+	<span class="hl-keyword">void</span> onRemove(String key, String oldValue);
+
+	<span class="hl-keyword">void</span> onUpdate(String key, String newValue);
+}</pre>
+</div>
+<p>See the <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/metadata/MetadataStoreListenerAdapter.html" target="_top">Javadoc</a> for more information.
+The <code class="literal">MetadataStoreListenerAdapter</code> can be subclassed if you are interested only in a subset of events.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="control-bus" href="#control-bus"></a>12.6&nbsp;Control Bus</h2></div></div></div>
+
+<p>As described in the <a class="ulink" href="http://www.eaipatterns.com" target="_top"><span class="emphasis"><em>Enterprise Integration Patterns</em></span></a> (EIP) book, the idea behind the control bus is that the same messaging system can be used for monitoring and managing the components within the framework as is used for "<code class="literal">application-level</code>" messaging.
+In Spring Integration, we build upon the adapters described above so that you can send messages as a means of invoking exposed operations.</p>
+<p>The following example shows how to configure a control bus with XML:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:control-bus</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"operationChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The control bus has an input channel that can be accessed for invoking operations on the beans in the application context.
+It also has all the common properties of a service activating endpoint.
+For example, you can specify an output channel if the result of the operation has a return value that you want to send on to a downstream channel.</p>
+<p>The control bus runs messages on the input channel as Spring Expression Language (SpEL) expressions.
+It takes a message, compiles the body to an expression, adds some context, and then runs it.
+The default context supports any method that has been annotated with <code class="literal">@ManagedAttribute</code> or <code class="literal">@ManagedOperation</code>.
+It also supports the methods on Spring&#8217;s <code class="literal">Lifecycle</code> interface, and it supports methods that are used to configure several of Spring&#8217;s <code class="literal">TaskExecutor</code> and <code class="literal">TaskScheduler</code> implementations.
+The simplest way to ensure that your own methods are available to the control bus is to use the <code class="literal">@ManagedAttribute</code> or <code class="literal">@ManagedOperation</code> annotations.
+Since those annotations are also used for exposing methods to a JMX MBean registry, they offer a convenient by-product: Often, the same types of operations you want to expose to the control bus are reasonable for exposing through JMX).
+Resolution of any particular instance within the application context is achieved in the typical SpEL syntax.
+To do so, provide the bean name with the SpEL prefix for beans (<code class="literal">@</code>).
+For example, to execute a method on a Spring Bean, a client could send a message to the operation channel as follows:</p>
+<div class="informalexample">
+<pre class="programlisting">Message operation = MessageBuilder.withPayload(<span class="hl-string">"@myServiceBean.shutdown()"</span>).build();
+operationChannel.send(operation)</pre>
+</div>
+<p>The root of the context for the expression is the <code class="literal">Message</code> itself, so you also have access to the <code class="literal">payload</code> and <code class="literal">headers</code> as variables within your expression.
+This is consistent with all the other expression support in Spring Integration endpoints.</p>
+<p>With Java annotations, you can configured the control bus as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "operationChannel")</span></em>
+<span class="hl-keyword">public</span> ExpressionControlBusFactoryBean controlBus() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> ExpressionControlBusFactoryBean();
+}</pre>
+</div>
+<p>Similarly, you can configure Java DSL flow definitions as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow controlBusFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"controlBus"</span>)
+              .controlBus()
+              .get();
+}</pre>
+</div>
+<p>If you prefer to use lambdas with automatic <code class="literal">DirectChannel</code> creation, you can create a control bus as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow controlBus() {
+    <span class="hl-keyword">return</span> IntegrationFlowDefinition::controlBus;
+}</pre>
+</div>
+<p>In this case, the channel is named <code class="literal">controlBus.input</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jmx-shutdown" href="#jmx-shutdown"></a>12.7&nbsp;Orderly Shutdown</h2></div></div></div>
+
+<p>As described in "<a class="xref" href="system-management-chapter.html#jmx-mbean-exporter" title="12.2.7&nbsp;MBean Exporter">Section&nbsp;12.2.7, &#8220;MBean Exporter&#8221;</a>", the MBean exporter provides a JMX operation called <code class="literal">stopActiveComponents</code>, which is used to stop the application in an orderly manner.
+The operation has a single <code class="literal">Long</code> parameter.
+The parameter indicates how long (in milliseconds) the operation waits to allow in-flight messages to complete.
+The operation works as follows:</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+<p class="simpara">Call <code class="literal">beforeShutdown()</code> on all beans that implement <code class="literal">OrderlyShutdownCapable</code>.</p>
+<p class="simpara">Doing so lets such components prepare for shutdown.
+Examples of components that implement this interface and what they do with this call include JMS and AMQP message-driven adapters that stop their listener containers, TCP server connection factories that stop accepting new connections (while keeping existing connections open), TCP inbound endpoints that drop (log) any new messages received, and HTTP inbound endpoints that return <code class="literal">503 - Service Unavailable</code> for any new requests.</p>
+</li><li class="listitem">
+Stop any active channels, such as JMS- or AMQP-backed channels.
+</li><li class="listitem">
+Stop all <code class="literal">MessageSource</code> instances.
+</li><li class="listitem">
+Stop all inbound <code class="literal">MessageProducer</code> s (that are not <code class="literal">OrderlyShutdownCapable</code>).
+</li><li class="listitem">
+<p class="simpara">Wait for any remaining time left, as defined by the value of the <code class="literal">Long</code> parameter passed in to the operation.</p>
+<p class="simpara">Doing so lets any in-flight messages complete their journeys.
+It is therefore important to select an appropriate timeout when invoking this operation.</p>
+</li><li class="listitem">
+<p class="simpara">Call <code class="literal">afterShutdown()</code> on all <code class="literal">OrderlyShutdownCapable</code> components.</p>
+<p class="simpara">Doing so lets such components perform final shutdown tasks (closing all open sockets, for example).</p>
+</li></ol></div>
+<p>As discussed in <a class="xref" href="system-management-chapter.html#jmx-mbean-shutdown" title="Orderly Shutdown Managed Operation">the section called &#8220;Orderly Shutdown Managed Operation&#8221;</a>, this operation can be invoked by using JMX.
+If you wish to programmatically invoke the method, you need to inject or otherwise get a reference to the <code class="literal">IntegrationMBeanExporter</code>.
+If no <code class="literal">id</code> attribute is provided on the <code class="literal">&lt;int-jmx:mbean-export/&gt;</code> definition, the bean has a generated name.
+This name contains a random component to avoid <code class="literal">ObjectName</code> collisions if multiple Spring Integration contexts exist in the same JVM (<code class="literal">MBeanServer</code>).</p>
+<p>For this reason, if you wish to invoke the method programmatically, we recommend that you provide the exporter with an <code class="literal">id</code> attribute so that you can easily access it in the application context.</p>
+<p>Finally, the operation can be invoked by using the <code class="literal">&lt;control-bus&gt;</code> element.
+See the <a class="ulink" href="https://github.com/spring-projects/spring-integration-samples/tree/master/intermediate/monitoring" target="_top">monitoring Spring Integration sample application</a> for details.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The algorithm described earlier was improved in version 4.1.
+Previously, all task executors and schedulers were stopped.
+This could cause mid-flow messages in <code class="literal">QueueChannel</code> instances to remain.
+Now the shutdown leaves pollers running, to let these messages be drained and processed.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="integration-graph" href="#integration-graph"></a>12.8&nbsp;Integration Graph</h2></div></div></div>
+
+<p>Starting with version 4.3, Spring Integration provides access to an application&#8217;s runtime object model, which can, optionally, include component metrics.
+It is exposed as a graph, which may be used to visualize the current state of the integration application.
+The <code class="literal">o.s.i.support.management.graph</code> package contains all the required classes to collect, build, and render the runtime state of Spring Integration components as a single tree-like <code class="literal">Graph</code> object.
+The <code class="literal">IntegrationGraphServer</code> should be declared as a bean to build, retrieve, and refresh the <code class="literal">Graph</code> object.
+The resulting <code class="literal">Graph</code> object can be serialized to any format, although JSON is flexible and convenient to parse and represent on the client side.
+A Spring Integration application with only the default components would expose a graph as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">{</span>
+  <span class="hl-string">"contentDescriptor"</span>: <span class="hl-keyword">{</span>
+    <span class="hl-string">"providerVersion"</span>: <span class="hl-string">"4.3.0.RELEASE"</span><span class="hl-keyword">,</span>
+    <span class="hl-string">"providerFormatVersion"</span>: <span class="hl-number">1.0</span><span class="hl-keyword">,</span>
+    <span class="hl-string">"provider"</span>: <span class="hl-string">"spring-integration"</span><span class="hl-keyword">,</span>
+    <span class="hl-string">"name"</span>: <span class="hl-string">"myApplication"</span>
+  <span class="hl-keyword">},</span>
+  <span class="hl-string">"nodes"</span>: <span class="hl-keyword">[</span>
+    <span class="hl-keyword">{</span>
+      <span class="hl-string">"nodeId"</span>: <span class="hl-number">1</span><span class="hl-keyword">,</span>
+      <span class="hl-string">"name"</span>: <span class="hl-string">"nullChannel"</span><span class="hl-keyword">,</span>
+      <span class="hl-string">"stats"</span>: null<span class="hl-keyword">,</span>
+      <span class="hl-string">"componentType"</span>: <span class="hl-string">"channel"</span>
+    <span class="hl-keyword">},</span>
+    <span class="hl-keyword">{</span>
+      <span class="hl-string">"nodeId"</span>: <span class="hl-number">2</span><span class="hl-keyword">,</span>
+      <span class="hl-string">"name"</span>: <span class="hl-string">"errorChannel"</span><span class="hl-keyword">,</span>
+      <span class="hl-string">"stats"</span>: null<span class="hl-keyword">,</span>
+      <span class="hl-string">"componentType"</span>: <span class="hl-string">"publish-subscribe-channel"</span>
+    <span class="hl-keyword">},</span>
+    <span class="hl-keyword">{</span>
+      <span class="hl-string">"nodeId"</span>: <span class="hl-number">3</span><span class="hl-keyword">,</span>
+      <span class="hl-string">"name"</span>: <span class="hl-string">"_org.springframework.integration.errorLogger"</span><span class="hl-keyword">,</span>
+      <span class="hl-string">"stats"</span>: <span class="hl-keyword">{</span>
+        <span class="hl-string">"duration"</span>: <span class="hl-keyword">{</span>
+          <span class="hl-string">"count"</span>: <span class="hl-number">0</span><span class="hl-keyword">,</span>
+          <span class="hl-string">"min"</span>: <span class="hl-number">0.0</span><span class="hl-keyword">,</span>
+          <span class="hl-string">"max"</span>: <span class="hl-number">0.0</span><span class="hl-keyword">,</span>
+          <span class="hl-string">"mean"</span>: <span class="hl-number">0.0</span><span class="hl-keyword">,</span>
+          <span class="hl-string">"standardDeviation"</span>: <span class="hl-number">0.0</span><span class="hl-keyword">,</span>
+          <span class="hl-string">"countLong"</span>: <span class="hl-number">0</span>
+        <span class="hl-keyword">},</span>
+        <span class="hl-string">"errorCount"</span>: <span class="hl-number">0</span><span class="hl-keyword">,</span>
+        <span class="hl-string">"standardDeviationDuration"</span>: <span class="hl-number">0.0</span><span class="hl-keyword">,</span>
+        <span class="hl-string">"countsEnabled"</span>: <span class="hl-keyword">true</span><span class="hl-keyword">,</span>
+        <span class="hl-string">"statsEnabled"</span>: <span class="hl-keyword">true</span><span class="hl-keyword">,</span>
+        <span class="hl-string">"loggingEnabled"</span>: <span class="hl-keyword">false</span><span class="hl-keyword">,</span>
+        <span class="hl-string">"handleCount"</span>: <span class="hl-number">0</span><span class="hl-keyword">,</span>
+        <span class="hl-string">"meanDuration"</span>: <span class="hl-number">0.0</span><span class="hl-keyword">,</span>
+        <span class="hl-string">"maxDuration"</span>: <span class="hl-number">0.0</span><span class="hl-keyword">,</span>
+        <span class="hl-string">"minDuration"</span>: <span class="hl-number">0.0</span><span class="hl-keyword">,</span>
+        <span class="hl-string">"activeCount"</span>: <span class="hl-number">0</span>
+      <span class="hl-keyword">},</span>
+      <span class="hl-string">"componentType"</span>: <span class="hl-string">"logging-channel-adapter"</span><span class="hl-keyword">,</span>
+      <span class="hl-string">"output"</span>: null<span class="hl-keyword">,</span>
+      <span class="hl-string">"input"</span>: <span class="hl-string">"errorChannel"</span>
+    <span class="hl-keyword">}</span>
+  ]<span class="hl-keyword">,</span>
+  <span class="hl-string">"links"</span>: <span class="hl-keyword">[</span>
+    <span class="hl-keyword">{</span>
+      <span class="hl-string">"from"</span>: <span class="hl-number">2</span><span class="hl-keyword">,</span>
+      <span class="hl-string">"to"</span>: <span class="hl-number">3</span><span class="hl-keyword">,</span>
+      <span class="hl-string">"type"</span>: <span class="hl-string">"input"</span>
+    <span class="hl-keyword">}</span>
+  <span class="hl-keyword">]</span>
+<span class="hl-keyword">}</span></pre>
+</div>
+<p>In the preceding example, the graph consists of three top-level elements.</p>
+<p>The <code class="literal">contentDescriptor</code> graph element contains general information about the application providing the data.
+The <code class="literal">name</code> can be customized on the <code class="literal">IntegrationGraphServer</code> bean or in the <code class="literal">spring.application.name</code> application context environment property.
+Other properties are provided by the framework and let you distinguish a similar model from other sources.</p>
+<p>The <code class="literal">links</code> graph element represents connections between nodes from the <code class="literal">nodes</code> graph element and, therefore, between integration components in the source Spring Integration application.
+For example, from a <code class="literal">MessageChannel</code> to an <code class="literal">EventDrivenConsumer</code> with some <code class="literal">MessageHandler</code>
+or from an <code class="literal">AbstractReplyProducingMessageHandler</code> to a <code class="literal">MessageChannel</code>.
+For convenience and to let you determine a link&#8217;s purpose, the model includes the <code class="literal">type</code> attribute.
+The possible types are:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">input</code>: Identifies the direction from <code class="literal">MessageChannel</code> to the endpoint, <code class="literal">inputChannel</code>, or <code class="literal">requestChannel</code> property
+</li><li class="listitem">
+<code class="literal">output</code>: The direction from the <code class="literal">MessageHandler</code>, <code class="literal">MessageProducer</code>, or <code class="literal">SourcePollingChannelAdapter</code> to the <code class="literal">MessageChannel</code> through an <code class="literal">outputChannel</code> or <code class="literal">replyChannel</code> property
+</li><li class="listitem">
+<code class="literal">error</code>: From <code class="literal">MessageHandler</code> on <code class="literal">PollingConsumer</code> or <code class="literal">MessageProducer</code> or <code class="literal">SourcePollingChannelAdapter</code> to the <code class="literal">MessageChannel</code> through an <code class="literal">errorChannel</code> property;
+</li><li class="listitem">
+<code class="literal">discard</code>: From <code class="literal">DiscardingMessageHandler</code> (such as <code class="literal">MessageFilter</code>) to the <code class="literal">MessageChannel</code> through an <code class="literal">errorChannel</code> property.
+</li><li class="listitem">
+<code class="literal">route</code>: From <code class="literal">AbstractMappingMessageRouter</code> (such as <code class="literal">HeaderValueRouter</code>) to the <code class="literal">MessageChannel</code>.
+Similar to <code class="literal">output</code> but determined at run-time.
+May be a configured channel mapping or a dynamically resolved channel.
+Routers typically retain only up to 100 dynamic routes for this purpose, but you can modify this value by setting the <code class="literal">dynamicChannelLimit</code> property.
+</li></ul></div>
+<p>The information from this element can be used by a visualization tool to render connections between nodes from the <code class="literal">nodes</code> graph element, where the <code class="literal">from</code> and <code class="literal">to</code> numbers represent the value from the <code class="literal">nodeId</code> property of the linked nodes.
+For example, the <code class="literal">link</code> element can be used to determine the proper <code class="literal">port</code> on the target node.</p>
+<p>The following "<code class="literal">text image</code>" shows the relationships between the types:</p>
+<div class="informalexample">
+<pre class="screen">              +---(discard)
+              |
+         +----o----+
+         |         |
+         |         |
+         |         |
+(input)--o         o---(output)
+         |         |
+         |         |
+         |         |
+         +----o----+
+              |
+              +---(error)</pre>
+</div>
+<p>The <code class="literal">nodes</code> graph element is perhaps the most interesting, because its elements contain not only the runtime components with their <code class="literal">componentType</code> instances and <code class="literal">name</code> values but can also optionally contain metrics exposed by the component.
+Node elements contain various properties that are generally self-explanatory.
+For example, expression-based components include the <code class="literal">expression</code> property that contains the primary expression string for the component.
+To enable the metrics, add an <code class="literal">@EnableIntegrationManagement</code> to a <code class="literal">@Configuration</code> class or add an <code class="literal">&lt;int:management/&gt;</code> element to your XML configuration.
+You can control exactly which components in the framework collect statistics.
+See  <a class="xref" href="system-management-chapter.html#metrics-management" title="12.1&nbsp;Metrics and Management">Section&nbsp;12.1, &#8220;Metrics and Management&#8221;</a> for complete information.
+See the <code class="literal">stats</code> attribute from the <code class="literal">o.s.i.errorLogger</code> component in the JSON example shown earlier.
+In this case, The <code class="literal">nullChannel</code> and <code class="literal">errorChannel</code> do not provide statistics information, because the configuration for this example was as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegrationManagement(statsEnabled = "_org.springframework.integration.errorLogger.handler",
+      countsEnabled = "!*",
+      defaultLoggingEnabled = "false")</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> ManagementConfiguration {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationGraphServer integrationGraphServer() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> IntegrationGraphServer();
+    }
+
+}</pre>
+</div>
+<p>The <code class="literal">nodeId</code> represents a unique incremental identifier to let you distinguish one component from another.
+It is also used in the <code class="literal">links</code> element to represent a relationship (connection) of this component to others, if any.
+The <code class="literal">input</code> and <code class="literal">output</code> attributes are for the <code class="literal">inputChannel</code> and <code class="literal">outputChannel</code> properties of the <code class="literal">AbstractEndpoint</code>, <code class="literal">MessageHandler</code>, <code class="literal">SourcePollingChannelAdapter</code>, or <code class="literal">MessageProducerSupport</code>.
+See the next section for more information.</p>
+<p>Starting with version 5.1, the <code class="literal">IntegrationGraphServer</code> accepts a <code class="literal">Function&lt;NamedComponent, Map&lt;String, Object&gt;&gt; additionalPropertiesCallback</code> for population of additional properties on the <code class="literal">IntegrationNode</code> for a particular <code class="literal">NamedComponent</code>.
+For example you can expose the <code class="literal">SmartLifecycle</code> <code class="literal">autoStartup</code> and <code class="literal">running</code> properties into the target graph:</p>
+<div class="informalexample">
+<pre class="programlisting">server.setAdditionalPropertiesCallback(namedComponent -&gt; {
+            Map&lt;String, Object&gt; properties = null;
+            <span class="hl-keyword">if</span> (namedComponent <span class="hl-keyword">instanceof</span> SmartLifecycle) {
+                SmartLifecycle smartLifecycle = (SmartLifecycle) namedComponent;
+                properties = <span class="hl-keyword">new</span> HashMap&lt;&gt;();
+                properties.put(<span class="hl-string">"auto-startup"</span>, smartLifecycle.isAutoStartup());
+                properties.put(<span class="hl-string">"running"</span>, smartLifecycle.isRunning());
+            }
+            <span class="hl-keyword">return</span> properties;
+        });</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_graph_runtime_model" href="#_graph_runtime_model"></a>12.8.1&nbsp;Graph Runtime Model</h3></div></div></div>
+
+<p>Spring Integration components have various levels of complexity.
+For example, any polled <code class="literal">MessageSource</code> also has a <code class="literal">SourcePollingChannelAdapter</code> and a <code class="literal">MessageChannel</code> to which to periodically send messages from the source data.
+Other components might be middleware request-reply components (such as <code class="literal">JmsOutboundGateway</code>) with a consuming <code class="literal">AbstractEndpoint</code> to subscribe to (or poll) the <code class="literal">requestChannel</code> (<code class="literal">input</code>) for messages, and a <code class="literal">replyChannel</code> (<code class="literal">output</code>) to produce a reply message to send downstream.
+Meanwhile, any <code class="literal">MessageProducerSupport</code> implementation (such as <code class="literal">ApplicationEventListeningMessageProducer</code>) wraps some source protocol listening logic and sends messages to the <code class="literal">outputChannel</code>.</p>
+<p>Within the graph, Spring Integration components are represented by using the <code class="literal">IntegrationNode</code> class hierarchy, which you can find in the <code class="literal">o.s.i.support.management.graph</code> package.
+For example, you can use the <code class="literal">ErrorCapableDiscardingMessageHandlerNode</code> for the <code class="literal">AggregatingMessageHandler</code> (because it has a <code class="literal">discardChannel</code> option) and can produce errors when consuming from a <code class="literal">PollableChannel</code> by using a <code class="literal">PollingConsumer</code>.
+Another example is <code class="literal">CompositeMessageHandlerNode</code>&#8201;&#8212;&#8201;for a <code class="literal">MessageHandlerChain</code> when subscribed to a <code class="literal">SubscribableChannel</code> by using an <code class="literal">EventDrivenConsumer</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">@MessagingGateway</code> (see <a class="xref" href="messaging-endpoints-chapter.html#gateway" title="10.4&nbsp;Messaging Gateways">Section&nbsp;10.4, &#8220;Messaging Gateways&#8221;</a>) provides nodes for each of its method, where the <code class="literal">name</code> attribute is based on the gateway&#8217;s bean name and the short method signature.
+Consider the following example of a gateway:</p>
+</td></tr></table></div>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@MessagingGateway(defaultRequestChannel = "four")</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> Gate {
+
+	<span class="hl-keyword">void</span> foo(String foo);
+
+	<span class="hl-keyword">void</span> foo(Integer foo);
+
+	<span class="hl-keyword">void</span> bar(String bar);
+
+}</pre>
+</div>
+<p>The preceding gateway produces nodes similar to the following:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">{</span>
+  <span class="hl-string">"nodeId"</span> : <span class="hl-number">10</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"name"</span> : <span class="hl-string">"gate.bar(class java.lang.String)"</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"stats"</span> : null<span class="hl-keyword">,</span>
+  <span class="hl-string">"componentType"</span> : <span class="hl-string">"gateway"</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"output"</span> : <span class="hl-string">"four"</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"errors"</span> : null
+<span class="hl-keyword">},</span>
+<span class="hl-keyword">{</span>
+  <span class="hl-string">"nodeId"</span> : <span class="hl-number">11</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"name"</span> : <span class="hl-string">"gate.foo(class java.lang.String)"</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"stats"</span> : null<span class="hl-keyword">,</span>
+  <span class="hl-string">"componentType"</span> : <span class="hl-string">"gateway"</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"output"</span> : <span class="hl-string">"four"</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"errors"</span> : null
+<span class="hl-keyword">},</span>
+<span class="hl-keyword">{</span>
+  <span class="hl-string">"nodeId"</span> : <span class="hl-number">12</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"name"</span> : <span class="hl-string">"gate.foo(class java.lang.Integer)"</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"stats"</span> : null<span class="hl-keyword">,</span>
+  <span class="hl-string">"componentType"</span> : <span class="hl-string">"gateway"</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"output"</span> : <span class="hl-string">"four"</span><span class="hl-keyword">,</span>
+  <span class="hl-string">"errors"</span> : null
+<span class="hl-keyword">}</span></pre>
+</div>
+<p>You can use this  <code class="literal">IntegrationNode</code> hierarchy for parsing the graph model on the client side as well as to understand the general Spring Integration runtime behavior.
+See also <a class="xref" href="overview.html#programming-tips" title="5.7&nbsp;Programming Tips and Tricks">Section&nbsp;5.7, &#8220;Programming Tips and Tricks&#8221;</a> for more information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="_integration_graph_controller" href="#_integration_graph_controller"></a>12.9&nbsp;Integration Graph Controller</h2></div></div></div>
+
+<p>If your application is web-based (or built on top of Spring Boot with an embedded web container) and the Spring Integration HTTP or WebFlux module (see <a class="xref" href="http.html" title="20.&nbsp;HTTP Support">Chapter&nbsp;20, <i>HTTP Support</i></a> and <a class="xref" href="webflux.html" title="35.&nbsp;WebFlux Support">Chapter&nbsp;35, <i>WebFlux Support</i></a>, respectively) is present on the classpath, you can use a <code class="literal">IntegrationGraphController</code> to expose the <code class="literal">IntegrationGraphServer</code> functionality as a REST service.
+For this purpose, the <code class="literal">@EnableIntegrationGraphController</code> and <code class="literal">@Configuration</code> class annotations and the <code class="literal">&lt;int-http:graph-controller/&gt;</code> XML element are available in the HTTP module.
+Together with the <code class="literal">@EnableWebMvc</code> annotation (or <code class="literal">&lt;mvc:annotation-driven/&gt;</code> for XML definitions), this configuration registers an <code class="literal">IntegrationGraphController</code> <code class="literal">@RestController</code> where its <code class="literal">@RequestMapping.path</code> can be configured on the <code class="literal">@EnableIntegrationGraphController</code> annotation or <code class="literal">&lt;int-http:graph-controller/&gt;</code> element.
+The default path is <code class="literal">/integration</code>.</p>
+<p>The <code class="literal">IntegrationGraphController</code> <code class="literal">@RestController</code> provides the following services:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">@GetMapping(name = "getGraph")</code>: To retrieve the state of the Spring Integration components since the last <code class="literal">IntegrationGraphServer</code> refresh.
+The <code class="literal">o.s.i.support.management.graph.Graph</code> is returned as a <code class="literal">@ResponseBody</code> of the REST service.
+</li><li class="listitem">
+<code class="literal">@GetMapping(path = "/refresh", name = "refreshGraph")</code>: To refresh the current <code class="literal">Graph</code> for the actual runtime state and return it as a REST response.
+It is not necessary to refresh the graph for metrics.
+They are provided in real-time when the graph is retrieved.
+Refresh can be called if the application context has been modified since the graph was last retrieved.
+In that case, the graph is completely rebuilt.
+</li></ul></div>
+<p>You can set security and cross-origin restrictions for the <code class="literal">IntegrationGraphController</code> with the standard configuration options and components provided by the Spring Security and Spring MVC projects.
+The following example achieves those goals:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;mvc:annotation-driven /&gt;</span>
+
+<span class="hl-tag">&lt;mvc:cors&gt;</span>
+	<span class="hl-tag">&lt;mvc:mapping</span> <span class="hl-attribute">path</span>=<span class="hl-value">"/myIntegration/**"</span>
+				 <span class="hl-attribute">allowed-origins</span>=<span class="hl-value">"http://localhost:9090"</span>
+				 <span class="hl-attribute">allowed-methods</span>=<span class="hl-value">"GET"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/mvc:cors&gt;</span>
+
+<span class="hl-tag">&lt;security:http&gt;</span>
+    <span class="hl-tag">&lt;security:intercept-url</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"/myIntegration/**"</span> <span class="hl-attribute">access</span>=<span class="hl-value">"ROLE_ADMIN"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/security:http&gt;</span>
+
+
+<span class="hl-tag">&lt;int-http:graph-controller</span> <span class="hl-attribute">path</span>=<span class="hl-value">"/myIntegration"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<p>The following example shows how to do the same thing with Java configuration:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableWebMvc</span></em> <span class="hl-comment">// or @EnableWebFlux</span>
+<em><span class="hl-annotation" style="color: gray">@EnableWebSecurity</span></em> <span class="hl-comment">// or @EnableWebFluxSecurity</span>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegrationGraphController(path = "/testIntegration", allowedOrigins="http://localhost:9090")</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> IntegrationConfiguration <span class="hl-keyword">extends</span> WebSecurityConfigurerAdapter {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> configure(HttpSecurity http) <span class="hl-keyword">throws</span> Exception {
+	    http
+            .authorizeRequests()
+               .antMatchers(<span class="hl-string">"/testIntegration/**"</span>).hasRole(<span class="hl-string">"ADMIN"</span>)
+            <span class="hl-comment">// ...</span>
+            .formLogin();
+    }
+
+    <span class="hl-comment">//...</span>
+
+}</pre>
+</div>
+<p>Note that, for convenience, the <code class="literal">@EnableIntegrationGraphController</code> annotation provides an <code class="literal">allowedOrigins</code> attribute.
+This provides <code class="literal">GET</code> access to the <code class="literal">path</code>.
+For more sophistication, you can configure the CORS mappings by using standard Spring MVC mechanisms.</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="java-dsl.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-core-messaging.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="spring-integration-endpoints.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">11.&nbsp;Java DSL&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Part&nbsp;V.&nbsp;Integration Endpoints</td></tr></table></div></body></html>

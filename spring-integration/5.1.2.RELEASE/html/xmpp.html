@@ -1,0 +1,352 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>39.&nbsp;XMPP Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="xml.html" title="38.&nbsp;XML Support - Dealing with XML Payloads"><link rel="next" href="zookeeper.html" title="40.&nbsp;Zookeeper Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">39.&nbsp;XMPP Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="xml.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="zookeeper.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="xmpp" href="#xmpp"></a>39.&nbsp;XMPP Support</h2></div></div></div>
+
+<p>Spring Integration provides channel adapters for <a class="ulink" href="http://www.xmpp.org" target="_top">XMPP</a>.
+XMPP stands for "<code class="literal">Extensible Messaging and Presence Protocol</code>".</p>
+<p>XMPP describes a way for multiple agents to communicate with each other in a distributed system.
+The canonical use case is to send and receive chat messages, though XMPP can be (and is) used for other kinds of applications.
+XMPP describes a network of actors.
+Within that network, actors may address each other directly and broadcast status changes (such as "<code class="literal">presence</code>").</p>
+<p>XMPP provides the messaging fabric that underlies some of the biggest instant messaging networks in the world, including Google Talk (GTalk, which is also available from within GMail) and Facebook Chat.
+Many good open-source XMPP servers are available.
+Two popular implementations are <a class="ulink" href="http://www.igniterealtime.org/projects/openfire/" target="_top">Openfire</a> and <a class="ulink" href="http://www.ejabberd.im" target="_top">ejabberd</a>.</p>
+<p>Spring integration provides support for XMPP by providing XMPP adapters, which support sending and receiving both XMPP chat messages and presence changes from other entries in a client&#8217;s roster.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-xmpp<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-xmpp:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<p>As with other adapters, the XMPP adapters come with support for a convenient namespace-based configuration.
+To configure the XMPP namespace, include the following elements in the headers of your XML configuration file:</p>
+<div class="informalexample">
+<pre class="programlisting">xmlns:int-xmpp="http://www.springframework.org/schema/integration/xmpp"
+xsi:schemaLocation="http://www.springframework.org/schema/integration/xmpp
+	http://www.springframework.org/schema/integration/xmpp/spring-integration-xmpp.xsd"</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xmpp-connection" href="#xmpp-connection"></a>39.1&nbsp;XMPP Connection</h2></div></div></div>
+
+<p>Before using inbound or outbound XMPP adapters to participate in the XMPP network, an actor must establish its XMPP connection.
+All XMPP adapters connected to a particular account can share this connection object.
+Typically this requires (at a minimum) <code class="literal">user</code>, <code class="literal">password</code>, and <code class="literal">host</code>.
+To create a basic XMPP connection, you can use the convenience of the namespace, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-xmpp:xmpp-connection</span>
+    <span class="hl-attribute">id</span>=<span class="hl-value">"myConnection"</span>
+    <span class="hl-attribute">user</span>=<span class="hl-value">"user"</span>
+    <span class="hl-attribute">password</span>=<span class="hl-value">"password"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"host"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"port"</span>
+    <span class="hl-attribute">resource</span>=<span class="hl-value">"theNameOfTheResource"</span>
+    <span class="hl-attribute">subscription-mode</span>=<span class="hl-value">"accept_all"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>For added convenience, you can rely on the default naming convention and omit the <code class="literal">id</code> attribute.
+The default name (<code class="literal">xmppConnection</code>) is used for this connection bean.</p>
+</td></tr></table></div>
+<p>If the XMPP connection goes stale, reconnection attempts are made with an automatic login as long as the previous connection state was logged (authenticated).
+We also register a <code class="literal">ConnectionListener</code>, which logs connection events if the <code class="literal">DEBUG</code> logging level is enabled.</p>
+<p>The <code class="literal">subscription-mode</code> attribute initiates the roster listener to deal with incoming subscriptions from other users.
+This functionality is not always available for the target XMPP servers.
+For example, Google Cloud Messaging (GCM) and Firebase Cloud Messaging (FCM) fully disable it.
+To switch off the roster listener for subscriptions, you can configure it with an empty string when using XML configuration (<code class="literal">subscription-mode=""</code>) or with <code class="literal">XmppConnectionFactoryBean.setSubscriptionMode(null)</code> when using Java Configuration.
+Doing so disables the roster at the login phase as well.
+See <a class="ulink" href="http://download.igniterealtime.org/smack/docs/latest/javadoc/org/jivesoftware/smack/roster/Roster.html#setRosterLoadedAtLogin-boolean-" target="_top"><code class="literal">Roster.setRosterLoadedAtLogin(boolean)</code></a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xmpp-messages" href="#xmpp-messages"></a>39.2&nbsp;XMPP Messages</h2></div></div></div>
+
+<p>Spring Integration provides support for sending and receiving XMPP messages.
+For receiving them, it offers an inbound message channel adapter.
+For sending them, it offers an outbound message channel adapter.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="xmpp-message-inbound-channel-adapter" href="#xmpp-message-inbound-channel-adapter"></a>39.2.1&nbsp;Inbound Message Channel Adapter</h3></div></div></div>
+
+<p>The Spring Integration adapters support receiving chat messages from other users in the system.
+To do so, the inbound message channel adapter "<code class="literal">logs in</code>" as a user on your behalf and receives the messages sent to that user.
+Those messages are then forwarded to your Spring Integration client.
+The <code class="literal">inbound-channel-adapter</code> element provides Configuration support for the XMPP inbound message channel adapter.
+The following example shows how to configure it:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-xmpp:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"xmppInboundAdapter"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"xmppInbound"</span>
+	<span class="hl-attribute">xmpp-connection</span>=<span class="hl-value">"testConnection"</span>
+	<span class="hl-attribute">payload-expression</span>=<span class="hl-value">"getExtension('google:mobile:data').json"</span>
+	<span class="hl-attribute">stanza-filter</span>=<span class="hl-value">"stanzaFilter"</span>
+	<span class="hl-attribute">auto-startup</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Along with the usual attributes (for a message channel adapter), this adapter also requires a reference to an XMPP Connection.</p>
+<p>The XMPP inbound adapter is event-driven and a <code class="literal">Lifecycle</code> implementation.
+When started, it registers a <code class="literal">PacketListener</code> that listens for incoming XMPP chat messages.
+It forwards any received messages to the underlying adapter, which converts them to Spring Integration messages and sends them to the specified <code class="literal">channel</code>.
+When stopped, it unregisters the <code class="literal">PacketListener</code>.</p>
+<p>Starting with version 4.3, the <code class="literal">ChatMessageListeningEndpoint</code> (and its <code class="literal">&lt;int-xmpp:inbound-channel-adapter&gt;</code>) supports the injection of a <code class="literal">org.jivesoftware.smack.filter.StanzaFilter</code> to be registered on the provided <code class="literal">XMPPConnection</code>, together with an internal <code class="literal">StanzaListener</code> implementation.
+See the <a class="ulink" href="https://www.igniterealtime.org/builds/smack/docs/latest/javadoc/org/jivesoftware/smack/XMPPConnection.html#addAsyncStanzaListener%28org.jivesoftware.smack.StanzaListener,%20org.jivesoftware.smack.filter.StanzaFilter%29" target="_top">Javadoc</a> for more information.</p>
+<p>Version 4.3 introduced the <code class="literal">payload-expression</code> attribute for the <code class="literal">ChatMessageListeningEndpoint</code>.
+The incoming <code class="literal">org.jivesoftware.smack.packet.Message</code> represents a root object for the evaluation context.
+This option is useful when you use <a class="link" href="xmpp.html#xmpp-extensions" title="39.6&nbsp;XMPP Extensions">XMPP extensions</a>.
+For example, for the GCM protocol we can extract the body by using the following expression:</p>
+<div class="informalexample">
+<pre class="programlisting">payload-expression="getExtension('google:mobile:data').json"</pre>
+</div>
+<p>The following example extracts the body for the XHTML protocol:</p>
+<div class="informalexample">
+<pre class="programlisting">payload-expression="getExtension(T(org.jivesoftware.smackx.xhtmlim.packet.XHTMLExtension).NAMESPACE).bodies[0]"</pre>
+</div>
+<p>To simplify access to the extension in the XMPP Message, the <code class="literal">extension</code> variable is added into the <code class="literal">EvaluationContext</code>.
+Note that it is added when only one extension is present in the message.
+The preceding examples that show the <code class="literal">namespace</code> manipulations can be simplified to the following example:</p>
+<div class="informalexample">
+<pre class="programlisting">payload-expression="#extension.json"
+payload-expression="#extension.bodies[0]"</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="xmpp-message-outbound-channel-adapter" href="#xmpp-message-outbound-channel-adapter"></a>39.2.2&nbsp;Outbound Message Channel Adapter</h3></div></div></div>
+
+<p>You can also send chat messages to other users on XMPP by using the outbound message channel adapter.
+The <code class="literal">outbound-channel-adapter</code> element provides configuration support for the XMPP outbound message channel adapter.</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-xmpp:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outboundEventAdapter"</span>
+						<span class="hl-attribute">channel</span>=<span class="hl-value">"outboundEventChannel"</span>
+						<span class="hl-attribute">xmpp-connection</span>=<span class="hl-value">"testConnection"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The adapter expects its input to be (at a minimum) a payload of type <code class="literal">java.lang.String</code> and a header value for <code class="literal">XmppHeaders.CHAT_TO</code> that specifies to which user the message should be sent.
+To create a message, you can use Java code similar to the following:</p>
+<div class="informalexample">
+<pre class="programlisting">Message&lt;String&gt; xmppOutboundMsg = MessageBuilder.withPayload(<span class="hl-string">"Hello, XMPP!"</span> )
+						.setHeader(XmppHeaders.CHAT_TO, <span class="hl-string">"userhandle"</span>)
+						.build();</pre>
+</div>
+<p>You can also set the header by using the XMPP header-enricher support, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-xmpp:header-enricher</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"input"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;int-xmpp:chat-to</span> <span class="hl-attribute">value</span>=<span class="hl-value">"test1@example.org"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xmpp:header-enricher&gt;</span></pre>
+</div>
+<p>Starting with version 4.3, the packet extension support has been added to the <code class="literal">ChatMessageSendingMessageHandler</code> (the <code class="literal">&lt;int-xmpp:outbound-channel-adapter&gt;</code> in XML configuration).
+Along with the regular <code class="literal">String</code> and <code class="literal">org.jivesoftware.smack.packet.Message</code> payload, now you can send a message with a payload of <code class="literal">org.jivesoftware.smack.packet.ExtensionElement</code> (which is populated to the <code class="literal">org.jivesoftware.smack.packet.Message.addExtension()</code>) instead of <code class="literal">setBody()</code>.
+For convenience, we added an <code class="literal">extension-provider</code> option for the <code class="literal">ChatMessageSendingMessageHandler</code>.
+It lets you inject <code class="literal">org.jivesoftware.smack.provider.ExtensionElementProvider</code>, which builds an <code class="literal">ExtensionElement</code> against the payload at runtime.
+For this case, the payload must be a string in JSON or XML format, depending of the XEP protocol.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xmpp-presence" href="#xmpp-presence"></a>39.3&nbsp;XMPP Presence</h2></div></div></div>
+
+<p>XMPP also supports broadcasting state.
+You can use this ability to let people who have you on their roster see your state changes.
+This happens all the time with your IM clients.
+You change your away status and set an away message, and everybody who has you on their roster sees your icon or username change to reflect this new state and might see your new "<code class="literal">away</code>" message.
+If you would like to receive notifications or notify others of state changes, you can use Spring Integration&#8217;s "<code class="literal">presence</code>" adapters.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="xmpp-roster-inbound-channel-adapter" href="#xmpp-roster-inbound-channel-adapter"></a>39.3.1&nbsp;Inbound Presence Message Channel Adapter</h3></div></div></div>
+
+<p>Spring Integration provides an inbound presence message channel adapter, which supports receiving presence events from other users in the system who are on your roster.
+To do this, the adapter "<code class="literal">logs in</code>" as a user on your behalf, registers a <code class="literal">RosterListener</code>, and forwards received presence update events as messages to the channel identified by the <code class="literal">channel</code> attribute.
+The payload of the message is a <code class="literal">org.jivesoftware.smack.packet.Presence</code> object (see <a class="ulink" href="https://www.igniterealtime.org/builds/smack/docs/latest/javadoc/org/jivesoftware/smack/packet/Presence.html" target="_top">https://www.igniterealtime.org/builds/smack/docs/latest/javadoc/org/jivesoftware/smack/packet/Presence.html</a>).</p>
+<p>The <code class="literal">presence-inbound-channel-adapter</code> element provides configuration support for the XMPP inbound presence message channel adapter.
+The following example configures an inbound presence message channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-xmpp:presence-inbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"outChannel"</span>
+		<span class="hl-attribute">xmpp-connection</span>=<span class="hl-value">"testConnection"</span> <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Along with the usual attributes, this adapter requires a reference to an XMPP Connection.
+This adapter is event-driven and a <code class="literal">Lifecycle</code> implementation.
+It registers a <code class="literal">RosterListener</code> when started and unregisters that <code class="literal">RosterListener</code> when stopped.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="xmpp-roster-outbound-channel-adapter" href="#xmpp-roster-outbound-channel-adapter"></a>39.3.2&nbsp;Outbound Presence Message Channel Adapter</h3></div></div></div>
+
+<p>Spring Integration also supports sending presence events to be seen by other users in the network who happen to have you on their roster.
+When you send a message to the outbound presence message channel adapter, it extracts the payload (which is expected to be of type <code class="literal">org.jivesoftware.smack.packet.Presence</code>) and sends it to the XMPP Connection, thus advertising your presence events to the rest of the network.</p>
+<p>The <code class="literal">presence-outbound-channel-adapter</code> element provides configuration support for the XMPP outbound presence message channel adapter.
+The following example shows how to configure an outbound presence message channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-xmpp:presence-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"eventOutboundPresenceChannel"</span>
+	<span class="hl-attribute">xmpp-connection</span>=<span class="hl-value">"testConnection"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>It can also be a polling consumer (if it receives messages from a pollable channel) in which case you would need to register a poller.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-xmpp:presence-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"pollingOutboundPresenceAdapter"</span>
+		<span class="hl-attribute">xmpp-connection</span>=<span class="hl-value">"testConnection"</span>
+		<span class="hl-attribute">channel</span>=<span class="hl-value">"pollingChannel"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"1"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-xmpp:presence-outbound-channel-adapter&gt;</span></pre>
+</div>
+<p>Like its inbound counterpart, it requires a reference to an XMPP Connection.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If you rely on the default naming convention for an XMPP Connection bean (<a class="link" href="xmpp.html#xmpp-connection" title="39.1&nbsp;XMPP Connection">described earlier</a>) and you have only one XMPP Connection bean configured in your application context, you can omit the <code class="literal">xmpp-connection</code> attribute.
+In that case, the bean with named <code class="literal">xmppConnection</code> is located and injected into the adapter.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xmpp-advanced" href="#xmpp-advanced"></a>39.4&nbsp;Advanced Configuration</h2></div></div></div>
+
+<p>Spring Integration&#8217;s XMPP support is based on the Smack 4.0 API (<a class="ulink" href="http://www.igniterealtime.org/projects/smack/" target="_top">http://www.igniterealtime.org/projects/smack/</a>), which allows more complex configuration of the XMPP Connection object.</p>
+<p>As <a class="link" href="xmpp.html#xmpp-connection" title="39.1&nbsp;XMPP Connection">stated earlier</a>, the <code class="literal">xmpp-connection</code> namespace support is designed to simplify basic connection configuration and supports only a few common configuration attributes.
+However, the <code class="literal">org.jivesoftware.smack.ConnectionConfiguration</code> object defines about 20 attributes, and adding namespace support for all of them offers no real value.
+So, for more complex connection configurations, you can configure an instance of our <code class="literal">XmppConnectionFactoryBean</code> as a regular bean and inject a <code class="literal">org.jivesoftware.smack.ConnectionConfiguration</code> as a constructor argument to that <code class="literal">FactoryBean</code>.
+You can specify every property you need directly on that <code class="literal">ConnectionConfiguration</code> instance.
+(A bean definition with the <span class="emphasis"><em>p</em></span> namespace would work well.)
+This way, you can directly set SSL (or any other attributes).
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"xmppConnection"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.xmpp.XmppConnectionFactoryBean"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.jivesoftware.smack.ConnectionConfiguration"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"myServiceName"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"socketFactory"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"..."</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outboundEventChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-xmpp:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outboundEventAdapter"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"outboundEventChannel"</span>
+    <span class="hl-attribute">xmpp-connection</span>=<span class="hl-value">"xmppConnection"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The Smack API also offers static initializers, which can be helpful.
+For more complex cases (such as registering a SASL mechanism), you may need to execute certain static initializers.
+One of those static initializers is <code class="literal">SASLAuthentication</code>, which lets you register supported SASL mechanisms.
+For that level of complexity, we recommend using Spring Java configuration for the XMPP connection configuration.
+That way, you can configure the entire component through Java code and execute all other necessary Java code, including static initializers, at the appropriate time.
+The following exampe shows how to configure an XMPP connection with an SASL (Simple Authentication and Security Layer) in Java:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> CustomConnectionConfiguration {
+  <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+  <span class="hl-keyword">public</span> XMPPConnection xmppConnection() {
+	SASLAuthentication.supportSASLMechanism(<span class="hl-string">"EXTERNAL"</span>, <span class="hl-number">0</span>); <span class="hl-comment">// static initializer</span>
+
+	ConnectionConfiguration config = <span class="hl-keyword">new</span> ConnectionConfiguration(<span class="hl-string">"localhost"</span>, <span class="hl-number">5223</span>);
+	config.setTrustorePath(<span class="hl-string">"path_to_truststore.jks"</span>);
+	config.setSecurityEnabled(true);
+	config.setSocketFactory(SSLSocketFactory.getDefault());
+	<span class="hl-keyword">return</span> <span class="hl-keyword">new</span> XMPPConnection(config);
+  }
+}</pre>
+</div>
+<p>For more information on using Java for application context configuration, see the following section in the <a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/beans.html#beans-java" target="_top">Spring Reference Manual</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xmpp-message-headers" href="#xmpp-message-headers"></a>39.5&nbsp;XMPP Message Headers</h2></div></div></div>
+
+<p>The Spring Integration XMPP Adapters automatically map standard XMPP properties.
+By default, these properties are copied to and from Spring Integration <code class="literal">MessageHeaders</code> by using
+<a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/xmpp/support/DefaultXmppHeaderMapper.html" target="_top"><code class="literal">DefaultXmppHeaderMapper</code></a>.</p>
+<p>Any user-defined headers are not copied to or from an XMPP Message, unless explicitly specified by the <code class="literal">requestHeaderNames</code> or <code class="literal">replyHeaderNames</code> properties of the <code class="literal">DefaultXmppHeaderMapper</code>.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>When mapping user-defined headers, the values can also contain simple wildcard patterns (such "thing*" or "*thing").</p>
+</td></tr></table></div>
+<p>Starting with version 4.1, <code class="literal">AbstractHeaderMapper</code> (a superclass of <code class="literal">DefaultXmppHeaderMapper</code>) lets you configure the <code class="literal">NON_STANDARD_HEADERS</code> token for the <code class="literal">requestHeaderNames</code> property (in addition to <code class="literal">STANDARD_REQUEST_HEADERS</code>), to map all user-defined headers.</p>
+<p>The <code class="literal">org.springframework.xmpp.XmppHeaders</code> class identifies the default headers to be used by the <code class="literal">DefaultXmppHeaderMapper</code>:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">xmpp_from</code>
+</li><li class="listitem">
+<code class="literal">xmpp_subject</code>
+</li><li class="listitem">
+<code class="literal">xmpp_thread</code>
+</li><li class="listitem">
+<code class="literal">xmpp_to</code>
+</li><li class="listitem">
+<code class="literal">xmpp_type</code>
+</li></ul></div>
+<p>Starting with version 4.3, you can negate patterns in the header mappings by preceding the pattern with <code class="literal">!</code>.
+Negated patterns get priority, so a list such as <code class="literal">STANDARD_REQUEST_HEADERS,thing1,thing*,!thing2,!thing3,qux,!thing1</code> does not map <code class="literal">thing1</code>, <code class="literal">thing2</code>,or <code class="literal">thing3</code>.
+That list does map the standard headers plus <code class="literal">thing4</code> and <code class="literal">qux</code>.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If you have a user-defined header that begins with <code class="literal">!</code> that you do wish to map, can escape it with <code class="literal">\</code> thus: <code class="literal">STANDARD_REQUEST_HEADERS,\!myBangHeader</code>.
+In that example, the standard request headers and <code class="literal">!myBangHeader</code> are mapped.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="xmpp-extensions" href="#xmpp-extensions"></a>39.6&nbsp;XMPP Extensions</h2></div></div></div>
+
+<p>Extensions put the "<code class="literal">Extensible</code>" in the "<code class="literal">Extensible Messaging and Presence Protocol</code>".</p>
+<p>XMPP is based around XML, a data format that supports a concept known as namespacing.
+Through namespacing, you can add bits to XMPP that are not defined in the original specifications.
+The XMPP specification deliberately describes only a set of core features:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+How a client connects to a server
+</li><li class="listitem">
+Encryption (SSL/TLS)
+</li><li class="listitem">
+Authentication
+</li><li class="listitem">
+How servers can communicate with each other to relay messages
+</li><li class="listitem">
+A few other basic building blocks
+</li></ul></div>
+<p>Once you have implemented this, you have an XMPP client and can send any kind of data you like.
+However, you may need to do more than the basics.
+For example, you might need to include formatting (bold, italic, and so on) in a message, which is not defined in the core XMPP specification.
+Well, you can make up a way to do that, but, unless everyone else does it the same way you do, no other software can interpret it (they ignore namespaces they cannot understand).</p>
+<p>To solve that problem, the XMPP Standards Foundation (XSF) publishes a series of extra documents, known as <a class="ulink" href="http://xmpp.org/extensions/xep-0001.html" target="_top">XMPP Enhancement Proposals</a> (XEPs).
+In general, each XEP describes a particular activity (from message formatting to file transfers, multi-user chats, and many more).
+They also provide a standard format for everyone to use for that activity.</p>
+<p>The Smack API provides many XEP implementations with its <code class="literal">extensions</code> and <code class="literal">experimental</code> <a class="ulink" href="http://www.igniterealtime.org/builds/smack/docs/latest/documentation/extensions/index.html" target="_top">projects</a>.
+Starting with Spring Integration version 4.3, you can use any XEP with the existing XMPP channel adapters.</p>
+<p>To be able to process XEPs or any other custom XMPP extensions, you must provide the Smack&#8217;s <code class="literal">ProviderManager</code> pre-configuration.
+You can do so with <code class="literal">static</code> Java code, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting">ProviderManager.addIQProvider(<span class="hl-string">"element"</span>, <span class="hl-string">"namespace"</span>, <span class="hl-keyword">new</span> MyIQProvider());
+ProviderManager.addExtensionProvider(<span class="hl-string">"element"</span>, <span class="hl-string">"namespace"</span>, <span class="hl-keyword">new</span> MyExtProvider());</pre>
+</div>
+<p>You can also use a  <code class="literal">.providers</code> configuration file in the specific instance and access it with a JVM argument, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting">-Dsmack.provider.file=file:///c:/my/provider/mycustom.providers</pre>
+</div>
+<p>The <code class="literal">mycustom.providers</code> file might be as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0"?&gt;</span>
+<span class="hl-tag">&lt;smackProviders&gt;</span>
+<span class="hl-tag">&lt;iqProvider&gt;</span>
+    <span class="hl-tag">&lt;elementName&gt;</span>query<span class="hl-tag">&lt;/elementName&gt;</span>
+    <span class="hl-tag">&lt;namespace&gt;</span>jabber:iq:time<span class="hl-tag">&lt;/namespace&gt;</span>
+    <span class="hl-tag">&lt;className&gt;</span>org.jivesoftware.smack.packet.Time<span class="hl-tag">&lt;/className&gt;</span>
+<span class="hl-tag">&lt;/iqProvider&gt;</span>
+
+<span class="hl-tag">&lt;iqProvider&gt;</span>
+    <span class="hl-tag">&lt;elementName&gt;</span>query<span class="hl-tag">&lt;/elementName&gt;</span>
+    <span class="hl-tag">&lt;namespace&gt;</span>http://jabber.org/protocol/disco#items<span class="hl-tag">&lt;/namespace&gt;</span>
+    <span class="hl-tag">&lt;className&gt;</span>org.jivesoftware.smackx.provider.DiscoverItemsProvider<span class="hl-tag">&lt;/className&gt;</span>
+<span class="hl-tag">&lt;/iqProvider&gt;</span>
+
+<span class="hl-tag">&lt;extensionProvider&gt;</span>
+    <span class="hl-tag">&lt;elementName&gt;</span>subscription<span class="hl-tag">&lt;/elementName&gt;</span>
+    <span class="hl-tag">&lt;namespace&gt;</span>http://jabber.org/protocol/pubsub<span class="hl-tag">&lt;/namespace&gt;</span>
+    <span class="hl-tag">&lt;className&gt;</span>org.jivesoftware.smackx.pubsub.provider.SubscriptionProvider<span class="hl-tag">&lt;/className&gt;</span>
+<span class="hl-tag">&lt;/extensionProvider&gt;</span>
+<span class="hl-tag">&lt;/smackProviders&gt;</span></pre>
+</div>
+<p>For example, the most popular XMPP messaging extension is <a class="ulink" href="https://developers.google.com/cloud-messaging/" target="_top">Google Cloud Messaging</a> (GCM).
+The Smack library provides <code class="literal">org.jivesoftware.smackx.gcm.provider.GcmExtensionProvider</code> for that purposes.
+By default, it registers that class with the <code class="literal">smack-experimental</code> jar in the classpath by using the <code class="literal">experimental.providers</code> resource, as the following Maven example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-comment">&lt;!-- GCM JSON payload --&gt;</span>
+<span class="hl-tag">&lt;extensionProvider&gt;</span>
+    <span class="hl-tag">&lt;elementName&gt;</span>gcm<span class="hl-tag">&lt;/elementName&gt;</span>
+    <span class="hl-tag">&lt;namespace&gt;</span>google:mobile:data<span class="hl-tag">&lt;/namespace&gt;</span>
+    <span class="hl-tag">&lt;className&gt;</span>org.jivesoftware.smackx.gcm.provider.GcmExtensionProvider<span class="hl-tag">&lt;/className&gt;</span>
+<span class="hl-tag">&lt;/extensionProvider&gt;</span></pre>
+</div>
+<p>Also, the <code class="literal">GcmPacketExtension</code> lets the target messaging protocol parse incoming packets and build outgoing packets, as the following examples show:</p>
+<div class="informalexample">
+<pre class="programlisting">GcmPacketExtension gcmExtension = (GcmPacketExtension) xmppMessage.getExtension(GcmPacketExtension.NAMESPACE);
+String message = gcmExtension.getJson());</pre>
+<pre class="programlisting">GcmPacketExtension packetExtension = <span class="hl-keyword">new</span> GcmPacketExtension(gcmJson);
+Message smackMessage = <span class="hl-keyword">new</span> Message();
+smackMessage.addExtension(packetExtension);</pre>
+</div>
+<p>See <a class="xref" href="xmpp.html#xmpp-message-inbound-channel-adapter" title="39.2.1&nbsp;Inbound Message Channel Adapter">Section&nbsp;39.2.1, &#8220;Inbound Message Channel Adapter&#8221;</a> and <a class="xref" href="xmpp.html#xmpp-message-outbound-channel-adapter" title="39.2.2&nbsp;Outbound Message Channel Adapter">Section&nbsp;39.2.2, &#8220;Outbound Message Channel Adapter&#8221;</a> earlier in this chapter for more information.</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="xml.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="zookeeper.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">38.&nbsp;XML Support - Dealing with XML Payloads&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;40.&nbsp;Zookeeper Support</td></tr></table></div></body></html>

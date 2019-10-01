@@ -1,0 +1,165 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Appendix&nbsp;D.&nbsp;Security in Spring Integration</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-appendices.html" title="Part&nbsp;VI.&nbsp;Appendices"><link rel="prev" href="transactions.html" title="Appendix&nbsp;C.&nbsp;Transaction Support"><link rel="next" href="configuration.html" title="Appendix&nbsp;E.&nbsp;Configuration"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Appendix&nbsp;D.&nbsp;Security in Spring Integration</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="transactions.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;VI.&nbsp;Appendices</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="configuration.html">Next</a></td></tr></table><hr></div><div class="appendix"><div class="titlepage"><div><div><h2 class="title"><a name="security" href="#security"></a>Appendix&nbsp;D.&nbsp;Security in Spring Integration</h2></div></div></div>
+
+<p>Security is one of the important functions in any modern enterprise (or cloud) application.
+Moreover, it is critical for distributed systems, such as those built on Enterprise Integration Patterns.
+Messaging independence and loose coupling let target systems communicate with each other with any type of data in the message&#8217;s <code class="literal">payload</code>.
+We can either trust all those messages or secure our service against "<code class="literal">infecting</code>" messages.</p>
+<p>Spring Integration, together with <a class="ulink" href="http://projects.spring.io/spring-security/" target="_top">Spring Security</a>, provides a simple and comprehensive way to secure message channels, as well as other part of the integration solution.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-security<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-security:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="securing-channels" href="#securing-channels"></a>D.1&nbsp;Securing channels</h2></div></div></div>
+
+<p>Spring Integration provides the <code class="literal">ChannelSecurityInterceptor</code> interceptor, which extends <code class="literal">AbstractSecurityInterceptor</code> and intercepts send and receive calls on the channel.
+Access decisions are then made with reference to a <code class="literal">ChannelSecurityMetadataSource</code>, which provides the metadata that describes the send and receive access policies for certain channels.
+The interceptor requires that a valid <code class="literal">SecurityContext</code> has been established by authenticating with Spring Security.
+See the <a class="ulink" href="https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/" target="_top">Spring Security Reference Guide</a> for details.</p>
+<p>Spring Integration provides Namespace support to allow easy configuration of security constraints.
+This support consists of the secured channels tag, which allows definition of one or more channel name patterns in conjunction with a definition of the security configuration for send and receive.
+The pattern is a <code class="literal">java.util.regexp.Pattern</code>.</p>
+<p>The following example shows how to configure a bean that includes security and how to set up policies with patterns:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-directive" style="color: maroon">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hl-tag">&lt;beans:beans</span> <span class="hl-attribute">xmlns:int</span>=<span class="hl-value">"http://www.springframework.org/schema/integration"</span>
+   <span class="hl-attribute">xmlns:int-security</span>=<span class="hl-value">"http://www.springframework.org/schema/integration/security"</span>
+  <span class="hl-attribute">xmlns:beans</span>=<span class="hl-value">"http://www.springframework.org/schema/beans"</span>
+  <span class="hl-attribute">xmlns:xsi</span>=<span class="hl-value">"http://www.w3.org/2001/XMLSchema-instance"</span>
+  <span class="hl-attribute">xmlns:security</span>=<span class="hl-value">"http://www.springframework.org/schema/security"</span>
+  <span class="hl-attribute">xsi:schemaLocation</span>=<span class="hl-value">"http://www.springframework.org/schema/beans
+      http://www.springframework.org/schema/beans/spring-beans.xsd
+      http://www.springframework.org/schema/security
+      http://www.springframework.org/schema/security/spring-security.xsd
+      http://www.springframework.org/schema/integration
+      http://www.springframework.org/schema/integration/spring-integration.xsd
+      http://www.springframework.org/schema/integration/security
+      http://www.springframework.org/schema/integration/security/spring-integration-security.xsd"</span><span class="hl-tag">&gt;</span>
+
+<span class="hl-tag">&lt;int-security:secured-channels&gt;</span>
+    <span class="hl-tag">&lt;int-security:access-policy</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"admin.*"</span> <span class="hl-attribute">send-access</span>=<span class="hl-value">"ROLE_ADMIN"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-security:access-policy</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"user.*"</span> <span class="hl-attribute">receive-access</span>=<span class="hl-value">"ROLE_USER"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-security:secured-channels&gt;</span></pre>
+</div>
+<p>By default, the <code class="literal">secured-channels</code> namespace element expects a bean named <code class="literal">authenticationManager</code> (which implements <code class="literal">AuthenticationManager</code>) and a bean named <code class="literal">accessDecisionManager</code> (which implements <code class="literal">AccessDecisionManager</code>).
+Where this is not the case, references to the appropriate beans can be configured as attributes of the <code class="literal">secured-channels</code> element, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-security:secured-channels</span> <span class="hl-attribute">access-decision-manager</span>=<span class="hl-value">"customAccessDecisionManager"</span>
+                              <span class="hl-attribute">authentication-manager</span>=<span class="hl-value">"customAuthenticationManager"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-security:access-policy</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"admin.*"</span> <span class="hl-attribute">send-access</span>=<span class="hl-value">"ROLE_ADMIN"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-security:access-policy</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"user.*"</span> <span class="hl-attribute">receive-access</span>=<span class="hl-value">"ROLE_USER"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-security:secured-channels&gt;</span></pre>
+</div>
+<p>Starting with version 4.2, the <code class="literal">@SecuredChannel</code> annotation is available for Java configuration in <code class="literal">@Configuration</code> classes.</p>
+<p>The following example shows the Java equivalent of the preceding XML examples:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> ContextConfiguration {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@SecuredChannel(interceptor = "channelSecurityInterceptor", sendAccess = "ROLE_ADMIN")</span></em>
+    <span class="hl-keyword">public</span> SubscribableChannel adminChannel() {
+    	<span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@SecuredChannel(interceptor = "channelSecurityInterceptor", receiveAccess = "ROLE_USER")</span></em>
+    <span class="hl-keyword">public</span> SubscribableChannel userChannel() {
+    	<span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> ChannelSecurityInterceptor channelSecurityInterceptor(
+            AuthenticationManager authenticationManager,
+    		AccessDecisionManager accessDecisionManager) {
+    	ChannelSecurityInterceptor channelSecurityInterceptor = <span class="hl-keyword">new</span> ChannelSecurityInterceptor();
+    	channelSecurityInterceptor.setAuthenticationManager(authenticationManager);
+    	channelSecurityInterceptor.setAccessDecisionManager(accessDecisionManager);
+    	<span class="hl-keyword">return</span> channelSecurityInterceptor;
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="security-context-propagation" href="#security-context-propagation"></a>D.2&nbsp;Security Context Propagation</h2></div></div></div>
+
+<p>To be sure that our interaction with the application is secure, according to its security system rules, we should supply some security context with an authentication (principal) object.
+The Spring Security project provides a flexible, canonical mechanism to authenticate our application clients over HTTP, WebSocket, or SOAP protocols (as can be done for any other integration protocol with a simple Spring Security extension).
+It also provides a <code class="literal">SecurityContext</code> for further authorization checks on the application objects, such as message channels.
+By default, the <code class="literal">SecurityContext</code> is tied to the execution state of the current <code class="literal">Thread</code> by using the (<code class="literal">ThreadLocalSecurityContextHolderStrategy</code>).
+It is accessed by an AOP (Aspect-oriented Programming) interceptor on secured methods to check (for example) whether that <code class="literal">principal</code> of the invocation has sufficient permissions to call that method.
+This works well with the current thread.
+Often, though, processing logic can be performed on another thread, on several threads, or even on external systems.</p>
+<p>Standard thread-bound behavior is easy to configure if our application is built on the Spring Integration components
+and its message channels.
+In this case, the secured objects can be any service activator or transformer, secured with a
+<code class="literal">MethodSecurityInterceptor</code> in their <code class="literal">&lt;request-handler-advice-chain&gt;</code> (see <a class="xref" href="messaging-endpoints-chapter.html#message-handler-advice-chain" title="10.9&nbsp;Adding Behavior to Endpoints">Section&nbsp;10.9, &#8220;Adding Behavior to Endpoints&#8221;</a>) or even <code class="literal">MessageChannel</code> (see <a class="xref" href="security.html#securing-channels" title="D.1&nbsp;Securing channels">Section&nbsp;D.1, &#8220;Securing channels&#8221;</a>, earlier).
+When using <code class="literal">DirectChannel</code> communication, the <code class="literal">SecurityContext</code> is automatically available, because the downstream flow runs on the current thread.
+However, in the cases of the <code class="literal">QueueChannel</code>, <code class="literal">ExecutorChannel</code>, and <code class="literal">PublishSubscribeChannel</code> with an <code class="literal">Executor</code>, messages are transferred from one thread to another (or several) by the nature of those channels.
+In order to support such scenarios, we have two choices:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Transfer an <code class="literal">Authentication</code> object within the message headers and extract and authenticate it on the other side before secured object access.
+</li><li class="listitem">
+Propagate the <code class="literal">SecurityContext</code> to the thread that receives the transferred message.
+</li></ul></div>
+<p>Version 4.2 introduced <code class="literal">SecurityContext</code> propagation.
+It is implemented as a <code class="literal">SecurityContextPropagationChannelInterceptor</code>, which you can add to any <code class="literal">MessageChannel</code> or configure as a <code class="literal">@GlobalChannelInterceptor</code>.
+The logic of this interceptor is based on the <code class="literal">SecurityContext</code> extraction from the current thread (from the <code class="literal">preSend()</code> method) and its populating to another thread from the <code class="literal">postReceive()</code> (<code class="literal">beforeHandle()</code>) method.
+Actually, this interceptor is an extension of the more generic <code class="literal">ThreadStatePropagationChannelInterceptor</code>, which wraps the message to send with the state to propagate in an internal <code class="literal">Message&lt;?&gt;</code> extension (<code class="literal">MessageWithThreadState&lt;S&gt;</code>) on one side and extracts the original message and the state to propagate on the other side.
+You can extend the <code class="literal">ThreadStatePropagationChannelInterceptor</code> for any context propagation use case, and <code class="literal">SecurityContextPropagationChannelInterceptor</code> is a good example of doing so.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The logic of the <code class="literal">ThreadStatePropagationChannelInterceptor</code> is based on message modification (it returns an internal <code class="literal">MessageWithThreadState</code> object to send).
+Consequently, you should be careful when combining this interceptor with any other that can also modify messages (for example, through the <code class="literal">MessageBuilder.withPayload(...)...build()</code>).
+The state to propagate may be lost.
+In most cases, to overcome the issue, you can order the interceptors for the channel and ensure the <code class="literal">ThreadStatePropagationChannelInterceptor</code> is the last one in the stack.</p>
+</td></tr></table></div>
+<p>Propagation and population of <code class="literal">SecurityContext</code> is just one half of the work.
+Since the message is not an owner of the threads in the message flow and we should be sure that we are secure against any incoming messages, we have to clean up the <code class="literal">SecurityContext</code> from <code class="literal">ThreadLocal</code>.
+The <code class="literal">SecurityContextPropagationChannelInterceptor</code> provides the <code class="literal">afterMessageHandled()</code> interceptor method implementation.
+It cleans up operation by freeing the thread at the end of invocation from that propagated principal.
+This means that, when the thread that processes the handed-off message finishes processing the message (successful or otherwise), the context is cleared so that it cannot inadvertently be used when processing another message.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When working with an <a class="link" href="messaging-endpoints-chapter.html#async-gateway" title="10.4.10&nbsp;Asynchronous Gateway">asynchronous gateway</a>, you should use an appropriate <code class="literal">AbstractDelegatingSecurityContextSupport</code> implementation from Spring Security <a class="ulink" href="http://docs.spring.io/spring-security/site/docs/current/reference/html/concurrency.html" target="_top">Concurrency Support</a>, to let security context propagation be ensured over gateway invocation.
+The following example shows how to do so:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> ContextConfiguration {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> AsyncTaskExecutor securityContextExecutor() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DelegatingSecurityContextAsyncTaskExecutor(
+                         <span class="hl-keyword">new</span> SimpleAsyncTaskExecutor());
+    }
+
+}
+
+...
+
+<em><span class="hl-annotation" style="color: gray">@MessagingGateway(asyncExecutor = "securityContextExecutor")</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> SecuredGateway {
+
+    <em><span class="hl-annotation" style="color: gray">@Gateway(requestChannel = "queueChannel")</span></em>
+    Future&lt;String&gt; send(String payload);
+
+}</pre>
+</td></tr></table></div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="transactions.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-appendices.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="configuration.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Appendix&nbsp;C.&nbsp;Transaction Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Appendix&nbsp;E.&nbsp;Configuration</td></tr></table></div></body></html>

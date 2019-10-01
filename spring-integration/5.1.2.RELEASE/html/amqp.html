@@ -1,0 +1,1440 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>14.&nbsp;AMQP Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="endpoint-summary.html" title="13.&nbsp;Endpoint Quick Reference Table"><link rel="next" href="applicationevent.html" title="15.&nbsp;Spring ApplicationEvent Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">14.&nbsp;AMQP Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="endpoint-summary.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="applicationevent.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="amqp" href="#amqp"></a>14.&nbsp;AMQP Support</h2></div></div></div>
+
+<p>Spring Integration provides channel adapters for receiving and sending messages by using the Advanced Message Queuing Protocol (AMQP).</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-amqp<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-amqp:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<p>The following adapters are available:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="amqp.html#amqp-inbound-channel-adapter" title="14.1&nbsp;Inbound Channel Adapter">Inbound Channel Adapter</a>
+</li><li class="listitem">
+<a class="link" href="amqp.html#amqp-inbound-gateway" title="14.3&nbsp;Inbound Gateway">Inbound Gateway</a>
+</li><li class="listitem">
+<a class="link" href="amqp.html#amqp-outbound-channel-adapter" title="14.5&nbsp;Outbound Channel Adapter">Outbound Channel Adapter</a>
+</li><li class="listitem">
+<a class="link" href="amqp.html#amqp-outbound-gateway" title="14.6&nbsp;Outbound Gateway">Outbound Gateway</a>
+</li><li class="listitem">
+<a class="link" href="amqp.html#amqp-async-outbound-gateway" title="14.7&nbsp;Asynchronous Outbound Gateway">Async Outbound Gateway</a>
+</li></ul></div>
+<p>Spring Integration also provides a point-to-point message channel and a publish-subscribe message channel backed by AMQP Exchanges and Queues.</p>
+<p>To provide AMQP support, Spring Integration relies on (<a class="ulink" href="http://projects.spring.io/spring-amqp" target="_top">Spring AMQP</a>), which applies core Spring concepts to the development of AMQP-based messaging solutions.
+Spring AMQP provides similar semantics to (<a class="ulink" href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/jms.html" target="_top">Spring JMS</a>).</p>
+<p>Whereas the provided AMQP Channel Adapters are intended for unidirectional messaging (send or receive) only, Spring Integration also provides inbound and outbound AMQP gateways for request-reply operations.</p>
+<p>TIP:
+You should familiarize yourself with the <a class="ulink" href="http://docs.spring.io/spring-amqp/reference/html/" target="_top">reference documentation of the Spring AMQP project</a>.
+It provides much more in-depth information about Spring&#8217;s integration with AMQP in general and RabbitMQ in particular.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-inbound-channel-adapter" href="#amqp-inbound-channel-adapter"></a>14.1&nbsp;Inbound Channel Adapter</h2></div></div></div>
+
+<p>The following listing shows the possible configuration options for an AMQP Inbound Channel Adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-amqp:inbound-channel-adapter</span>
+                                  <span class="hl-attribute">id</span>=<span class="hl-value">"inboundAmqp"</span>                <a name="CO18-1" href="#CO18-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                                  channel="inboundChannel"        <a name="CO18-2" href="#CO18-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                                  queue-names="si.test.queue"     <a name="CO18-3" href="#CO18-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                                  acknowledge-mode="AUTO"         <a name="CO18-4" href="#CO18-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                                  advice-chain=""                 <a name="CO18-5" href="#CO18-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                                  channel-transacted=""           <a name="CO18-6" href="#CO18-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                                  concurrent-consumers=""         <a name="CO18-7" href="#CO18-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                                  connection-factory=""           <a name="CO18-8" href="#CO18-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                                  error-channel=""                <a name="CO18-9" href="#CO18-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+                                  expose-listener-channel=""      <a name="CO18-10" href="#CO18-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+                                  header-mapper=""                <a name="CO18-11" href="#CO18-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+                                  mapped-request-headers=""       <a name="CO18-12" href="#CO18-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+                                  listener-container=""           <a name="CO18-13" href="#CO18-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+                                  message-converter=""            <a name="CO18-14" href="#CO18-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span>
+                                  message-properties-converter="" <a name="CO18-15" href="#CO18-15"></a><span><img src="images/callouts/15.png" alt="15" border="0"></span>
+                                  phase=""                        <a name="CO18-16" href="#CO18-16"></a>(16)
+                                  prefetch-count=""               <a name="CO18-17" href="#CO18-17"></a>(17)
+                                  receive-timeout=""              <a name="CO18-18" href="#CO18-18"></a>(18)
+                                  recovery-interval=""            <a name="CO18-19" href="#CO18-19"></a>(19)
+                                  missing-queues-fatal=""         <a name="CO18-20" href="#CO18-20"></a>(20)
+                                  shutdown-timeout=""             <a name="CO18-21" href="#CO18-21"></a>(21)
+                                  task-executor=""                <a name="CO18-22" href="#CO18-22"></a>(22)
+                                  transaction-attribute=""        <a name="CO18-23" href="#CO18-23"></a>(23)
+                                  transaction-manager=""          <a name="CO18-24" href="#CO18-24"></a>(24)
+                                  tx-size=""                      <a name="CO18-25" href="#CO18-25"></a>(25)
+                                  consumers-per-queue /&gt;          <a name="CO18-26" href="#CO18-26"></a>(26)</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The unique ID for this adapter.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message channel to which converted messages should be sent.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Names of the AMQP queues (comma-separated list) from which messages should be consumed.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Acknowledge mode for the <code class="literal">MessageListenerContainer</code>.
+When set to <code class="literal">MANUAL</code>, the delivery tag and channel are provided in message headers <code class="literal">amqp_deliveryTag</code> and <code class="literal">amqp_channel</code>, respectively.
+The user application is responsible for acknowledgement.
+<code class="literal">NONE</code> means no acknowledgements (<code class="literal">autoAck</code>).
+<code class="literal">AUTO</code> means the adapter&#8217;s container acknowledges when the downstream flow completes.
+Optional (defaults to AUTO).
+See <a class="xref" href="amqp.html#amqp-inbound-ack" title="14.4&nbsp;Inbound Endpoint Acknowledge Mode">Section&nbsp;14.4, &#8220;Inbound Endpoint Acknowledge Mode&#8221;</a>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Extra AOP Advices to handle cross-cutting behavior associated with this inbound channel adapter.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Flag to indicate that channels created by this component are transactional.
+If true, it tells the framework to use a transactional channel and to end all operations (send or receive) with a commit or rollback, depending on the outcome, with an exception that signals a rollback.
+Optional (Defaults to false).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specify the number of concurrent consumers to create.
+The default is <code class="literal">1</code>.
+We recommend raising the number of concurrent consumers to scale the consumption of messages coming in from a queue.
+However, note that any ordering guarantees are lost once multiple consumers are registered.
+In general, use one consumer for low-volume queues.
+Not allowed when <span class="emphasis"><em>consumers-per-queue</em></span> is set.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Bean reference to the RabbitMQ <code class="literal">ConnectionFactory</code>.
+Optional (defaults to <span class="emphasis"><em>connectionFactory</em></span>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message channel to which error messages should be sent.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Whether the listener channel (com.rabbitmq.client.Channel) is exposed to a registered <code class="literal">ChannelAwareMessageListener</code>.
+Optional (defaults to true).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to an <code class="literal">AmqpHeaderMapper</code> to use when receiving AMQP Messages.
+Optional.
+By default, only standard AMQP properties (such as <code class="literal">contentType</code>) are copied to Spring Integration <code class="literal">MessageHeaders</code>.
+Any user-defined headers within the AMQP <code class="literal">MessageProperties</code> are NOT copied to the message by the default <code class="literal">DefaultAmqpHeaderMapper</code>.
+Not allowed if <span class="emphasis"><em>request-header-names</em></span> is provided.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Comma-separated list of the names of AMQP Headers to be mapped from the AMQP request into the <code class="literal">MessageHeaders</code>.
+This can only be provided if the <span class="emphasis"><em>header-mapper</em></span> reference is not provided.
+The values in this list can also be simple patterns to be matched against the header names (such as "*" or "thing1*, thing2" or "*something").</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Reference to the <code class="literal">AbstractMessageListenerContainer</code> to use for receiving AMQP Messages.
+If this attribute is provided, no other attribute related to the listener container configuration should be provided.
+In other words, by setting this reference, you must take full responsibility for the listener container configuration.
+The only exception is the <code class="literal">MessageListener</code> itself.
+Since that is actually the core responsibility of this channel adapter implementation, the referenced listener container must not already have its own <code class="literal">MessageListener</code>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessageConverter</code> to use when receiving AMQP messages.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-15"><span><img src="images/callouts/15.png" alt="15" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">MessagePropertiesConverter</code> to use when receiving AMQP messages.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-16">(16)</a> </p></td><td valign="top" align="left">
+<p>Specifies the phase in which the underlying <code class="literal">AbstractMessageListenerContainer</code> should be started and stopped.
+The startup order proceeds from lowest to highest, and the shutdown order is the reverse of that.
+By default, this value is <code class="literal">Integer.MAX_VALUE</code>, meaning that this container starts as late as possible and stops as soon as possible.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-17">(17)</a> </p></td><td valign="top" align="left">
+<p>Tells the AMQP broker how many messages to send to each consumer in a single request.
+Often, you can set this value high to improve throughput.
+It should be greater than or equal to the transaction size (see the <code class="literal">tx-size</code> attribute, later in this list).
+Optional (defaults to <code class="literal">1</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-18">(18)</a> </p></td><td valign="top" align="left">
+<p>Receive timeout in milliseconds.
+Optional (defaults to <code class="literal">1000</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-19">(19)</a> </p></td><td valign="top" align="left">
+<p>Specifies the interval between recovery attempts of the underlying <code class="literal">AbstractMessageListenerContainer</code> (in milliseconds).
+Optional (defaults to <code class="literal">5000</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-20">(20)</a> </p></td><td valign="top" align="left">
+<p>If <span class="emphasis"><em>true</em></span> and none of the queues are available on the broker, the container throws a fatal exception during startup and stops if the queues are deleted when the container is running (after making three attempts to passively declare the queues).
+If <code class="literal">false</code>, the container does not throw an exception and goes into recovery mode, attempting to restart according to the <code class="literal">recovery-interval</code>.
+Optional (defaults to <code class="literal">true</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-21">(21)</a> </p></td><td valign="top" align="left">
+<p>The time to wait for workers (in milliseconds) after the underlying <code class="literal">AbstractMessageListenerContainer</code> is stopped and before the AMQP connection is forced closed.
+If any workers are active when the shutdown signal comes, they are allowed to finish processing as long as they can finish within this timeout.
+Otherwise, the connection is closed and messages remain unacknowledged (if the channel is transactional).
+Optional (defaults to <code class="literal">5000</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-22">(22)</a> </p></td><td valign="top" align="left">
+<p>By default, the underlying <code class="literal">AbstractMessageListenerContainer</code> uses a <code class="literal">SimpleAsyncTaskExecutor</code> implementation, that fires up a new thread for each task, running it asynchronously.
+By default, the number of concurrent threads is unlimited.
+Note that this implementation does not reuse threads.
+Consider using a thread-pooling <code class="literal">TaskExecutor</code> implementation as an alternative.
+Optional (defaults to <code class="literal">SimpleAsyncTaskExecutor</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-23">(23)</a> </p></td><td valign="top" align="left">
+<p>By default, the underlying <code class="literal">AbstractMessageListenerContainer</code> creates a new instance of the <code class="literal">DefaultTransactionAttribute</code> (it takes the EJB approach to rolling back on runtime but not checked exceptions).
+Optional (defaults to <code class="literal">DefaultTransactionAttribute</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-24">(24)</a> </p></td><td valign="top" align="left">
+<p>Sets a bean reference to an external <code class="literal">PlatformTransactionManager</code> on the underlying <code class="literal">AbstractMessageListenerContainer</code>.
+The transaction manager works in conjunction with the <code class="literal">channel-transacted</code> attribute.
+If there is already a transaction in progress when the framework is sending or receiving a message and the <code class="literal">channelTransacted</code> flag is <code class="literal">true</code>, the commit or rollback of the messaging transaction is deferred until the end of the current transaction.
+If the <code class="literal">channelTransacted</code> flag is <code class="literal">false</code>, no transaction semantics apply to the messaging operation (it is auto-acked).
+For further information, see
+<a class="ulink" href="http://docs.spring.io/spring-amqp/reference/html/%5Freference.html#%5Ftransactions" target="_top">Transactions with Spring AMQP</a>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-25">(25)</a> </p></td><td valign="top" align="left">
+<p>Tells the <code class="literal">SimpleMessageListenerContainer</code> how many messages to process in a single transaction (if the channel is transactional).
+For best results, it should be less than or equal to the value set in <code class="literal">prefetch-count</code>.
+Not allowed when <span class="emphasis"><em>consumers-per-queue</em></span> is set.
+Optional (defaults to <code class="literal">1</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO18-26">(26)</a> </p></td><td valign="top" align="left">
+<p>Indicates that the underlying listener container should be a <code class="literal">DirectMessageListenerContainer</code> instead of the default <code class="literal">SimpleMessageListenerContainer</code>.
+See the <a class="ulink" href="https://docs.spring.io/spring-amqp/reference/html/" target="_top">Spring AMQP Reference Manual</a> for more information.</p>
+</td></tr></table></div>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note: container"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">container</th></tr><tr><td align="left" valign="top">
+
+<p>Note that when configuring an external container, you cannot use the Spring AMQP namespace to define the container.
+This is because the namespace requires at least one <code class="literal">&lt;listener/&gt;</code> element.
+In this environment, the listener is internal to the adapter.
+For this reason, you must define the container by using a normal Spring <code class="literal">&lt;bean/&gt;</code> definition, as the following example shows:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"container"</span>
+ <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"connectionFactory"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"connectionFactory"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"queueNames"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"aName.queue"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"defaultRequeueRejected"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Even though the Spring Integration JMS and AMQP support is similar, important differences exist.
+The JMS inbound channel adapter is using a <code class="literal">JmsDestinationPollingSource</code> under the covers and expects a configured poller.
+The AMQP inbound channel adapter uses an <code class="literal">AbstractMessageListenerContainer</code> and is message driven.
+In that regard, it is more similar to the JMS message-driven channel adapter.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration" href="#_configuring_with_java_configuration"></a>14.1.1&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of configuring the inbound adapter with Java configuration:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(AmqpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel amqpInputChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> AmqpInboundChannelAdapter inbound(SimpleMessageListenerContainer listenerContainer,
+            <em><span class="hl-annotation" style="color: gray">@Qualifier("amqpInputChannel")</span></em> MessageChannel channel) {
+        AmqpInboundChannelAdapter adapter = <span class="hl-keyword">new</span> AmqpInboundChannelAdapter(listenerContainer);
+        adapter.setOutputChannel(channel);
+        <span class="hl-keyword">return</span> adapter;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> SimpleMessageListenerContainer container(ConnectionFactory connectionFactory) {
+        SimpleMessageListenerContainer container =
+                                   <span class="hl-keyword">new</span> SimpleMessageListenerContainer(connectionFactory);
+        container.setQueueNames(<span class="hl-string">"aName"</span>);
+        container.setConcurrentConsumers(<span class="hl-number">2</span>);
+        <span class="hl-comment">// ...</span>
+        <span class="hl-keyword">return</span> container;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "amqpInputChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler handler() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> MessageHandler() {
+
+            <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+            <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> handleMessage(Message&lt;?&gt; message) <span class="hl-keyword">throws</span> MessagingException {
+                System.out.println(message.getPayload());
+            }
+
+        };
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_2" href="#_configuring_with_the_java_dsl_2"></a>14.1.2&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application provides an example of configuring the inbound adapter with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(AmqpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow amqpInbound(ConnectionFactory connectionFactory) {
+        <span class="hl-keyword">return</span> IntegrationFlows.from(Amqp.inboundAdapter(connectionFactory, <span class="hl-string">"aName"</span>))
+                .handle(m -&gt; System.out.println(m.getPayload()))
+                .get();
+    }
+
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="_polled_inbound_channel_adapter" href="#_polled_inbound_channel_adapter"></a>14.2&nbsp;Polled Inbound Channel Adapter</h2></div></div></div>
+
+<p>Version 5.0.1 introduced a polled channel adapter, letting you fetch individual messages on demand&#8201;&#8212;&#8201;for example, with a <code class="literal">MessageSourcePollingTemplate</code> or a poller.
+See <a class="xref" href="messaging-channels-section.html#deferred-acks-message-source" title="6.2.3&nbsp;Deferred Acknowledgment Pollable Message Source">Section&nbsp;6.2.3, &#8220;Deferred Acknowledgment Pollable Message Source&#8221;</a> for more information.</p>
+<p>It does not currently support XML configuration.</p>
+<p>The following example shows how to configure an <code class="literal">AmqpMessageSource</code> with Java configuration:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> AmqpMessageSource source(ConnectionFactory connectionFactory) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> AmpqpMessageSource(connectionFactory, <span class="hl-string">"someQueue"</span>);
+}</pre>
+</div>
+<p>See the <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/amqp/inbound/AmqpMessageSource.html" target="_top">Javadoc</a> for configuration properties.</p>
+<p>The following example shows how to configure an <code class="literal">inboundPolledAdapter</code> with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow flow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(Amqp.inboundPolledAdapter(connectionFactory(), DSL_QUEUE),
+                    e -&gt; e.poller(Pollers.fixedDelay(<span class="hl-number">1</span>_<span class="hl-number">000</span>)).autoStartup(false))
+            .handle(p -&gt; {
+                ...
+            })
+            .get();
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-inbound-gateway" href="#amqp-inbound-gateway"></a>14.3&nbsp;Inbound Gateway</h2></div></div></div>
+
+<p>The inbound gateway supports all the attributes on the inbound channel adapter (except that <span class="emphasis"><em>channel</em></span> is replaced by <span class="emphasis"><em>request-channel</em></span>), plus some additional attributes.
+The following listing shows the available attributes:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int-amqp:inbound-gateway</span>
+                          <span class="hl-attribute">id</span>=<span class="hl-value">"inboundGateway"</span>                <a name="CO19-1" href="#CO19-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                          request-channel="myRequestChannel" <a name="CO19-2" href="#CO19-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                          header-mapper=""                   <a name="CO19-3" href="#CO19-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                          mapped-request-headers=""          <a name="CO19-4" href="#CO19-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                          mapped-reply-headers=""            <a name="CO19-5" href="#CO19-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                          reply-channel="myReplyChannel"     <a name="CO19-6" href="#CO19-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                          reply-timeout="1000"               <a name="CO19-7" href="#CO19-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                          amqp-template=""                   <a name="CO19-8" href="#CO19-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                          default-reply-to="" /&gt;             <a name="CO19-9" href="#CO19-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO19-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The Unique ID for this adapter.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO19-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message channel to which converted messages are sent.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO19-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to an <code class="literal">AmqpHeaderMapper</code> to use when receiving AMQP Messages.
+Optional.
+By default, only standard AMQP properties (such as <code class="literal">contentType</code>) are copied to and from Spring Integration <code class="literal">MessageHeaders</code>.
+Any user-defined headers within the AMQP <code class="literal">MessageProperties</code> are not copied to or from an AMQP message by the default <code class="literal">DefaultAmqpHeaderMapper</code>.
+Not allowed if <span class="emphasis"><em>request-header-names</em></span> or <span class="emphasis"><em>reply-header-names</em></span> is provided.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO19-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Comma-separated list of names of AMQP Headers to be mapped from the AMQP request into the <code class="literal">MessageHeaders</code>.
+This attribute can be provided only if the <span class="emphasis"><em>header-mapper</em></span> reference is not provided.
+The values in this list can also be simple patterns to be matched against the header names (e.g. <code class="literal">"\*"</code> or <code class="literal">"thing1*, thing2"</code> or <code class="literal">"*thing1"</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO19-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Comma-separated list of names of <code class="literal">MessageHeaders</code> to be mapped into the AMQP message properties of the AMQP reply message.
+All standard Headers (such as <code class="literal">contentType</code>) are mapped to AMQP Message Properties, while user-defined headers are mapped to the <span class="emphasis"><em>headers</em></span> property.
+This attribute can only be provided if the <span class="emphasis"><em>header-mapper</em></span> reference is not provided.
+The values in this list can also be simple patterns to be matched against the header names (for example, <code class="literal">"\*"</code> or <code class="literal">"foo*, bar"</code> or <code class="literal">"*foo"</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO19-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message Channel where reply Messages are expected.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO19-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Sets the <code class="literal">receiveTimeout</code> on the underlying <code class="literal">o.s.i.core.MessagingTemplate</code> for receiving messages from the reply channel.
+If not specified, this property defaults to <code class="literal">1000</code> (1 second).
+Only applies if the container thread hands off to another thread before the reply is sent.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO19-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The customized <code class="literal">AmqpTemplate</code> bean reference (to have more control over the reply messages to send).
+You can provide an alternative implementation to the <code class="literal">RabbitTemplate</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO19-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">replyTo</code> <code class="literal">o.s.amqp.core.Address</code> to be used when the <code class="literal">requestMessage</code> does not have a <code class="literal">replyTo</code>
+property.
+If this option is not specified, no <code class="literal">amqp-template</code> is provided, no <code class="literal">replyTo</code> property exists in the request message, and
+an <code class="literal">IllegalStateException</code> is thrown because the reply cannot be routed.
+If this option is not specified and an external <code class="literal">amqp-template</code> is provided, no exception is thrown.
+You must either specify this option or configure a default <code class="literal">exchange</code> and <code class="literal">routingKey</code> on that template,
+if you anticipate cases when no <code class="literal">replyTo</code> property exists in the request message.</p>
+</td></tr></table></div>
+<p>See the note in <a class="xref" href="amqp.html#amqp-inbound-channel-adapter" title="14.1&nbsp;Inbound Channel Adapter">Section&nbsp;14.1, &#8220;Inbound Channel Adapter&#8221;</a> about configuring the <code class="literal">listener-container</code> attribute.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_2" href="#_configuring_with_java_configuration_2"></a>14.3.1&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the inbound gateway with Java configuration:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(AmqpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel amqpInputChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> AmqpInboundGateway inbound(SimpleMessageListenerContainer listenerContainer,
+            <em><span class="hl-annotation" style="color: gray">@Qualifier("amqpInputChannel")</span></em> MessageChannel channel) {
+        AmqpInboundGateway gateway = <span class="hl-keyword">new</span> AmqpInboundGateway(listenerContainer);
+        gateway.setRequestChannel(channel);
+        gateway.setDefaultReplyTo(<span class="hl-string">"bar"</span>);
+        <span class="hl-keyword">return</span> gateway;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> SimpleMessageListenerContainer container(ConnectionFactory connectionFactory) {
+        SimpleMessageListenerContainer container =
+                        <span class="hl-keyword">new</span> SimpleMessageListenerContainer(connectionFactory);
+        container.setQueueNames(<span class="hl-string">"foo"</span>);
+        container.setConcurrentConsumers(<span class="hl-number">2</span>);
+        <span class="hl-comment">// ...</span>
+        <span class="hl-keyword">return</span> container;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "amqpInputChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler handler() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> AbstractReplyProducingMessageHandler() {
+
+            <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+            <span class="hl-keyword">protected</span> Object handleRequestMessage(Message&lt;?&gt; requestMessage) {
+                <span class="hl-keyword">return</span> <span class="hl-string">"reply to "</span> + requestMessage.getPayload();
+            }
+
+        };
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_3" href="#_configuring_with_the_java_dsl_3"></a>14.3.2&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the inbound gateway with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(AmqpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em> <span class="hl-comment">// return the upper cased payload</span>
+    <span class="hl-keyword">public</span> IntegrationFlow amqpInboundGateway(ConnectionFactory connectionFactory) {
+        <span class="hl-keyword">return</span> IntegrationFlows.from(Amqp.inboundGateway(connectionFactory, <span class="hl-string">"foo"</span>))
+                .transform(String.<span class="hl-keyword">class</span>, String::toUpperCase)
+                .get();
+    }
+
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-inbound-ack" href="#amqp-inbound-ack"></a>14.4&nbsp;Inbound Endpoint Acknowledge Mode</h2></div></div></div>
+
+<p>By default, the inbound endpoints use the <code class="literal">AUTO</code> acknowledge mode, which means the container automatically acknowledges the message when the downstream integration flow completes (or a message is handed off to another thread by using a <code class="literal">QueueChannel</code> or <code class="literal">ExecutorChannel</code>).
+Setting the mode to <code class="literal">NONE</code> configures the consumer such that acknowledgments are not used at all (the broker automatically acknowledges the message as soon as it is sent).
+Setting the mode to <code class="literal">MANUAL</code> lets user code acknowledge the message at some other point during processing.
+To support this, with this mode, the endpoints provide the <code class="literal">Channel</code> and <code class="literal">deliveryTag</code> in the <code class="literal">amqp_channel</code> and <code class="literal">amqp_deliveryTag</code> headers, respectively.</p>
+<p>You can perform any valid Rabbit command on the <code class="literal">Channel</code> but, generally, only <code class="literal">basicAck</code> and <code class="literal">basicNack</code> (or <code class="literal">basicReject</code>) are used.
+In order to not interfere with the operation of the container, you should not retain a reference to the channel and use it only in the context of the current message.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Since the <code class="literal">Channel</code> is a reference to a "<code class="literal">live</code>" object, it cannot be serialized and is lost if a message is persisted.</p>
+</td></tr></table></div>
+<p>The following example shows how you might use <code class="literal">MANUAL</code> acknowledgement:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "foo", outputChannel = "bar")</span></em>
+<span class="hl-keyword">public</span> Object handle(<em><span class="hl-annotation" style="color: gray">@Payload</span></em> String payload, <em><span class="hl-annotation" style="color: gray">@Header(AmqpHeaders.CHANNEL)</span></em> Channel channel,
+        <em><span class="hl-annotation" style="color: gray">@Header(AmqpHeaders.DELIVERY_TAG)</span></em> Long deliveryTag) <span class="hl-keyword">throws</span> Exception {
+
+    <span class="hl-comment">// Do some processing</span>
+
+    <span class="hl-keyword">if</span> (allOK) {
+        channel.basicAck(deliveryTag, false);
+
+        <span class="hl-comment">// perhaps do some more processing</span>
+
+    }
+    <span class="hl-keyword">else</span> {
+        channel.basicNack(deliveryTag, false, true);
+    }
+    <span class="hl-keyword">return</span> someResultForDownStreamProcessing;
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-outbound-channel-adapter" href="#amqp-outbound-channel-adapter"></a>14.5&nbsp;Outbound Channel Adapter</h2></div></div></div>
+
+<p>The following example shows the available properties for an AMQP outbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-amqp:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outboundAmqp"</span>             <a name="CO20-1" href="#CO20-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                               channel="outboundChannel"         <a name="CO20-2" href="#CO20-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                               amqp-template="myAmqpTemplate"    <a name="CO20-3" href="#CO20-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                               exchange-name=""                  <a name="CO20-4" href="#CO20-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                               exchange-name-expression=""       <a name="CO20-5" href="#CO20-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                               order="1"                         <a name="CO20-6" href="#CO20-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                               routing-key=""                    <a name="CO20-7" href="#CO20-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                               routing-key-expression=""         <a name="CO20-8" href="#CO20-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                               default-delivery-mode""           <a name="CO20-9" href="#CO20-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+                               confirm-correlation-expression="" <a name="CO20-10" href="#CO20-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+                               confirm-ack-channel=""            <a name="CO20-11" href="#CO20-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+                               confirm-nack-channel=""           <a name="CO20-12" href="#CO20-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+                               return-channel=""                 <a name="CO20-13" href="#CO20-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+                               error-message-strategy=""         <a name="CO20-14" href="#CO20-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span>
+                               header-mapper=""                  <a name="CO20-15" href="#CO20-15"></a><span><img src="images/callouts/15.png" alt="15" border="0"></span>
+                               mapped-request-headers=""         <a name="CO20-16" href="#CO20-16"></a>(16)
+                               lazy-connect="true" /&gt;            <a name="CO20-17" href="#CO20-17"></a>(17)</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The unique ID for this adapter.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message channel to which messages should be sent to have them converted and published to an AMQP exchange.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Bean reference to the configured AMQP template.
+Optional (defaults to <code class="literal">amqpTemplate</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of the AMQP exchange to which messages are sent.
+If not provided, messages are sent to the default, no-name exchange.
+Mutually exclusive with <span class="emphasis"><em>exchange-name-expression</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A SpEL expression that is evaluated to determine the name of the AMQP exchange to which messages are sent, with the message as the root object.
+If not provided, messages are sent to the default, no-name exchange.
+Mutually exclusive with <span class="emphasis"><em>exchange-name</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The order for this consumer when multiple consumers are registered, thereby enabling load-balancing and failover.
+Optional (defaults to <code class="literal">Ordered.LOWEST_PRECEDENCE [=Integer.MAX_VALUE]</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The fixed routing-key to use when sending messages.
+By default, this is an empty <code class="literal">String</code>.
+Mutually exclusive with <span class="emphasis"><em>routing-key-expression</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A SpEL expression that is evaluated to determine the routing key to use when sending messages, with the message as the root object (for example, <span class="emphasis"><em>payload.key</em></span>).
+By default, this is an empty <code class="literal">String</code>.
+Mutually exclusive with <span class="emphasis"><em>routing-key</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The default delivery mode for messages: <code class="literal">PERSISTENT</code> or <code class="literal">NON_PERSISTENT</code>.
+Overridden if the <code class="literal">header-mapper</code> sets the delivery mode.
+If the Spring Integration message header <code class="literal">amqp_deliveryMode</code> is present, the <code class="literal">DefaultHeaderMapper</code> sets the value.
+If this attribute is not supplied and the header mapper does not set it, the default depends on the underlying Spring AMQP <code class="literal">MessagePropertiesConverter</code> used by the <code class="literal">RabbitTemplate</code>.
+If that is not customized at all, the default is <code class="literal">PERSISTENT</code>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An expression that defines correlation data.
+When provided, this configures the underlying AMQP template to receive publisher confirmations.
+Requires a dedicated <code class="literal">RabbitTemplate</code> and a <code class="literal">CachingConnectionFactory</code> with the <code class="literal">publisherConfirms</code> property set to
+<code class="literal">true</code>. When a publisher confirmation is received and correlation data is supplied, it is written to either the
+<code class="literal">confirm-ack-channel</code> or the <code class="literal">confirm-nack-channel</code>, depending on the confirmation type. The payload of the confirmation is
+the correlation data, as defined by this expression.
+The message has an <span class="emphasis"><em>amqp_publishConfirm</em></span> header set to <code class="literal">true</code> (<code class="literal">ack</code>) or <code class="literal">false</code> (<code class="literal">nack</code>).
+Examples: <code class="literal">headers['myCorrelationData']</code> and <code class="literal">payload</code>.
+Version 4.1 introduced the <code class="literal">amqp_publishConfirmNackCause</code> message header.
+It contains the <code class="literal">cause</code> of a <span class="emphasis"><em>nack</em></span> for a publisher confirmation.
+Starting with version 4.2, if the expression resolves to a <code class="literal">Message&lt;?&gt;</code> instance (such as <code class="literal">#this</code>), the message
+emitted on the <code class="literal">ack</code>/<code class="literal">nack</code> channel is based on that message, with the additional header(s) added.
+Previously, a new message was created with the correlation data as its payload, regardless of type.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which positive (<code class="literal">ack</code>) publisher confirms are sent.
+The payload is the correlation data defined by the <code class="literal">confirm-correlation-expression</code>.
+If the expression is <code class="literal">#root</code> or <code class="literal">#this</code>, the message is built from the original message, with the <code class="literal">amqp_publishConfirm</code> header set to <code class="literal">true</code>.
+Optional (the default is <code class="literal">nullChannel</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which negative (<code class="literal">nack</code>) publisher confirmations are sent.
+The payload is the correlation data defined by the <code class="literal">confirm-correlation-expression</code> (if there is no <code class="literal">ErrorMessageStrategy</code> configured).
+If the expression is <code class="literal">#root</code> or <code class="literal">#this</code>, the message is built from the original message, with the <code class="literal">amqp_publishConfirm</code> header set to <code class="literal">false</code>.
+When there is an <code class="literal">ErrorMessageStrategy</code>, the message is an <code class="literal">ErrorMessage</code> with a <code class="literal">NackedAmqpMessageException</code> payload.
+Optional (the default is <code class="literal">nullChannel</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which returned messages are sent.
+When provided, the underlying AMQP template is configured to return undeliverable messages to the adapter.
+When there is no <code class="literal">ErrorMessageStrategy</code> configured, the message is constructed from the data received from AMQP, with the following additional headers: <code class="literal">amqp_returnReplyCode</code>, <code class="literal">amqp_returnReplyText</code>, <code class="literal">amqp_returnExchange</code>, <code class="literal">amqp_returnRoutingKey</code>.
+When there is an <code class="literal">ErrorMessageStrategy</code>, the message is an <code class="literal">ErrorMessage</code> with a <code class="literal">ReturnedAmqpMessageException</code> payload.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to an <code class="literal">ErrorMessageStrategy</code> implementation used to build <code class="literal">ErrorMessage</code> instances when sending returned or negatively acknowledged messages.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-15"><span><img src="images/callouts/15.png" alt="15" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A reference to an <code class="literal">AmqpHeaderMapper</code> to use when sending AMQP Messages.
+By default, only standard AMQP properties (such as <code class="literal">contentType</code>) are copied to the Spring Integration <code class="literal">MessageHeaders</code>.
+Any user-defined headers is not copied to the message by the default`DefaultAmqpHeaderMapper`.
+Not allowed if <span class="emphasis"><em>request-header-names</em></span> is provided.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-16">(16)</a> </p></td><td valign="top" align="left">
+<p>Comma-separated list of names of AMQP Headers to be mapped from the <code class="literal">MessageHeaders</code> to the AMQP Message.
+Not allowed if the <span class="emphasis"><em>header-mapper</em></span> reference is provided.
+The values in this list can also be simple patterns to be matched against the header names (e.g. <code class="literal">"\*"</code> or <code class="literal">"thing1*, thing2"</code> or <code class="literal">"*thing1"</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO20-17">(17)</a> </p></td><td valign="top" align="left">
+<p>When set to <code class="literal">false</code>, the endpoint attempts to connect to the broker during application context initialization.
+This allows "<code class="literal">fail fast</code>" detection of bad configuration but also causes initialization to fail if the broker is down.
+When <code class="literal">true</code> (the default), the connection is established (if it does not already exist because some other component established it) when the first message is sent.</p>
+</td></tr></table></div>
+</div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important: return-channel"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">return-channel</th></tr><tr><td align="left" valign="top">
+
+<p>Using a <code class="literal">return-channel</code> requires a <code class="literal">RabbitTemplate</code> with the <code class="literal">mandatory</code> property set to <code class="literal">true</code> and a <code class="literal">CachingConnectionFactory</code> with the <code class="literal">publisherReturns</code> property set to <code class="literal">true</code>.
+When using multiple outbound endpoints with returns, a separate <code class="literal">RabbitTemplate</code> is needed for each endpoint.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_3" href="#_configuring_with_java_configuration_3"></a>14.5.1&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the outbound adapter with Java configuration:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+         ConfigurableApplicationContext context =
+              <span class="hl-keyword">new</span> SpringApplicationBuilder(AmqpJavaApplication.<span class="hl-keyword">class</span>)
+                       .web(false)
+                       .run(args);
+         MyGateway gateway = context.getBean(MyGateway.<span class="hl-keyword">class</span>);
+         gateway.sendToRabbit(<span class="hl-string">"foo"</span>);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "amqpOutboundChannel")</span></em>
+    <span class="hl-keyword">public</span> AmqpOutboundEndpoint amqpOutbound(AmqpTemplate amqpTemplate) {
+        AmqpOutboundEndpoint outbound = <span class="hl-keyword">new</span> AmqpOutboundEndpoint(amqpTemplate);
+        outbound.setRoutingKey(<span class="hl-string">"foo"</span>); <span class="hl-comment">// default exchange - route to queue 'foo'</span>
+        <span class="hl-keyword">return</span> outbound;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel amqpOutboundChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway(defaultRequestChannel = "amqpOutboundChannel")</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MyGateway {
+
+        <span class="hl-keyword">void</span> sendToRabbit(String data);
+
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_4" href="#_configuring_with_the_java_dsl_4"></a>14.5.2&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the outbound adapter with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+         ConfigurableApplicationContext context =
+                  <span class="hl-keyword">new</span> SpringApplicationBuilder(AmqpJavaApplication.<span class="hl-keyword">class</span>)
+                          .web(false)
+                          .run(args);
+         MyGateway gateway = context.getBean(MyGateway.<span class="hl-keyword">class</span>);
+         gateway.sendToRabbit(<span class="hl-string">"foo"</span>);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow amqpOutbound(AmqpTemplate amqpTemplate) {
+        <span class="hl-keyword">return</span> IntegrationFlows.from(amqpOutboundChannel())
+                .handle(Amqp.outboundAdapter(amqpTemplate)
+                            .routingKey(<span class="hl-string">"foo"</span>)) <span class="hl-comment">// default exchange - route to queue 'foo'</span>
+                .get();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel amqpOutboundChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway(defaultRequestChannel = "amqpOutboundChannel")</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MyGateway {
+
+        <span class="hl-keyword">void</span> sendToRabbit(String data);
+
+    }
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-outbound-gateway" href="#amqp-outbound-gateway"></a>14.6&nbsp;Outbound Gateway</h2></div></div></div>
+
+<p>The following listing shows the possible properties for an AMQP Outbound Gateway:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-amqp:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inboundGateway"</span>                <a name="CO21-1" href="#CO21-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                           request-channel="myRequestChannel" <a name="CO21-2" href="#CO21-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                           amqp-template=""                   <a name="CO21-3" href="#CO21-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                           exchange-name=""                   <a name="CO21-4" href="#CO21-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                           exchange-name-expression=""        <a name="CO21-5" href="#CO21-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                           order="1"                          <a name="CO21-6" href="#CO21-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                           reply-channel=""                   <a name="CO21-7" href="#CO21-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                           reply-timeout=""                   <a name="CO21-8" href="#CO21-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                           requires-reply=""                  <a name="CO21-9" href="#CO21-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+                           routing-key=""                     <a name="CO21-10" href="#CO21-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+                           routing-key-expression=""          <a name="CO21-11" href="#CO21-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+                           default-delivery-mode""            <a name="CO21-12" href="#CO21-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+                           confirm-correlation-expression=""  <a name="CO21-13" href="#CO21-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+                           confirm-ack-channel=""             <a name="CO21-14" href="#CO21-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span>
+                           confirm-nack-channel=""            <a name="CO21-15" href="#CO21-15"></a><span><img src="images/callouts/15.png" alt="15" border="0"></span>
+                           return-channel=""                  <a name="CO21-16" href="#CO21-16"></a>(16)
+                           error-message-strategy=""          <a name="CO21-17" href="#CO21-17"></a>(17)
+                           lazy-connect="true" /&gt;             <a name="CO21-18" href="#CO21-18"></a>(18)</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The unique ID for this adapter.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message channel to which messages are sent to have them converted and published to an AMQP exchange.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Bean reference to the configured AMQP template.
+Optional (defaults to <code class="literal">amqpTemplate</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of the AMQP exchange to which messages should be sent.
+If not provided, messages are sent to the default, no-name cxchange.
+Mutually exclusive with <span class="emphasis"><em>exchange-name-expression</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A SpEL expression that is evaluated to determine the name of the AMQP exchange to which messages should be sent, with the message as the root object.
+If not provided, messages are sent to the default, no-name exchange.
+Mutually exclusive with <span class="emphasis"><em>exchange-name</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The order for this consumer when multiple consumers are registered, thereby enabling load-balancing and failover.
+Optional (defaults to <code class="literal">Ordered.LOWEST_PRECEDENCE [=Integer.MAX_VALUE]</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message channel to which replies should be sent after being received from an AMQP queue and converted.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The time the gateway waits when sending the reply message to the <code class="literal">reply-channel</code>.
+This only applies if the <code class="literal">reply-channel</code> can block&#8201;&#8212;&#8201;such as a <code class="literal">QueueChannel</code> with a capacity limit that is currently full.
+Defaults to infinity.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When <code class="literal">true</code>, the gateway throws an exception if no reply message is received within the <code class="literal">AmqpTemplate</code>'s <code class="literal">replyTimeout</code> property.
+Defaults to <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">routing-key</code> to use when sending messages.
+By default, this is an empty <code class="literal">String</code>.
+Mutually exclusive with <span class="emphasis"><em>routing-key-expression</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A SpEL expression that is evaluated to determine the <code class="literal">routing-key</code> to use when sending messages, with the message as the root object (for example, <span class="emphasis"><em>payload.key</em></span>).
+By default, this is an empty <code class="literal">String</code>.
+Mutually exclusive with <span class="emphasis"><em>routing-key</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The default delivery mode for messages: <code class="literal">PERSISTENT</code> or <code class="literal">NON_PERSISTENT</code>.
+Overridden if the <code class="literal">header-mapper</code> sets the delivery mode.
+If the Spring Integration message header <code class="literal">amqp_deliveryMode</code> is present, the <code class="literal">DefaultHeaderMapper</code> sets the value.
+If this attribute is not supplied and the header mapper does not set it, the default depends on the underlying Spring AMQP <code class="literal">MessagePropertiesConverter</code> used by the <code class="literal">RabbitTemplate</code>.
+If that is not customized at all, the default is <code class="literal">PERSISTENT</code>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Since version 4.2.
+An expression defining correlation data.
+When provided, this configures the underlying AMQP template to receive publisher confirms.
+Requires a dedicated <code class="literal">RabbitTemplate</code> and a <code class="literal">CachingConnectionFactory</code> with the <code class="literal">publisherConfirms</code> property set to <code class="literal">true</code>.
+When a publisher confirm is received and correlation data is supplied, it is written to either the <code class="literal">confirm-ack-channel</code> or the <code class="literal">confirm-nack-channel</code>, depending on the confirmation type.
+The payload of the confirm is the correlation data, as defined by this expression.
+The message has a header <span class="emphasis"><em>amqp_publishConfirm</em></span> set to <code class="literal">true</code> (<code class="literal">ack</code>) or <code class="literal">false</code> (<code class="literal">nack</code>).
+For <code class="literal">nack</code> confirmations, Spring Integration provides an additional header <code class="literal">amqp_publishConfirmNackCause</code>.
+Examples: <code class="literal">headers['myCorrelationData']</code> and <code class="literal">payload</code>.
+If the expression resolves to a <code class="literal">Message&lt;?&gt;</code> instance (such as <code class="literal">#this</code>), the message
+emitted on the <code class="literal">ack</code>/<code class="literal">nack</code> channel is based on that message, with the additional headers added.
+Previously, a new message was created with the correlation data as its payload, regardless of type.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which positive (<code class="literal">ack</code>) publisher confirmations are sent.
+The payload is the correlation data defined by <code class="literal">confirm-correlation-expression</code>.
+If the expression is <code class="literal">#root</code> or <code class="literal">#this</code>, the message is built from the original message, with the <code class="literal">amqp_publishConfirm</code> header set to <code class="literal">true</code>.
+Optional (the default is <code class="literal">nullChannel</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-15"><span><img src="images/callouts/15.png" alt="15" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which negative (<code class="literal">nack</code>) publisher confirmations are sent.
+The payload is the correlation data defined by <code class="literal">confirm-correlation-expression</code> (if there is no <code class="literal">ErrorMessageStrategy</code> configured).
+If the expression is <code class="literal">#root</code> or <code class="literal">#this</code>, the message is built from the original message, with the <code class="literal">amqp_publishConfirm</code> header set to <code class="literal">false</code>.
+When there is an <code class="literal">ErrorMessageStrategy</code>, the message is an <code class="literal">ErrorMessage</code> with a <code class="literal">NackedAmqpMessageException</code> payload.
+Optional (the default is <code class="literal">nullChannel</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-16">(16)</a> </p></td><td valign="top" align="left">
+<p>The channel to which returned messages are sent.
+When provided, the underlying AMQP template is configured to return undeliverable messages to the adapter.
+When there is no <code class="literal">ErrorMessageStrategy</code> configured, the message is constructed from the data received from AMQP, with the following additional headers: <code class="literal">amqp_returnReplyCode</code>, <code class="literal">amqp_returnReplyText</code>, <code class="literal">amqp_returnExchange</code>, and <code class="literal">amqp_returnRoutingKey</code>.
+When there is an <code class="literal">ErrorMessageStrategy</code>, the message is an <code class="literal">ErrorMessage</code> with a <code class="literal">ReturnedAmqpMessageException</code> payload.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-17">(17)</a> </p></td><td valign="top" align="left">
+<p>A reference to an <code class="literal">ErrorMessageStrategy</code> implementation used to build <code class="literal">ErrorMessage</code> instances when sending returned or negatively acknowledged messages.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO21-18">(18)</a> </p></td><td valign="top" align="left">
+<p>When set to <code class="literal">false</code>, the endpoint attempts to connect to the broker during application context initialization.
+This allows "<code class="literal">fail fast</code>" detection of bad configuration by logging an error message if the broker is down.
+When <code class="literal">true</code> (the default), the connection is established (if it does not already exist because some other component established it) when the first message is sent.</p>
+</td></tr></table></div>
+</div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important: return-channel"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">return-channel</th></tr><tr><td align="left" valign="top">
+
+<p>Using a <code class="literal">return-channel</code> requires a <code class="literal">RabbitTemplate</code> with the <code class="literal">mandatory</code> property set to <code class="literal">true</code> and a <code class="literal">CachingConnectionFactory</code> with the <code class="literal">publisherReturns</code> property set to <code class="literal">true</code>.
+When using multiple outbound endpoints with returns, a separate <code class="literal">RabbitTemplate</code> is needed for each endpoint.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The underlying <code class="literal">AmqpTemplate</code> has a default <code class="literal">replyTimeout</code> of five seconds.
+If you require a longer timeout, you must configure it on the <code class="literal">template</code>.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_4" href="#_configuring_with_java_configuration_4"></a>14.6.1&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the outbound gateway with Java configuration:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+         ConfigurableApplicationContext context =
+                <span class="hl-keyword">new</span> SpringApplicationBuilder(AmqpJavaApplication.<span class="hl-keyword">class</span>)
+                       .web(false)
+                       .run(args);
+         MyGateway gateway = context.getBean(MyGateway.<span class="hl-keyword">class</span>);
+         String reply = gateway.sendToRabbit(<span class="hl-string">"foo"</span>);
+         System.out.println(reply);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "amqpOutboundChannel")</span></em>
+    <span class="hl-keyword">public</span> AmqpOutboundEndpoint amqpOutbound(AmqpTemplate amqpTemplate) {
+        AmqpOutboundEndpoint outbound = <span class="hl-keyword">new</span> AmqpOutboundEndpoint(amqpTemplate);
+        outbound.setExpectReply(true);
+        outbound.setRoutingKey(<span class="hl-string">"foo"</span>); <span class="hl-comment">// default exchange - route to queue 'foo'</span>
+        <span class="hl-keyword">return</span> outbound;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel amqpOutboundChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway(defaultRequestChannel = "amqpOutboundChannel")</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MyGateway {
+
+        String sendToRabbit(String data);
+
+    }
+
+}</pre>
+</div>
+<p>Note that the only difference between the outbound adapter and outbound gateway configuration is the setting of the
+<code class="literal">expectReply</code> property.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_5" href="#_configuring_with_the_java_dsl_5"></a>14.6.2&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the outbound adapter with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+         ConfigurableApplicationContext context =
+                 <span class="hl-keyword">new</span> SpringApplicationBuilder(AmqpJavaApplication.<span class="hl-keyword">class</span>)
+                      .web(false)
+                      .run(args);
+         RabbitTemplate template = context.getBean(RabbitTemplate.<span class="hl-keyword">class</span>);
+         MyGateway gateway = context.getBean(MyGateway.<span class="hl-keyword">class</span>);
+         String reply = gateway.sendToRabbit(<span class="hl-string">"foo"</span>);
+         System.out.println(reply);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow amqpOutbound(AmqpTemplate amqpTemplate) {
+        <span class="hl-keyword">return</span> IntegrationFlows.from(amqpOutboundChannel())
+                .handle(Amqp.outboundGateway(amqpTemplate)
+                        .routingKey(<span class="hl-string">"foo"</span>)) <span class="hl-comment">// default exchange - route to queue 'foo'</span>
+                .get();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel amqpOutboundChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway(defaultRequestChannel = "amqpOutboundChannel")</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MyGateway {
+
+        String sendToRabbit(String data);
+
+    }
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-async-outbound-gateway" href="#amqp-async-outbound-gateway"></a>14.7&nbsp;Asynchronous Outbound Gateway</h2></div></div></div>
+
+<p>The gateway discussed in the previous section is synchronous, in that the sending thread is suspended until a
+reply is received (or a timeout occurs).
+Spring Integration version 4.3 added an asynchronous gateway, which uses the <code class="literal">AsyncRabbitTemplate</code> from Spring AMQP.
+When a message is sent, the thread returns immediately after the send operation completes, and, when the message is received, the reply is sent on the template&#8217;s listener container thread.
+This can be useful when the gateway is invoked on a poller thread.
+The thread is released and is available for other tasks in the framework.</p>
+<p>The following listing shows the possible configuration options for an AMQP asynchronous outbound gateway:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-amqp:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inboundGateway"</span> <a name="CO22-1" href="#CO22-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                           request-channel="myRequestChannel" <a name="CO22-2" href="#CO22-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                           async-template="" <a name="CO22-3" href="#CO22-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                           exchange-name="" <a name="CO22-4" href="#CO22-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                           exchange-name-expression="" <a name="CO22-5" href="#CO22-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                           order="1" <a name="CO22-6" href="#CO22-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+                           reply-channel="" <a name="CO22-7" href="#CO22-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+                           reply-timeout="" <a name="CO22-8" href="#CO22-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+                           requires-reply="" <a name="CO22-9" href="#CO22-9"></a><span><img src="images/callouts/9.png" alt="9" border="0"></span>
+                           routing-key="" <a name="CO22-10" href="#CO22-10"></a><span><img src="images/callouts/10.png" alt="10" border="0"></span>
+                           routing-key-expression="" <a name="CO22-11" href="#CO22-11"></a><span><img src="images/callouts/11.png" alt="11" border="0"></span>
+                           default-delivery-mode"" <a name="CO22-12" href="#CO22-12"></a><span><img src="images/callouts/12.png" alt="12" border="0"></span>
+                           confirm-correlation-expression="" <a name="CO22-13" href="#CO22-13"></a><span><img src="images/callouts/13.png" alt="13" border="0"></span>
+                           confirm-ack-channel="" <a name="CO22-14" href="#CO22-14"></a><span><img src="images/callouts/14.png" alt="14" border="0"></span>
+                           confirm-nack-channel="" <a name="CO22-15" href="#CO22-15"></a><span><img src="images/callouts/15.png" alt="15" border="0"></span>
+                           return-channel="" <a name="CO22-16" href="#CO22-16"></a>(16)
+                           lazy-connect="true" /&gt; <a name="CO22-17" href="#CO22-17"></a>(17)</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The unique ID for this adapter.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message channel to which messages should be sent in order to have them converted and published to an AMQP exchange.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Bean reference to the configured <code class="literal">AsyncRabbitTemplate</code>.
+Optional (it defaults to <code class="literal">asyncRabbitTemplate</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The name of the AMQP exchange to which messages should be sent.
+If not provided, messages are sent to the default, no-name exchange.
+Mutually exclusive with <span class="emphasis"><em>exchange-name-expression</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A SpEL expression that is evaluated to determine the name of the AMQP exchange to which messages are sent, with the message as the root object.
+If not provided, messages are sent to the default, no-name exchange.
+Mutually exclusive with <span class="emphasis"><em>exchange-name</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The order for this consumer when multiple consumers are registered, thereby enabling load-balancing and failover.
+Optional (it defaults to <code class="literal">Ordered.LOWEST_PRECEDENCE [=Integer.MAX_VALUE]</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message channel to which replies should be sent after being received from an AMQP queue and converted.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The time the gateway waits when sending the reply message to the <code class="literal">reply-channel</code>.
+This only applies if the <code class="literal">reply-channel</code> can block&#8201;&#8212;&#8201;such as a <code class="literal">QueueChannel</code> with a capacity limit that is currently full.
+The default is infinity.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-9"><span><img src="images/callouts/9.png" alt="9" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>When no reply message is received within the <code class="literal">AsyncRabbitTemplate</code>'s <code class="literal">receiveTimeout</code> property and this setting is <code class="literal">true</code>, the gateway sends an error message to the inbound message&#8217;s <code class="literal">errorChannel</code> header.
+When no reply message is received within the <code class="literal">AsyncRabbitTemplate</code>'s <code class="literal">receiveTimeout</code> property and this setting is <code class="literal">false</code>, the gateway sends an error message to the default <code class="literal">errorChannel</code> (if available).
+It defaults to <code class="literal">true</code>.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-10"><span><img src="images/callouts/10.png" alt="10" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The routing-key to use when sending Messages.
+By default, this is an empty <code class="literal">String</code>.
+Mutually exclusive with <span class="emphasis"><em>routing-key-expression</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-11"><span><img src="images/callouts/11.png" alt="11" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>A SpEL expression that is evaluated to determine the routing-key to use when sending messages,
+with the message as the root object (for example, <span class="emphasis"><em>payload.key</em></span>).
+By default, this is an empty <code class="literal">String</code>.
+Mutually exclusive with <span class="emphasis"><em>routing-key</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-12"><span><img src="images/callouts/12.png" alt="12" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The default delivery mode for messages: <code class="literal">PERSISTENT</code> or <code class="literal">NON_PERSISTENT</code>.
+Overridden if the <code class="literal">header-mapper</code> sets the delivery mode.
+If the Spring Integration message header (<code class="literal">amqp_deliveryMode</code>) is present, the <code class="literal">DefaultHeaderMapper</code> sets the value.
+If this attribute is not supplied and the header mapper does not set it, the default depends on the underlying Spring AMQP <code class="literal">MessagePropertiesConverter</code> used by the <code class="literal">RabbitTemplate</code>.
+If that is not customized, the default is <code class="literal">PERSISTENT</code>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-13"><span><img src="images/callouts/13.png" alt="13" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>An expression that defines correlation data.
+When provided, this configures the underlying AMQP template to receive publisher confirmations.
+Requires a dedicated <code class="literal">RabbitTemplate</code> and a <code class="literal">CachingConnectionFactory</code> with its <code class="literal">publisherConfirms</code> property set to
+<code class="literal">true</code>. When a publisher confirmation is received and correlation data is supplied, the confirmation is written to either the
+<code class="literal">confirm-ack-channel</code> or the <code class="literal">confirm-nack-channel</code>, depending on the confirmation type. The payload of the confirmation is
+the correlation data as defined by this expression, and the message has its <span class="emphasis"><em>amqp_publishConfirm</em></span> header set to <code class="literal">true</code>
+(<code class="literal">ack</code>) or <code class="literal">false</code> (<code class="literal">nack</code>).
+For <code class="literal">nack</code> instances, an additional header (<code class="literal">amqp_publishConfirmNackCause</code>) is provided.
+Examples: <code class="literal">headers['myCorrelationData']</code>, <code class="literal">payload</code>.
+If the expression resolves to a <code class="literal">Message&lt;?&gt;</code> instance (such as "<code class="literal">#this</code>"), the message
+emitted on the <code class="literal">ack</code>/<code class="literal">nack</code> channel is based on that message, with the additional headers added.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-14"><span><img src="images/callouts/14.png" alt="14" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The channel to which positive (<code class="literal">ack</code>) publisher confirmations are sent.
+The payload is the correlation data defined by the <code class="literal">confirm-correlation-expression</code>.
+Requires the underlying <code class="literal">AsyncRabbitTemplate</code> to have its <code class="literal">enableConfirms</code> property set to <code class="literal">true</code>.
+Optional (the default is <code class="literal">nullChannel</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-15"><span><img src="images/callouts/15.png" alt="15" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Since version 4.2. The channel to which negative (<code class="literal">nack</code>) publisher confirmations are sent.
+The payload is the correlation data defined by the <code class="literal">confirm-correlation-expression</code>.
+Requires the underlying <code class="literal">AsyncRabbitTemplate</code> to have its <code class="literal">enableConfirms</code> property set to <code class="literal">true</code>.
+Optional (the default is <code class="literal">nullChannel</code>).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-16">(16)</a> </p></td><td valign="top" align="left">
+<p>The channel to which returned messages are sent.
+When provided, the underlying AMQP template is configured to return undeliverable messages to the gateway.
+The message is constructed from the data received from AMQP, with the following additional headers:
+<code class="literal">amqp_returnReplyCode</code>, <code class="literal">amqp_returnReplyText</code>, <code class="literal">amqp_returnExchange</code>, and <code class="literal">amqp_returnRoutingKey</code>.
+Requires the underlying <code class="literal">AsyncRabbitTemplate</code> to have its <code class="literal">mandatory</code> property set to <code class="literal">true</code>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO22-17">(17)</a> </p></td><td valign="top" align="left">
+<p>When set to <code class="literal">false</code>, the endpoint tries to connect to the broker during application context initialization.
+Doing so allows "<code class="literal">fail fast</code>" detection of bad configuration, by logging an error message if the broker is down.
+When <code class="literal">true</code> (the default), the connection is established (if it does not already exist because some other component established
+it) when the first message is sent.</p>
+</td></tr></table></div>
+</div>
+<p>See also <a class="xref" href="messaging-endpoints-chapter.html#async-service-activator" title="10.5.2&nbsp;Asynchronous Service Activator">Section&nbsp;10.5.2, &#8220;Asynchronous Service Activator&#8221;</a> for more information.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important: RabbitTemplate"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">RabbitTemplate</th></tr><tr><td align="left" valign="top">
+
+<p>When you use confirmations and returns, we recommend that the <code class="literal">RabbitTemplate</code> wired into the <code class="literal">AsyncRabbitTemplate</code> be dedicated.
+Otherwise, unexpected side-effects may be encountered.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_5" href="#_configuring_with_java_configuration_5"></a>14.7.1&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following configuration shows an example of how to configure the outbound gateway with Java configuration:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpAsyncConfig {
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "amqpOutboundChannel")</span></em>
+    <span class="hl-keyword">public</span> AsyncAmqpOutboundGateway amqpOutbound(AmqpTemplate asyncTemplate) {
+        AsyncAmqpOutboundGateway outbound = <span class="hl-keyword">new</span> AsyncAmqpOutboundGateway(asyncTemplate);
+        outbound.setRoutingKey(<span class="hl-string">"foo"</span>); <span class="hl-comment">// default exchange - route to queue 'foo'</span>
+        <span class="hl-keyword">return</span> outbound;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> AsyncRabbitTemplate asyncTemplate(RabbitTemplate rabbitTemplate,
+                     SimpleMessageListenerContainer replyContainer) {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> AsyncRabbitTemplate(rabbitTemplate, replyContainer);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> SimpleMessageListenerContainer replyContainer() {
+        SimpleMessageListenerContainer container = <span class="hl-keyword">new</span> SimpleMessageListenerContainer(ccf);
+        container.setQueueNames(<span class="hl-string">"asyncRQ1"</span>);
+        <span class="hl-keyword">return</span> container;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel amqpOutboundChannel() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_6" href="#_configuring_with_the_java_dsl_6"></a>14.7.2&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the outbound adapter with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> AmqpAsyncApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+         ConfigurableApplicationContext context =
+                 <span class="hl-keyword">new</span> SpringApplicationBuilder(AmqpAsyncApplication.<span class="hl-keyword">class</span>)
+                      .web(false)
+                      .run(args);
+         MyGateway gateway = context.getBean(MyGateway.<span class="hl-keyword">class</span>);
+         String reply = gateway.sendToRabbit(<span class="hl-string">"foo"</span>);
+         System.out.println(reply);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow asyncAmqpOutbound(AsyncRabbitTemplate asyncRabbitTemplate) {
+        <span class="hl-keyword">return</span> f -&gt; f
+                .handle(Amqp.asyncOutboundGateway(asyncRabbitTemplate)
+                        .routingKey(<span class="hl-string">"foo"</span>)); <span class="hl-comment">// default exchange - route to queue 'foo'</span>
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway(defaultRequestChannel = "asyncAmqpOutbound.input")</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MyGateway {
+
+        String sendToRabbit(String data);
+
+    }
+
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="content-type-conversion-outbound" href="#content-type-conversion-outbound"></a>14.8&nbsp;Outbound Message Conversion</h2></div></div></div>
+
+<p>Spring AMQP 1.4 introduced the <code class="literal">ContentTypeDelegatingMessageConverter</code>, where the actual converter is selected based
+on the incoming content type message property.
+This can be used by inbound endpoints.</p>
+<p>As of Spring Integration version 4.3, you can use the <code class="literal">ContentTypeDelegatingMessageConverter</code> on outbound endpoints as well, with the <code class="literal">contentType</code> header specifying which converter is used.</p>
+<p>The following example configures a <code class="literal">ContentTypeDelegatingMessageConverter</code>, with the default converter being the <code class="literal">SimpleMessageConverter</code> (which handles Java serialization and plain text), together with a JSON converter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;amqp:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"withContentTypeConverter"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"ctRequestChannel"</span>
+                               <span class="hl-attribute">exchange-name</span>=<span class="hl-value">"someExchange"</span>
+                               <span class="hl-attribute">routing-key</span>=<span class="hl-value">"someKey"</span>
+                               <span class="hl-attribute">amqp-template</span>=<span class="hl-value">"amqpTemplateContentTypeConverter"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"ctRequestChannel"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;rabbit:template</span> <span class="hl-attribute">id</span>=<span class="hl-value">"amqpTemplateContentTypeConverter"</span>
+        <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"connectionFactory"</span> <span class="hl-attribute">message-converter</span>=<span class="hl-value">"ctConverter"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"ctConverter"</span>
+        <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.amqp.support.converter.ContentTypeDelegatingMessageConverter"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"delegates"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;map&gt;</span>
+            <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"application/json"</span><span class="hl-tag">&gt;</span>
+                <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.amqp.support.converter.Jackson2JsonMessageConverter"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;/entry&gt;</span>
+        <span class="hl-tag">&lt;/map&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<p>Sending a message to <code class="literal">ctRequestChannel</code> with the <code class="literal">contentType</code> header set to <code class="literal">application/json</code> causes the JSON converter to be selected.</p>
+<p>This applies to both the outbound channel adapter and gateway.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Starting with version 5.0, headers that are added to the <code class="literal">MessageProperties</code> of the outbound message are never overwritten by mapped headers (by default).
+Previously, this was only the case if the message converter was a <code class="literal">ContentTypeDelegatingMessageConverter</code> (in that case, the header was mapped first so that the proper converter could be selected).
+For other converters, such as the <code class="literal">SimpleMessageConverter</code>, mapped headers overwrote any headers added by the converter.
+This caused problems when an outbound message had some leftover <code class="literal">contentType</code> headers (perhaps from an inbound channel adapter) and the correct outbound <code class="literal">contentType</code> was incorrectly overwritten.
+The work-around was to use a header filter to remove the header before sending the message to the outbound endpoint.</p>
+<p>There are, however, cases where the previous behavior is desired&#8201;&#8212;&#8201;for example, when a <code class="literal">String</code> payload that contains JSON, the <code class="literal">SimpleMessageConverter</code> is not aware of the content and sets the <code class="literal">contentType</code> message property to <code class="literal">text/plain</code> but your application would like to override that to <code class="literal">application/json</code> by setting the <code class="literal">contentType</code> header of the message sent to the outbound endpoint.
+The <code class="literal">ObjectToJsonTransformer</code> does exactly that (by default).</p>
+<p>There is now a property called <code class="literal">headersMappedLast</code> on the outbound channel adapter and gateway (as well as on AMQP-backed channels).
+Setting this to <code class="literal">true</code> restores the behavior of overwriting the property added by the converter.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-user-id" href="#amqp-user-id"></a>14.9&nbsp;Outbound User ID</h2></div></div></div>
+
+<p>Spring AMQP version 1.6 introduced a mechanism to allow the specification of a default user ID for outbound messages.
+It has always been possible to set the <code class="literal">AmqpHeaders.USER_ID</code> header, which now takes precedence over the default.
+This might be useful to message recipients.
+For inbound messages, if the message publisher sets the property, it is made available in the <code class="literal">AmqpHeaders.RECEIVED_USER_ID</code> header.
+Note that RabbitMQ <a class="ulink" href="https://www.rabbitmq.com/validated-user-id.html" target="_top">validates that the user ID is the actual user ID for the connection or that the connection allows impersonation</a>.</p>
+<p>To configure a default user ID for outbound messages, configure it on a <code class="literal">RabbitTemplate</code> and configure the outbound adapter or gateway to use that template.
+Similarly, to set the user ID property on replies, inject an appropriately configured template into the inbound gateway.
+See the <a class="ulink" href="http://docs.spring.io/spring-amqp/reference/html/_reference.html#template-user-id" target="_top">Spring AMQP documentation</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-delay" href="#amqp-delay"></a>14.10&nbsp;Delayed Message Exchange</h2></div></div></div>
+
+<p>Spring AMQP supports the <a class="ulink" href="http://docs.spring.io/spring-amqp/reference/html/_reference.html#delayed-message-exchange" target="_top">RabbitMQ Delayed Message Exchange Plugin</a>.
+For inbound messages, the <code class="literal">x-delay</code> header is mapped to the <code class="literal">AmqpHeaders.RECEIVED_DELAY</code> header.
+Setting the <code class="literal">AMQPHeaders.DELAY</code> header causes the corresponding <code class="literal">x-delay</code> header to be set in outbound messages.
+You can also specify the <code class="literal">delay</code> and <code class="literal">delayExpression</code> properties on outbound endpoints (<code class="literal">delay-expression</code> when using XML configuration).
+These properties take precedence over the <code class="literal">AmqpHeaders.DELAY</code> header.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-channels" href="#amqp-channels"></a>14.11&nbsp;AMQP-backed Message Channels</h2></div></div></div>
+
+<p>There are two message channel implementations available.
+One is point-to-point, and the other is publish-subscribe.
+Both of these channels provide a wide range of configuration attributes for the underlying <code class="literal">AmqpTemplate</code> and
+<code class="literal">SimpleMessageListenerContainer</code> (as shown earlier in this chapter for the channel adapters and gateways).
+However, the examples we show here have minimal configuration.
+Explore the XML schema to view the available attributes.</p>
+<p>A point-to-point channel might look like the following example:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-amqp:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"p2pChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Under the covers, the preceding example causes a <code class="literal">Queue</code> named <code class="literal">si.p2pChannel</code> to be declared, and this channel sends to that <code class="literal">Queue</code> (technically, by sending to the no-name direct exchange with a routing key that matches the name of this <code class="literal">Queue</code>).
+This channel also registers a consumer on that <code class="literal">Queue</code>.
+If you want the channel to be "<code class="literal">pollable</code>" instead of message-driven, provide the <code class="literal">message-driven</code> flag with a value of <code class="literal">false</code>, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-amqp:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"p2pPollableChannel"</span>  <span class="hl-attribute">message-driven</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>A publish-subscribe channel might look like the following:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-amqp:publish-subscribe-channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"pubSubChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Under the covers, the preceding example causes a fanout exchange named <code class="literal">si.fanout.pubSubChannel</code> to be declared, and this channel sends to that fanout exchange.
+This channel also declares a server-named exclusive, auto-delete, non-durable <code class="literal">Queue</code> and binds that to the fanout exchange while registering a consumer on that <code class="literal">Queue</code> to receive messages.
+There is no "<code class="literal">pollable</code>" option for a publish-subscribe-channel.
+It must be message-driven.</p>
+<p>Starting with version 4.1, AMQP-backed message channels (in conjunction with <code class="literal">channel-transacted</code>) support
+<code class="literal">template-channel-transacted</code> to separate <code class="literal">transactional</code> configuration for the <code class="literal">AbstractMessageListenerContainer</code> and
+for the <code class="literal">RabbitTemplate</code>.
+Note that, previously, <code class="literal">channel-transacted</code> was <code class="literal">true</code> by default.
+Now, by default, it is <code class="literal">false</code> for the <code class="literal">AbstractMessageListenerContainer</code>.</p>
+<p>Prior to version 4.3, AMQP-backed channels only supported messages with <code class="literal">Serializable</code> payloads and headers.
+The entire message was converted (serialized) and sent to RabbitMQ.
+Now, you can set the <code class="literal">extract-payload</code> attribute (or <code class="literal">setExtractPayload()</code> when using Java configuration) to <code class="literal">true</code>.
+When this flag is <code class="literal">true</code>, the message payload is converted and the headers are mapped, in a manner similar to when you use channel adapters.
+This arrangement lets AMQP-backed channels be used with non-serializable payloads (perhaps with another message converter, such as the <code class="literal">Jackson2JsonMessageConverter</code>).
+See <a class="xref" href="amqp.html#amqp-message-headers" title="14.12&nbsp;AMQP Message Headers">Section&nbsp;14.12, &#8220;AMQP Message Headers&#8221;</a> for more about the default mapped headers.
+You can modify the mapping by providing custom mappers that use the <code class="literal">outbound-header-mapper</code> and <code class="literal">inbound-header-mapper</code> attributes.
+You can now also specify a <code class="literal">default-delivery-mode</code>, which is used to set the delivery mode when there is no <code class="literal">amqp_deliveryMode</code> header.
+By default, Spring AMQP <code class="literal">MessageProperties</code> uses <code class="literal">PERSISTENT</code> delivery mode.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>As with other persistence-backed channels, AMQP-backed channels are intended to provide message persistence to avoid message loss.
+They are not intended to distribute work to other peer applications.
+For that purpose, use channel adapters instead.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Starting with version 5.0, the pollable channel now blocks the poller thread for the specified <code class="literal">receiveTimeout</code> (the default is 1 second).
+Previously, unlike other <code class="literal">PollableChannel</code> implementations, the thread returned immediately to the scheduler if no message was available, regardless of the receive timeout.
+Blocking is a little more expensive than using a <code class="literal">basicGet()</code> to retrieve a message (with no timeout), because a consumer has to be created to receive each message.
+To restore the previous behavior, set the poller&#8217;s <code class="literal">receiveTimeout</code> to 0.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_6" href="#_configuring_with_java_configuration_6"></a>14.11.1&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following example shows how to configure the channels with Java configuration:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> AmqpChannelFactoryBean pollable(ConnectionFactory connectionFactory) {
+    AmqpChannelFactoryBean factoryBean = <span class="hl-keyword">new</span> AmqpChannelFactoryBean();
+    factoryBean.setConnectionFactory(connectionFactory);
+    factoryBean.setQueueName(<span class="hl-string">"foo"</span>);
+    factoryBean.setPubSub(false);
+    <span class="hl-keyword">return</span> factoryBean;
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> AmqpChannelFactoryBean messageDriven(ConnectionFactory connectionFactory) {
+    AmqpChannelFactoryBean factoryBean = <span class="hl-keyword">new</span> AmqpChannelFactoryBean(true);
+    factoryBean.setConnectionFactory(connectionFactory);
+    factoryBean.setQueueName(<span class="hl-string">"bar"</span>);
+    factoryBean.setPubSub(false);
+    <span class="hl-keyword">return</span> factoryBean;
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> AmqpChannelFactoryBean pubSub(ConnectionFactory connectionFactory) {
+    AmqpChannelFactoryBean factoryBean = <span class="hl-keyword">new</span> AmqpChannelFactoryBean(true);
+    factoryBean.setConnectionFactory(connectionFactory);
+    factoryBean.setQueueName(<span class="hl-string">"baz"</span>);
+    factoryBean.setPubSub(false);
+    <span class="hl-keyword">return</span> factoryBean;
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_7" href="#_configuring_with_the_java_dsl_7"></a>14.11.2&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following example shows how to configure the channels with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow pollableInFlow(ConnectionFactory connectionFactory) {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(...)
+            ...
+            .channel(Amqp.pollableChannel(connectionFactory)
+                    .queueName(<span class="hl-string">"foo"</span>))
+            ...
+            .get();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow messageDrivenInFow(ConnectionFactory connectionFactory) {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(...)
+            ...
+            .channel(Amqp.channel(connectionFactory)
+                    .queueName(<span class="hl-string">"bar"</span>))
+            ...
+            .get();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow pubSubInFlow(ConnectionFactory connectionFactory) {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(...)
+            ...
+            .channel(Amqp.publisSubscribeChannel(connectionFactory)
+                    .queueName(<span class="hl-string">"baz"</span>))
+            ...
+            .get();
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-message-headers" href="#amqp-message-headers"></a>14.12&nbsp;AMQP Message Headers</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_overview" href="#_overview"></a>14.12.1&nbsp;Overview</h3></div></div></div>
+
+<p>The Spring Integration AMQP Adapters automatically map all AMQP properties and headers.
+(This is a change from 4.3 - previously, only standard headers were mapped).
+By default, these properties are copied to and from Spring Integration <code class="literal">MessageHeaders</code> by using the
+<a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/amqp/support/DefaultAmqpHeaderMapper.html" target="_top"><code class="literal">DefaultAmqpHeaderMapper</code></a>.</p>
+<p>You can pass in your own implementation of AMQP-specific header mappers, as the adapters have properties to support doing so.</p>
+<p>Any user-defined headers within the AMQP <a class="ulink" href="http://docs.spring.io/spring-amqp/api/org/springframework/amqp/core/MessageProperties.html" target="_top"><code class="literal">MessageProperties</code></a> are copied to or from an AMQP message, unless explicitly negated by the <code class="literal">requestHeaderNames</code> or <code class="literal">replyHeaderNames</code> properties of the <code class="literal">DefaultAmqpHeaderMapper</code>.
+By default, for an outbound mapper, no <code class="literal">x-*</code> headers are mapped.
+See the <a class="link" href="amqp.html#header-copy-caution" title="Caution">caution</a> that appears later in this section for why.</p>
+<p>To override the default and revert to the pre-4.3 behavior, use <code class="literal">STANDARD_REQUEST_HEADERS</code> and
+<code class="literal">STANDARD_REPLY_HEADERS</code> in the properties.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>When mapping user-defined headers, the values can also contain simple wildcard patterns (such as <span class="emphasis"><em>thing*</em></span> or <code class="literal">*thing</code>) to be matched.
+<code class="literal">*</code> matches all headers.</p>
+</td></tr></table></div>
+<p>Starting with version 4.1, the <code class="literal">AbstractHeaderMapper</code> (a <code class="literal">DefaultAmqpHeaderMapper</code> superclass) lets the <code class="literal">NON_STANDARD_HEADERS</code> token be configured for the <code class="literal">requestHeaderNames</code> and <code class="literal">replyHeaderNames</code> properties (in addition to the existing <code class="literal">STANDARD_REQUEST_HEADERS</code> and <code class="literal">STANDARD_REPLY_HEADERS</code>) to map all user-defined headers.</p>
+<p>The <code class="literal">org.springframework.amqp.support.AmqpHeaders</code> class identifies the default headers that are used by the
+<code class="literal">DefaultAmqpHeaderMapper</code>:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">amqp_appId</code>
+</li><li class="listitem">
+<code class="literal">amqp_clusterId</code>
+</li><li class="listitem">
+<code class="literal">amqp_contentEncoding</code>
+</li><li class="listitem">
+<code class="literal">amqp_contentLength</code>
+</li><li class="listitem">
+<code class="literal">content-type</code> (see <a class="xref" href="amqp.html#amqp-content-type" title="14.12.2&nbsp;contentType Header">Section&nbsp;14.12.2, &#8220;contentType Header&#8221;</a>)
+</li><li class="listitem">
+<code class="literal">amqp_correlationId</code>
+</li><li class="listitem">
+<code class="literal">amqp_delay</code>
+</li><li class="listitem">
+<code class="literal">amqp_deliveryMode</code>
+</li><li class="listitem">
+<code class="literal">amqp_deliveryTag</code>
+</li><li class="listitem">
+<code class="literal">amqp_expiration</code>
+</li><li class="listitem">
+<code class="literal">amqp_messageCount</code>
+</li><li class="listitem">
+<code class="literal">amqp_messageId</code>
+</li><li class="listitem">
+<code class="literal">amqp_receivedDelay</code>
+</li><li class="listitem">
+<code class="literal">amqp_receivedDeliveryMode</code>
+</li><li class="listitem">
+<code class="literal">amqp_receivedExchange</code>
+</li><li class="listitem">
+<code class="literal">amqp_receivedRoutingKey</code>
+</li><li class="listitem">
+<code class="literal">amqp_redelivered</code>
+</li><li class="listitem">
+<code class="literal">amqp_replyTo</code>
+</li><li class="listitem">
+<code class="literal">amqp_timestamp</code>
+</li><li class="listitem">
+<code class="literal">amqp_type</code>
+</li><li class="listitem">
+<code class="literal">amqp_userId</code>
+</li><li class="listitem">
+<code class="literal">amqp_publishConfirm</code>
+</li><li class="listitem">
+<code class="literal">amqp_publishConfirmNackCause</code>
+</li><li class="listitem">
+<code class="literal">amqp_returnReplyCode</code>
+</li><li class="listitem">
+<code class="literal">amqp_returnReplyText</code>
+</li><li class="listitem">
+<code class="literal">amqp_returnExchange</code>
+</li><li class="listitem">
+<code class="literal">amqp_returnRoutingKey</code>
+</li><li class="listitem">
+<code class="literal">amqp_channel</code>
+</li><li class="listitem">
+<code class="literal">amqp_consumerTag</code>
+</li><li class="listitem">
+<code class="literal">amqp_consumerQueue</code>
+</li></ul></div>
+<div class="caution" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Caution"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="images/caution.png"></td><th align="left"><a name="header-copy-caution" href="#header-copy-caution"></a>Caution</th></tr><tr><td align="left" valign="top">
+<p>As mentioned earlier in this section, using a header mapping pattern of`*` is a common way to copy all headers.
+However, this can have some unexpected side effects, because certain RabbitMQ proprietary properties/headers are also
+copied.
+For example, when you use <a class="ulink" href="https://www.rabbitmq.com/federated-exchanges.html" target="_top">federation</a>, the received message may have
+a property named <code class="literal">x-received-from</code>, which contains the node that sent the message.
+If you use the wildcard character <code class="literal">*</code> for the request and reply header mapping on the inbound gateway, this header is copied, which may cause some issues with federation.
+This reply message may be federated back to the sending broker, which may think that a message is looping and, as a result, silently drop it.
+If you wish to use the convenience of wildcard header mapping, you may need to filter out some headers in the downstream flow.
+For example, to avoid copying the <code class="literal">x-received-from</code> header back to the reply you can use <code class="literal">&lt;int:header-filter ... header-names="x-received-from"&gt;</code> before sending the reply to the AMQP inbound gateway.
+Alternatively, you can explicitly list those properties that you actually want mapped, instead of using wildcards.
+For these reasons, for inbound messages, the mapper (by default) does not map any <code class="literal">x-*</code> headers.
+It also does not map the <code class="literal">deliveryMode</code> to the <code class="literal">amqp_deliveryMode</code> header, to avoid propagation of that header from an inbound message to an outbound message.
+Instead, this header is mapped to <code class="literal">amqp_receivedDeliveryMode</code>, which is not mapped on output.</p>
+</td></tr></table></div>
+<p>Starting with version 4.3, patterns in the header mappings can be negated by preceding the pattern with <code class="literal">!</code>.
+Negated patterns get priority, so a list such as
+<code class="literal">STANDARD_REQUEST_HEADERS,thing1,ba*,!thing2,!thing3,qux,!thing1</code> does not map <code class="literal">thing1</code>
+(nor <code class="literal">thing2</code> nor <code class="literal">thing3</code>).
+The standard headers plus <code class="literal">bad</code> and <code class="literal">qux</code> are mapped.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>If you have a user-defined header that begins with <code class="literal">!</code> that you do wish to map, you need to escape it with
+<code class="literal">\</code>, as follows: <code class="literal">STANDARD_REQUEST_HEADERS,\!myBangHeader</code>. The header named <code class="literal">!myBangHeader</code> is now mapped.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Starting with <span class="emphasis"><em>version 5.1</em></span>, the <code class="literal">DefaultAmqpHeaderMapper</code> will fall back to mapping <code class="literal">MessageHeaders.ID</code> and <code class="literal">MessageHeaders.TIMESTAMP</code> to <code class="literal">MessageProperties.messageId</code> and <code class="literal">MessageProperties.timestamp</code> respectively, if the corresponding <code class="literal">amqp_messageId</code> or <code class="literal">amqp_timestamp</code> headers are not present on outbound messages.
+Inbound properties will be mapped to the <code class="literal">amqp_*</code> headers as before.
+It is useful to populate the <code class="literal">messageId</code> property when message consumers are using stateful retry.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="amqp-content-type" href="#amqp-content-type"></a>14.12.2&nbsp;contentType Header</h3></div></div></div>
+
+<p>Unlike other headers, the <code class="literal">AmqpHeaders.CONTENT_TYPE</code> is not prefixed with <code class="literal">amqp_</code>; this allows transparent passing of the contentType header across different technologies.
+E.g. an inbound HTTP message sent to a RabbitMQ queue.</p>
+<p>The <code class="literal">contentType</code> header is mapped to Spring AMQP&#8217;s <code class="literal">MessageProperties.contentType</code> property and that is subsequently mapped to RabbitMQ&#8217;s <code class="literal">content_type</code> property.</p>
+<p>Prior to <span class="emphasis"><em>version 5.1</em></span>, this header was also mapped as an entry in the <code class="literal">MessageProperties.headers</code> map; this was incorrect and, furthermore, the value could be wrong since the underlying Spring AMQP message converter might have changed the content type.
+Such a change would be reflected in the first-class <code class="literal">content_type</code> property, but not in the RabbitMQ headers map.
+Inbound mapping ignored the headers map value.
+<code class="literal">contentType</code> is no longer mapped to an entry in the headers map.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="amqp-strict-ordering" href="#amqp-strict-ordering"></a>14.13&nbsp;Strict Message Ordering</h2></div></div></div>
+
+<p>This section describes message ordering for inbound and outbound messages.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_inbound" href="#_inbound"></a>14.13.1&nbsp;Inbound</h3></div></div></div>
+
+<p>If you require strict ordering of inbound messages, you must configure the inbound listener container&#8217;s <code class="literal">prefetchCount</code> property to <code class="literal">1</code>.
+This is because, if a message fails and is redelivered, it arrives after existing prefetched messages.
+Since Spring AMQP version 2.0, the <code class="literal">prefetchCount</code> defaults to <code class="literal">250</code> for improved performance.
+Strict ordering requirements come at the cost of decreased performance.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_outbound" href="#_outbound"></a>14.13.2&nbsp;Outbound</h3></div></div></div>
+
+<p>Consider the following integration flow:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow flow(RabbitTemplate template) {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(Gateway.<span class="hl-keyword">class</span>)
+            .split(s -&gt; s.delimiters(<span class="hl-string">","</span>))
+            .&lt;String, String&gt;transform(String::toUpperCase)
+            .handle(Amqp.outboundAdapter(template).routingKey(<span class="hl-string">"rk"</span>))
+            .get();
+}</pre>
+</div>
+<p>Suppose we send messages <code class="literal">A</code>, <code class="literal">B</code> and <code class="literal">C</code> to the gateway.
+While it is likely that messages <code class="literal">A</code>, <code class="literal">B</code>, <code class="literal">C</code> are sent in order, there is no guarantee.
+This is because the template "<code class="literal">borrows</code>" a channel from the cache for each send operation, and there is no guarantee that the same channel is used for each message.
+One solution is to start a transaction before the splitter, but transactions are expensive in RabbitMQ and can reduce performance several hundred fold.</p>
+<p>To solve this problem in a more efficient manner, starting with version 5.1, Spring Integration provides the <code class="literal">BoundRabbitChannelAdvice</code> which is a <code class="literal">HandleMessageAdvice</code>.
+See <a class="xref" href="messaging-endpoints-chapter.html#handle-message-advice" title="10.9.4&nbsp;Handling Message Advice">Section&nbsp;10.9.4, &#8220;Handling Message Advice&#8221;</a>.
+When applied before the splitter, it ensures that all downstream operations are performed on the same channel and, optionally, can wait until publisher confirmations for all sent messages are received (if the connection factory is configured for confirmations).
+The following example shows how to use <code class="literal">BoundRabbitChannelAdvice</code>:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow flow(RabbitTemplate template) {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(Gateway.<span class="hl-keyword">class</span>)
+            .split(s -&gt; s.delimiters(<span class="hl-string">","</span>)
+                    .advice(<span class="hl-keyword">new</span> BoundRabbitChannelAdvice(template, Duration.ofSeconds(<span class="hl-number">10</span>))))
+            .&lt;String, String&gt;transform(String::toUpperCase)
+            .handle(Amqp.outboundAdapter(template).routingKey(<span class="hl-string">"rk"</span>))
+            .get();
+}</pre>
+</div>
+<p>Notice that the same <code class="literal">RabbitTemplate</code> (which implements <code class="literal">RabbitOperations</code>) is used in the advice and the outbound adapter.
+The advice runs the downstream flow within the template&#8217;s <code class="literal">invoke</code> method so that all operations run on the same channel.
+If the optional timeout is provided, when the flow completes, the advice calls the <code class="literal">waitForConfirmsOrDie</code> method, which throws an exception if the confirmations are not received within the specified time.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>There must be no thread handoffs in the downstream flow (<code class="literal">QueueChannel</code>, <code class="literal">ExecutorChannel</code>, and others).</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="_amqp_samples" href="#_amqp_samples"></a>14.14&nbsp;AMQP Samples</h2></div></div></div>
+
+<p>To experiment with the AMQP adapters, check out the samples available in the Spring Integration samples git repository at <a class="ulink" href="https://github.com/spring-projects/spring-integration-samples" target="_top">https://github.com/SpringSource/spring-integration-samples</a></p>
+<p>Currently, one sample demonstrates the basic functionality of the Spring Integration AMQP adapter by using an outbound channel adapter and an inbound channel adapter.
+As AMQP broker implementation in the sample uses <a class="ulink" href="http://www.rabbitmq.com/" target="_top">RabbitMQ</a>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>In order to run the example, you need a running instance of RabbitMQ.
+A local installation with just the basic defaults suffices.
+For detailed RabbitMQ installation procedures, see <a class="ulink" href="http://www.rabbitmq.com/install.html" target="_top">http://www.rabbitmq.com/install.html</a></p>
+</td></tr></table></div>
+<p>Once the sample application is started, enter some text on the command prompt and a message containing that entered text is dispatched to the AMQP queue.
+In return, that message is retrieved by Spring Integration and printed to the console.</p>
+<p>The following image illustrates the basic set of Spring Integration components used in this sample.</p>
+<div class="figure"><a name="d5e12228" href="#d5e12228"></a><p class="title"><b>Figure&nbsp;14.1.&nbsp;The Spring Integration graph of the AMQP sample</b></p><div class="figure-contents">
+
+<div class="mediaobject"><img src="images/spring-integration-amqp-sample-graph.png" alt="spring integration amqp sample graph"></div>
+</div></div><br class="figure-break">
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="endpoint-summary.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="applicationevent.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">13.&nbsp;Endpoint Quick Reference Table&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;15.&nbsp;Spring <code class="literal">ApplicationEvent</code> Support</td></tr></table></div></body></html>

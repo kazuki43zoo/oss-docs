@@ -1,0 +1,1145 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>6.&nbsp;Messaging Channels</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-core-messaging.html" title="Part&nbsp;IV.&nbsp;Core Messaging"><link rel="prev" href="spring-integration-core-messaging.html" title="Part&nbsp;IV.&nbsp;Core Messaging"><link rel="next" href="message.html" title="7.&nbsp;Message"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">6.&nbsp;Messaging Channels</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="spring-integration-core-messaging.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;IV.&nbsp;Core Messaging</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="message.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="messaging-channels-section" href="#messaging-channels-section"></a>6.&nbsp;Messaging Channels</h2></div></div></div>
+
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="channel" href="#channel"></a>6.1&nbsp;Message Channels</h2></div></div></div>
+
+<p>While the <code class="literal">Message</code> plays the crucial role of encapsulating data, it is the <code class="literal">MessageChannel</code> that decouples message producers from message consumers.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="channel-interfaces" href="#channel-interfaces"></a>6.1.1&nbsp;The MessageChannel Interface</h3></div></div></div>
+
+<p>Spring Integration&#8217;s top-level <code class="literal">MessageChannel</code> interface is defined as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MessageChannel {
+
+    <span class="hl-keyword">boolean</span> send(Message message);
+
+    <span class="hl-keyword">boolean</span> send(Message message, <span class="hl-keyword">long</span> timeout);
+}</pre>
+</div>
+<p>When sending a message, the return value is <code class="literal">true</code> if the message is sent successfully.
+If the send call times out or is interrupted, it returns <code class="literal">false</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-interfaces-pollablechannel" href="#channel-interfaces-pollablechannel"></a><code class="literal">PollableChannel</code></h4></div></div></div>
+
+<p>Since message channels may or may not buffer messages (as discussed in the <a class="xref" href="overview.html" title="5.&nbsp;Spring Integration Overview">Chapter&nbsp;5, <i>Spring Integration Overview</i></a>), two sub-interfaces define the buffering (pollable) and non-buffering (subscribable) channel behavior.
+The following listing shows the definition of the <code class="literal">PollableChannel</code> interface:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> PollableChannel <span class="hl-keyword">extends</span> MessageChannel {
+
+    Message&lt;?&gt; receive();
+
+    Message&lt;?&gt; receive(<span class="hl-keyword">long</span> timeout);
+
+}</pre>
+</div>
+<p>As with the send methods, when receiving a message, the return value is null in the case of a timeout or interrupt.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-interfaces-subscribablechannel" href="#channel-interfaces-subscribablechannel"></a><code class="literal">SubscribableChannel</code></h4></div></div></div>
+
+<p>The <code class="literal">SubscribableChannel</code> base interface is implemented by channels that send messages directly to their subscribed <code class="literal">MessageHandler</code> instances.
+Therefore, they do not provide receive methods for polling.
+Instead, they define methods for managing those subscribers.
+The following listing shows the definition of the <code class="literal">SubscribableChannel</code> interface:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> SubscribableChannel <span class="hl-keyword">extends</span> MessageChannel {
+
+    <span class="hl-keyword">boolean</span> subscribe(MessageHandler handler);
+
+    <span class="hl-keyword">boolean</span> unsubscribe(MessageHandler handler);
+
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="channel-implementations" href="#channel-implementations"></a>6.1.2&nbsp;Message Channel Implementations</h3></div></div></div>
+
+<p>Spring Integration provides several different message channel implementations.
+The following sections briefly describe each one.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-implementations-publishsubscribechannel" href="#channel-implementations-publishsubscribechannel"></a><code class="literal">PublishSubscribeChannel</code></h4></div></div></div>
+
+<p>The <code class="literal">PublishSubscribeChannel</code> implementation broadcasts any <code class="literal">Message</code> sent to it to all of its subscribed handlers.
+This is most often used for sending event messages, whose primary role is notification (as opposed to document messages, which are generally intended to be processed by a single handler).
+Note that the <code class="literal">PublishSubscribeChannel</code> is intended for sending only.
+Since it broadcasts to its subscribers directly when its <code class="literal">send(Message)</code> method is invoked, consumers cannot poll for messages (it does not implement <code class="literal">PollableChannel</code> and therefore has no <code class="literal">receive()</code> method).
+Instead, any subscriber must itself be a <code class="literal">MessageHandler</code>, and the subscriber&#8217;s <code class="literal">handleMessage(Message)</code> method is invoked in turn.</p>
+<p>Prior to version 3.0, invoking the <code class="literal">send</code> method on a <code class="literal">PublishSubscribeChannel</code> that had no subscribers returned <code class="literal">false</code>.
+When used in conjunction with a <code class="literal">MessagingTemplate</code>, a <code class="literal">MessageDeliveryException</code> was thrown.
+Starting with version 3.0, the behavior has changed such that a <code class="literal">send</code> is always considered successful if at least the minimum subscribers are present (and successfully handle the message).
+This behavior can be modified by setting the <code class="literal">minSubscribers</code> property, which defaults to <code class="literal">0</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If you use a <code class="literal">TaskExecutor</code>, only the presence of the correct number of subscribers is used for this determination, because the actual handling of the message is performed asynchronously.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-implementations-queuechannel" href="#channel-implementations-queuechannel"></a><code class="literal">QueueChannel</code></h4></div></div></div>
+
+<p>The <code class="literal">QueueChannel</code> implementation wraps a queue.
+Unlike the <code class="literal">PublishSubscribeChannel</code>, the <code class="literal">QueueChannel</code> has point-to-point semantics.
+In other words, even if the channel has multiple consumers, only one of them should receive any <code class="literal">Message</code> sent to that channel.
+It provides a default no-argument constructor (providing an essentially unbounded capacity of <code class="literal">Integer.MAX_VALUE</code>) as well as a constructor that accepts the queue capacity, as the following listing shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> QueueChannel(<span class="hl-keyword">int</span> capacity)</pre>
+</div>
+<p>A channel that has not reached its capacity limit storeS messages in its internal queue, and the <code class="literal">send()</code> method returns immediately, even if no receiver is ready to handle the message.
+If the queue has reached capacity, the sender blocks until room is available.
+Alternatively, if you use the send call that accepts a timeout, the queue blocks until either room is available or the timeout period elapses, whichever occurs first.
+Similarly, a <code class="literal">receive</code> call returns immediately if a message is available on the queue, but, if the queue is empty, then a receive call may block until either a message is available or the timeout elapses.
+In either case, it is possible to force an immediate return regardless of the queue&#8217;s state by passing a timeout value of 0.
+Note, however, that calls to the no-arg versions of <code class="literal">send()</code> and <code class="literal">receive()</code> block indefinitely.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-implementations-prioritychannel" href="#channel-implementations-prioritychannel"></a><code class="literal">PriorityChannel</code></h4></div></div></div>
+
+<p>Whereas the <code class="literal">QueueChannel</code> enforces first-in-first-out (FIFO) ordering, the <code class="literal">PriorityChannel</code> is an alternative implementation that allows for messages to be ordered within the channel based upon a priority.
+By default, the priority is determined by the <code class="literal">priority</code> header within each message.
+However, for custom priority determination logic, a comparator of type <code class="literal">Comparator&lt;Message&lt;?&gt;&gt;</code> can be provided to the <code class="literal">PriorityChannel</code> constructor.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-implementations-rendezvouschannel" href="#channel-implementations-rendezvouschannel"></a><code class="literal">RendezvousChannel</code></h4></div></div></div>
+
+<p>The <code class="literal">RendezvousChannel</code> enables a "<code class="literal">direct-handoff</code>" scenario, wherein a sender blocks until another party invokes the channel&#8217;s <code class="literal">receive()</code> method.
+The other party blocks until the sender sends the message.
+Internally, this implementation is quite similar to the <code class="literal">QueueChannel</code>, except that it uses a <code class="literal">SynchronousQueue</code> (a zero-capacity implementation of <code class="literal">BlockingQueue</code>).
+This works well in situations where the sender and receiver operate in different threads, but asynchronously dropping the message in a queue is not appropriate.
+In other words, with a <code class="literal">RendezvousChannel</code>, the sender knows that some receiver has accepted the message, whereas with a <code class="literal">QueueChannel</code>, the message would have been stored to the internal queue and potentially never received.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>Keep in mind that all of these queue-based channels are storing messages in-memory only by default.
+When persistence is required, you can either provide a <span class="emphasis"><em>message-store</em></span> attribute within the <span class="emphasis"><em>queue</em></span> element to reference a persistent <code class="literal">MessageStore</code> implementation or you can replace the local channel with one that is backed by a persistent broker, such as a JMS-backed channel or channel adapter.
+The latter option lets you take advantage of any JMS provider&#8217;s implementation for message persistence, as discussed in <a class="xref" href="jms.html" title="23.&nbsp;JMS Support">Chapter&nbsp;23, <i>JMS Support</i></a>.
+However, when buffering in a queue is not necessary, the simplest approach is to rely upon the <code class="literal">DirectChannel</code>, discussed in the next section.</p>
+</td></tr></table></div>
+<p>The <code class="literal">RendezvousChannel</code> is also useful for implementing request-reply operations.
+The sender can create a temporary, anonymous instance of <code class="literal">RendezvousChannel</code>, which it then sets as the <span class="emphasis"><em>replyChannel</em></span> header when building a <code class="literal">Message</code>.
+After sending that <code class="literal">Message</code>, the sender can immediately call <code class="literal">receive</code> (optionally providing a timeout value) in order to block while waiting for a reply <code class="literal">Message</code>.
+This is very similar to the implementation used internally by many of Spring Integration&#8217;s request-reply components.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-implementations-directchannel" href="#channel-implementations-directchannel"></a><code class="literal">DirectChannel</code></h4></div></div></div>
+
+<p>The <code class="literal">DirectChannel</code> has point-to-point semantics but otherwise is more similar to the <code class="literal">PublishSubscribeChannel</code> than any of the queue-based channel implementations described earlier.
+It implements the <code class="literal">SubscribableChannel</code> interface instead of the <code class="literal">PollableChannel</code> interface, so it dispatches messages directly to a subscriber.
+As a point-to-point channel, however, it differs from the <code class="literal">PublishSubscribeChannel</code> in that it sends each <code class="literal">Message</code> to a single subscribed <code class="literal">MessageHandler</code>.</p>
+<p>In addition to being the simplest point-to-point channel option, one of its most important features is that it enables a single thread to perform the operations on "<code class="literal">both sides</code>" of the channel.
+For example, if a handler subscribes to a <code class="literal">DirectChannel</code>, then sending a <code class="literal">Message</code> to that channel triggers invocation of that handler&#8217;s <code class="literal">handleMessage(Message)</code> method directly in the sender&#8217;s thread, before the <code class="literal">send()</code> method invocation can return.</p>
+<p>The key motivation for providing a channel implementation with this behavior is to support transactions that must span across the channel while still benefiting from the abstraction and loose coupling that the channel provides.
+If the send call is invoked within the scope of a transaction, the outcome of the handler&#8217;s invocation (for example,
+updating a database record) plays a role in determining the ultimate result of that transaction (commit or rollback).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Since the <code class="literal">DirectChannel</code> is the simplest option and does not add any additional overhead that would be required for scheduling and managing the threads of a poller, it is the default channel type within Spring Integration.
+The general idea is to define the channels for an application, consider which of those need to provide buffering or to throttle input, and modify those to be queue-based <code class="literal">PollableChannels</code>.
+Likewise, if a channel needs to broadcast messages, it should not be a <code class="literal">DirectChannel</code> but rather a <code class="literal">PublishSubscribeChannel</code>.
+Later, we show how each of these channels can be configured.</p>
+</td></tr></table></div>
+<p>The <code class="literal">DirectChannel</code> internally delegates to a message dispatcher to invoke its subscribed message handlers, and that dispatcher can have a load-balancing strategy exposed by <code class="literal">load-balancer</code> or <code class="literal">load-balancer-ref</code> attributes (mutually exclusive).
+The load balancing strategy is used by the message dispatcher to help determine how messages are distributed amongst message handlers when multiple message handlers subscribe to the same channel.
+As a convenience, the <code class="literal">load-balancer</code> attribute exposes an enumeration of values pointing to pre-existing implementations of <code class="literal">LoadBalancingStrategy</code>.
+<code class="literal">round-robin</code> (load-balances across the handlers in rotation) and <code class="literal">none</code> (for the cases where one wants to explicitly disable load balancing) are the only available values.
+Other strategy implementations may be added in future versions.
+However, since version 3.0, you can provide your own implementation of the <code class="literal">LoadBalancingStrategy</code> and inject it by using the <code class="literal">load-balancer-ref</code> attribute, which should point to a bean that implements <code class="literal">LoadBalancingStrategy</code>, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"lbRefChannel"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;int:dispatcher</span> <span class="hl-attribute">load-balancer-ref</span>=<span class="hl-value">"lb"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"lb"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"foo.bar.SampleLoadBalancingStrategy"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Note that the <code class="literal">load-balancer</code> and <code class="literal">load-balancer-ref</code> attributes are mutually exclusive.</p>
+<p>The load-balancing also works in conjunction with a boolean <code class="literal">failover</code> property.
+If the "<code class="literal">failover</code>" value is true (the default), the dispatcher falls back to any subsequent handlers (as necessary) when preceding handlers throw exceptions.
+The order is determined by an optional order value defined on the handlers themselves or, if no such value exists, the order in which the handlers subscribed.</p>
+<p>If a certain situation requires that the dispatcher always try to invoke the first handler and then fall back in the same fixed order sequence every time an error occurs, no load-balancing strategy should be provided.
+In other words, the dispatcher still supports the <code class="literal">failover</code> boolean property even when no load-balancing is enabled.
+Without load-balancing, however, the invocation of handlers always begins with the first, according to their order.
+For example, this approach works well when there is a clear definition of primary, secondary, tertiary, and so on.
+When using the namespace support, the <code class="literal">order</code> attribute on any endpoint determines the order.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Keep in mind that load-balancing and <code class="literal">failover</code> apply only when a channel has more than one subscribed message handler.
+When using the namespace support, this means that more than one endpoint shares the same channel reference defined in the <code class="literal">input-channel</code> attribute.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="executor-channel" href="#executor-channel"></a><code class="literal">ExecutorChannel</code></h4></div></div></div>
+
+<p>The <code class="literal">ExecutorChannel</code> is a point-to-point channel that supports the same dispatcher configuration as <code class="literal">DirectChannel</code> (load-balancing strategy and the <code class="literal">failover</code> boolean property).
+The key difference between these two dispatching channel types is that the <code class="literal">ExecutorChannel</code> delegates to an instance of <code class="literal">TaskExecutor</code> to perform the dispatch.
+This means that the send method typically does not block, but it also means that the handler invocation may not occur in the sender&#8217;s thread.
+It therefore does not support transactions that span the sender and receiving handler.</p>
+<div class="caution" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Caution"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="images/caution.png"></td><th align="left">Caution</th></tr><tr><td align="left" valign="top">
+<p>The sender can sometimes block.
+For example, when using a <code class="literal">TaskExecutor</code> with a rejection policy that throttles the client (such as the <code class="literal">ThreadPoolExecutor.CallerRunsPolicy</code>), the sender&#8217;s thread can execute the method any time the thread pool is at its maximum capacity and the executor&#8217;s work queue is full.
+Since that situation would only occur in a non-predictable way, you should not rely upon it for transactions.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-implementations-threadlocalchannel" href="#channel-implementations-threadlocalchannel"></a>Scoped Channel</h4></div></div></div>
+
+<p>Spring Integration 1.0 provided a <code class="literal">ThreadLocalChannel</code> implementation, but that has been removed as of 2.0.
+Now the more general way to handle the same requirement is to add a <code class="literal">scope</code> attribute to a channel.
+The value of the attribute can be the name of a scope that is available within the context.
+For example, in a web environment, certain scopes are available, and any custom scope implementations can be registered with the context.
+The following example shows a thread-local scope being applied to a channel, including the registration of the scope itself:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"threadScopedChannel"</span> <span class="hl-attribute">scope</span>=<span class="hl-value">"thread"</span><span class="hl-tag">&gt;</span>
+     <span class="hl-tag">&lt;int:queue /&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.beans.factory.config.CustomScopeConfigurer"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"scopes"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;map&gt;</span>
+            <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"thread"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"org.springframework.context.support.SimpleThreadScope"</span><span class="hl-tag"> /&gt;</span>
+        <span class="hl-tag">&lt;/map&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<p>The channel defined in the previous example also delegates to a queue internally, but the channel is bound to the current thread, so the contents of the queue are similarly bound.
+That way, the thread that sends to the channel can later receive those same messages, but no other thread would be able to access them.
+While thread-scoped channels are rarely needed, they can be useful in situations where <code class="literal">DirectChannel</code> instances are being used to enforce a single thread of operation but any reply messages should be sent to a "<code class="literal">terminal</code>" channel.
+If that terminal channel is thread-scoped, the original sending thread can collect its replies from the terminal channel.</p>
+<p>Now, since any channel can be scoped, you can define your own scopes in addition to thread-Local.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="channel-interceptors" href="#channel-interceptors"></a>6.1.3&nbsp;Channel Interceptors</h3></div></div></div>
+
+<p>One of the advantages of a messaging architecture is the ability to provide common behavior and capture meaningful information about the messages passing through the system in a non-invasive way.
+Since the <code class="literal">Message</code> instances are sent to and received from <code class="literal">MessageChannel</code> instances, those channels provide an opportunity for intercepting the send and receive operations.
+The <code class="literal">ChannelInterceptor</code> strategy interface, shown in the following listing, provides methods for each of those operations:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> ChannelInterceptor {
+
+    Message&lt;?&gt; preSend(Message&lt;?&gt; message, MessageChannel channel);
+
+    <span class="hl-keyword">void</span> postSend(Message&lt;?&gt; message, MessageChannel channel, <span class="hl-keyword">boolean</span> sent);
+
+    <span class="hl-keyword">void</span> afterSendCompletion(Message&lt;?&gt; message, MessageChannel channel, <span class="hl-keyword">boolean</span> sent, Exception ex);
+
+    <span class="hl-keyword">boolean</span> preReceive(MessageChannel channel);
+
+    Message&lt;?&gt; postReceive(Message&lt;?&gt; message, MessageChannel channel);
+
+    <span class="hl-keyword">void</span> afterReceiveCompletion(Message&lt;?&gt; message, MessageChannel channel, Exception ex);
+}</pre>
+</div>
+<p>After implementing the interface, registering the interceptor with a channel is just a matter of making the following call:</p>
+<div class="informalexample">
+<pre class="programlisting">channel.addInterceptor(someChannelInterceptor);</pre>
+</div>
+<p>The methods that return a <code class="literal">Message</code> instance can be used for transforming the <code class="literal">Message</code> or can return <span class="emphasis"><em>null</em></span> to prevent further processing (of course, any of the methods can throw a <code class="literal">RuntimeException</code>).
+Also, the <code class="literal">preReceive</code> method can return <code class="literal">false</code> to prevent the receive operation from proceeding.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Keep in mind that <code class="literal">receive()</code> calls are only relevant for <code class="literal">PollableChannels</code>.
+In fact, the <code class="literal">SubscribableChannel</code> interface does not even define a <code class="literal">receive()</code> method.
+The reason for this is that when a <code class="literal">Message</code> is sent to a <code class="literal">SubscribableChannel</code>, it is sent directly to zero or more subscribers, depending on the type of channel (for example,
+a <code class="literal">PublishSubscribeChannel</code> sends to all of its subscribers).
+Therefore, the <code class="literal">preReceive(...)</code>, <code class="literal">postReceive(...)</code>, and <code class="literal">afterReceiveCompletion(...)</code> interceptor methods are invoked only when the interceptor is applied to a <code class="literal">PollableChannel</code>.</p>
+</td></tr></table></div>
+<p>Spring Integration also provides an implementation of the <a class="ulink" href="http://eaipatterns.com/WireTap.html" target="_top">Wire Tap</a> pattern.
+It is a simple interceptor that sends the <code class="literal">Message</code> to another channel without otherwise altering the existing flow.
+It can be very useful for debugging and monitoring.
+An example is shown in <a class="xref" href="messaging-channels-section.html#channel-wiretap" title="Wire Tap">the section called &#8220;Wire Tap&#8221;</a>.</p>
+<p>Because it is rarely necessary to implement all of the interceptor methods, the interface provides no-op methods (methods returning <code class="literal">void</code> method have no code, the <code class="literal">Message</code>-returning methods return the <code class="literal">Message</code> as-is, and the <code class="literal">boolean</code> method returns <code class="literal">true</code>).</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>The order of invocation for the interceptor methods depends on the type of channel.
+As described earlier, the queue-based channels are the only ones where the receive method is intercepted in the first place.
+Additionally, the relationship between send and receive interception depends on the timing of the separate sender and receiver threads.
+For example, if a receiver is already blocked while waiting for a message, the order could be as follows: <code class="literal">preSend</code>, <code class="literal">preReceive</code>, <code class="literal">postReceive</code>, <code class="literal">postSend</code>.
+However, if a receiver polls after the sender has placed a message on the channel and has already returned, the order would be as follows: <code class="literal">preSend</code>, <code class="literal">postSend</code> (some-time-elapses), <code class="literal">preReceive</code>, <code class="literal">postReceive</code>.
+The time that elapses in such a case depends on a number of factors and is therefore generally unpredictable (in fact, the receive may never happen).
+The type of queue also plays a role (for example, rendezvous versus priority).
+In short, you cannot rely on the order beyond the fact that <code class="literal">preSend</code> precedes <code class="literal">postSend</code> and <code class="literal">preReceive</code> precedes <code class="literal">postReceive</code>.</p>
+</td></tr></table></div>
+<p>Starting with Spring Framework 4.1 and Spring Integration 4.1, the <code class="literal">ChannelInterceptor</code> provides new methods: <code class="literal">afterSendCompletion()</code> and <code class="literal">afterReceiveCompletion()</code>.
+They are invoked after <code class="literal">send()' and 'receive()</code> calls, regardless of any exception that is raised, which allow for resource cleanup.
+Note that the channel invokes these methods on the <code class="literal">ChannelInterceptor</code> list in the reverse order of the initial <code class="literal">preSend()</code> and <code class="literal">preReceive()</code> calls.</p>
+<p>Starting with version 5.1, global channel interceptors now apply to dynamically registered channels - such as through beans that are initialized by using <code class="literal">beanFactory.initializeBean()</code> or <code class="literal">IntegrationFlowContext</code> when using the Java DSL.
+Previously, interceptors were not applied when beans were created after the application context was refreshed.</p>
+<p>Also, starting with version 5.1, <code class="literal">ChannelInterceptor.postReceive()</code> is no longer called when no message is received; it is no longer necessary to check for a <code class="literal">null</code> <code class="literal">Message&lt;?&gt;</code>.
+Previously, the method was called.
+If you have an interceptor that relies on the previous behavior, implement <code class="literal">afterReceiveCompleted()</code> instead, since that method is invoked, regardless of whether a message is received or not.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="channel-template" href="#channel-template"></a>6.1.4&nbsp;<code class="literal">MessagingTemplate</code></h3></div></div></div>
+
+<p>When the endpoints and their various configuration options are introduced, Spring Integration provides a foundation for messaging components that enables non-invasive invocation of your application code from the messaging system.
+However, it is sometimes necessary to invoke the messaging system from your application code.
+For convenience when implementing such use cases, Spring Integration provides a <code class="literal">MessagingTemplate</code> that supports a variety of operations across the message channels, including request and reply scenarios.
+For example, it is possible to send a request and wait for a reply, as follows:</p>
+<div class="informalexample">
+<pre class="programlisting">MessagingTemplate template = <span class="hl-keyword">new</span> MessagingTemplate();
+
+Message reply = template.sendAndReceive(someChannel, <span class="hl-keyword">new</span> GenericMessage(<span class="hl-string">"test"</span>));</pre>
+</div>
+<p>In the preceding example, a temporary anonymous channel would be created internally by the template.
+The <span class="emphasis"><em>sendTimeout</em></span> and <span class="emphasis"><em>receiveTimeout</em></span> properties may also be set on the template, and other exchange types are also supported.
+The following listing shows the signatures for such methods:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">boolean</span> send(<span class="hl-keyword">final</span> MessageChannel channel, <span class="hl-keyword">final</span> Message&lt;?&gt; message) { ...
+}
+
+<span class="hl-keyword">public</span> Message&lt;?&gt; sendAndReceive(<span class="hl-keyword">final</span> MessageChannel channel, <span class="hl-keyword">final</span> Message&lt;?&gt; request) { ...
+}
+
+<span class="hl-keyword">public</span> Message&lt;?&gt; receive(<span class="hl-keyword">final</span> PollableChannel&lt;?&gt; channel) { ...
+}</pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>A less invasive approach that lets you invoke simple interfaces with payload or header values instead of <code class="literal">Message</code> instances is described in <a class="xref" href="messaging-endpoints-chapter.html#gateway-proxy" title="10.4.1&nbsp;Enter the GatewayProxyFactoryBean">Section&nbsp;10.4.1, &#8220;Enter the <code class="literal">GatewayProxyFactoryBean</code>&#8221;</a>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="channel-configuration" href="#channel-configuration"></a>6.1.5&nbsp;Configuring Message Channels</h3></div></div></div>
+
+<p>To create a message channel instance, you can use the &lt;channel/&gt; element, as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The default channel type is point-to-point.
+To create a publish-subscribe channel, use the <code class="literal">&lt;publish-subscribe-channel/&gt;</code> element, as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:publish-subscribe-channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>When you use the <code class="literal">&lt;channel/&gt;</code> element without any sub-elements, it creates a <code class="literal">DirectChannel</code> instance (a <code class="literal">SubscribableChannel</code>).</p>
+<p>However, you can alternatively provide a variety of <code class="literal">&lt;queue/&gt;</code> sub-elements to create any of the pollable channel types (as described in <a class="xref" href="messaging-channels-section.html#channel-implementations" title="6.1.2&nbsp;Message Channel Implementations">Section&nbsp;6.1.2, &#8220;Message Channel Implementations&#8221;</a>).
+The following sections shows examples of each channel type.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-configuration-directchannel" href="#channel-configuration-directchannel"></a><code class="literal">DirectChannel</code> Configuration</h4></div></div></div>
+
+<p>As mentioned earlier, <code class="literal">DirectChannel</code> is the default type.
+The following listing shows who to define one in XML:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"directChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>A default channel has a round-robin load-balancer and also has failover enabled (see <a class="xref" href="messaging-channels-section.html#channel-implementations-directchannel" title="DirectChannel">the section called &#8220;<code class="literal">DirectChannel</code>&#8221;</a> for more detail).
+To disable one or both of these, add a <code class="literal">&lt;dispatcher/&gt;</code> sub-element and configure the attributes as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"failFastChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:dispatcher</span> <span class="hl-attribute">failover</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/channel&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"channelWithFixedOrderSequenceFailover"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:dispatcher</span> <span class="hl-attribute">load-balancer</span>=<span class="hl-value">"none"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-datatype-channel" href="#channel-datatype-channel"></a>Datatype Channel Configuration</h4></div></div></div>
+
+<p>Sometimes, a consumer can process only a particular type of payload, forcing you to ensure the payload type of the input messages.
+The first thing that comes to mind may be to use a message filter.
+However, all that message filter can do is filter out messages that are not compliant with the requirements of the consumer.
+Another way would be to use a content-based router and route messages with non-compliant data-types to specific transformers to enforce transformation and conversion to the required data type.
+This would work, but a simpler way to accomplish the same thing is to apply the <a class="ulink" href="http://www.eaipatterns.com/DatatypeChannel.html" target="_top">Datatype Channel</a> pattern.
+You can use separate datatype channels for each specific payload data type.</p>
+<p>To create a datatype channel that accepts only messages that contain a certain payload type, provide the data type&#8217;s fully-qualified class name in the channel element&#8217;s <code class="literal">datatype</code> attribute, as the following example shows:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"numberChannel"</span> <span class="hl-attribute">datatype</span>=<span class="hl-value">"java.lang.Number"</span><span class="hl-tag">/&gt;</span></pre>
+<p>Note that the type check passes for any type that is assignable to the channel&#8217;s datatype.
+In other words, the <code class="literal">numberChannel</code> in the preceding example would accept messages whose payload is <code class="literal">java.lang.Integer</code> or <code class="literal">java.lang.Double</code>.
+Multiple types can be provided as a comma-delimited list, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"stringOrNumberChannel"</span> <span class="hl-attribute">datatype</span>=<span class="hl-value">"java.lang.String,java.lang.Number"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>So the <span class="emphasis"><em>numberChannel</em></span> in the preceding example accepts only messages with a data type of <code class="literal">java.lang.Number</code>.
+But what happens if the payload of the message is not of the required type? It depends on whether you have defined a bean named <code class="literal">integrationConversionService</code> that is an instance of Spring&#8217;s <a class="ulink" href="http://static.springsource.org/spring/docs/current/spring-framework-reference/html/validation.html#core-convert-ConversionService-API" target="_top">Conversion Service</a>.
+If not, then an <code class="literal">Exception</code> would be thrown immediately.
+However, if you have defined an <code class="literal">integrationConversionService</code> bean, it is used in an attempt to convert the message&#8217;s payload to the acceptable type.</p>
+<p>You can even register custom converters.
+For example, suppose you send a message with a <code class="literal">String</code> payload to the <span class="emphasis"><em>numberChannel</em></span> we configured above.
+You might handle the message as follows:</p>
+<pre class="programlisting">MessageChannel inChannel = context.getBean(<span class="hl-string">"numberChannel"</span>, MessageChannel.<span class="hl-keyword">class</span>);
+inChannel.send(<span class="hl-keyword">new</span> GenericMessage&lt;String&gt;(<span class="hl-string">"5"</span>));</pre>
+<p>Typically this would be a perfectly legal operation.
+However, since we use Datatype Channel, the result of such operation would generate an exception similar to the following:</p>
+<div class="informalexample">
+<pre class="screen">Exception in thread "main" org.springframework.integration.MessageDeliveryException:
+Channel 'numberChannel'
+expected one of the following datataypes [class java.lang.Number],
+but received [class java.lang.String]
+&#8230;</pre>
+</div>
+<p>The exception happens because we require the payload type to be a <code class="literal">Number</code>, but we sent a <code class="literal">String</code>.
+So we need something to convert a <code class="literal">String</code> to a <code class="literal">Number</code>.
+For that, we can implement a converter similar to the following example:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">class</span> StringToIntegerConverter <span class="hl-keyword">implements</span> Converter&lt;String, Integer&gt; {
+    <span class="hl-keyword">public</span> Integer convert(String source) {
+        <span class="hl-keyword">return</span> Integer.parseInt(source);
+    }
+}</pre>
+</div>
+<p>Then we can register it as a converter with the Integration Conversion Service, as the following example shows:</p>
+<pre class="programlisting">&lt;<span class="hl-keyword">int</span>:converter ref=<span class="hl-string">"strToInt"</span>/&gt;
+
+&lt;bean id=<span class="hl-string">"strToInt"</span> <span class="hl-keyword">class</span>=<span class="hl-string">"org.springframework.integration.util.Demo.StringToIntegerConverter"</span>/&gt;</pre>
+<p>When the <span class="emphasis"><em>converter</em></span> element is parsed, it creates the <code class="literal">integrationConversionService</code> bean if one is not already defined.
+With that converter in place, the <code class="literal">send</code> operation would now be successful, because the datatype channel uses that converter to convert the <code class="literal">String</code> payload to an <code class="literal">Integer</code>.</p>
+<p>For more information regarding payload type conversion, see <a class="xref" href="messaging-endpoints-chapter.html#payload-type-conversion" title="10.1.6&nbsp;Payload Type Conversion">Section&nbsp;10.1.6, &#8220;Payload Type Conversion&#8221;</a>.</p>
+<p>Beginning with version 4.0, the <code class="literal">integrationConversionService</code> is invoked by the <code class="literal">DefaultDatatypeChannelMessageConverter</code>, which looks up the conversion service in the application context.
+To use a different conversion technique, you can specify the <code class="literal">message-converter</code> attribute on the channel.
+This must be a reference to a <code class="literal">MessageConverter</code> implementation.
+Only the <code class="literal">fromMessage</code> method is used.
+It provides the converter with access to the message headers (in case the conversion might need information from the headers, such as <code class="literal">content-type</code>).
+The method can return only the converted payload or a full <code class="literal">Message</code> object.
+If the latter, the converter must be careful to copy all the headers from the inbound message.</p>
+<p>Alternatively, you can declare a <code class="literal">&lt;bean/&gt;</code> of type <code class="literal">MessageConverter</code> with an ID of <code class="literal">datatypeChannelMessageConverter</code>, and that converter is used by all channels with a <code class="literal">datatype</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-configuration-queuechannel" href="#channel-configuration-queuechannel"></a><code class="literal">QueueChannel</code> Configuration</h4></div></div></div>
+
+<p>To create a <code class="literal">QueueChannel</code>, use the <code class="literal">&lt;queue/&gt;</code> sub-element.
+You may specify the channel&#8217;s capacity as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"queueChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;queue</span> <span class="hl-attribute">capacity</span>=<span class="hl-value">"25"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If you do not provide a value for the <span class="emphasis"><em>capacity</em></span> attribute on this <code class="literal">&lt;queue/&gt;</code> sub-element, the resulting queue is unbounded.
+To avoid issues such as running out of memory, we highly recommend that you set an explicit value for a bounded queue.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h5 class="title"><a name="_persistent_literal_queuechannel_literal_configuration" href="#_persistent_literal_queuechannel_literal_configuration"></a>Persistent <code class="literal">QueueChannel</code> Configuration</h5></div></div></div>
+
+<p>Since a <code class="literal">QueueChannel</code> provides the capability to buffer messages but does so in-memory only by default, it also introduces a possibility that messages could be lost in the event of a system failure.
+To mitigate this risk, a <code class="literal">QueueChannel</code> may be backed by a persistent implementation of the <code class="literal">MessageGroupStore</code> strategy interface.
+For more details on <code class="literal">MessageGroupStore</code> and <code class="literal">MessageStore</code>, see <a class="xref" href="system-management-chapter.html#message-store" title="12.4&nbsp;Message Store">Section&nbsp;12.4, &#8220;Message Store&#8221;</a>.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">capacity</code> attribute is not allowed when the <code class="literal">message-store</code> attribute is used.</p>
+</td></tr></table></div>
+<p>When a <code class="literal">QueueChannel</code> receives a <code class="literal">Message</code>, it adds the message to the message store.
+When a <code class="literal">Message</code> is polled from a <code class="literal">QueueChannel</code>, it is removed from the message store.</p>
+<p>By default, a <code class="literal">QueueChannel</code> stores its messages in an in-memory queue, which can lead to the lost message scenario mentioned earlier.
+However, Spring Integration provides persistent stores, such as the <code class="literal">JdbcChannelMessageStore</code>.</p>
+<p>You can configure a message store for any <code class="literal">QueueChannel</code> by adding the <code class="literal">message-store</code> attribute, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"dbBackedChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:queue</span> <span class="hl-attribute">message-store</span>=<span class="hl-value">"channelStore"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"channelStore"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.jdbc.store.JdbcChannelMessageStore"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"dataSource"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"dataSource"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"channelMessageStoreQueryProvider"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"queryProvider"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<p>The Spring Integration JDBC module also provides a schema Data Definition Language (DDL) for a number of popular databases.
+These schemas are located in the org.springframework.integration.jdbc.store.channel package of that module (<code class="literal">spring-integration-jdbc</code>).</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>One important feature is that, with any transactional persistent store (such as <code class="literal">JdbcChannelMessageStore</code>), as long as the poller has a transaction configured, a message removed from the store can be permanently removed only if the transaction completes successfully.
+Otherwise the transaction rolls back, and the <code class="literal">Message</code> is not lost.</p>
+</td></tr></table></div>
+<p>Many other implementations of the message store are available as the growing number of Spring projects related to "<code class="literal">NoSQL</code>" data stores come to provide underlying support for these stores.
+You can also provide your own implementation of the <code class="literal">MessageGroupStore</code> interface if you cannot find one that meets your particular needs.</p>
+<p>Since version 4.0, we recommend that <code class="literal">QueueChannel</code> instances be configured to use a <code class="literal">ChannelMessageStore</code>, if possible.
+These are generally optimized for this use, as compared to a general message store.
+If the <code class="literal">ChannelMessageStore</code> is a <code class="literal">ChannelPriorityMessageStore</code>, the messages are received in FIFO within priority order.
+The notion of priority is determined by the message store implementation.
+For example, the following example shows the Java configuration for the <a class="xref" href="mongodb.html#mongodb-priority-channel-message-store" title="25.2.1&nbsp;MongoDB Channel Message Store">Section&nbsp;25.2.1, &#8220;MongoDB Channel Message Store&#8221;</a>:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> BasicMessageGroupStore mongoDbChannelMessageStore(MongoDbFactory mongoDbFactory) {
+    MongoDbChannelMessageStore store = <span class="hl-keyword">new</span> MongoDbChannelMessageStore(mongoDbFactory);
+    store.setPriorityEnabled(true);
+    <span class="hl-keyword">return</span> store;
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> PollableChannel priorityQueue(BasicMessageGroupStore mongoDbChannelMessageStore) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> PriorityChannel(<span class="hl-keyword">new</span> MessageGroupQueue(mongoDbChannelMessageStore, <span class="hl-string">"priorityQueue"</span>));
+}</pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Pay attention to the <code class="literal">MessageGroupQueue</code> class.
+That is a <code class="literal">BlockingQueue</code> implementation to use the <code class="literal">MessageGroupStore</code> operations.</p>
+</td></tr></table></div>
+<p>The same implementation with Java DSL might look like the following example:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow priorityFlow(PriorityCapableChannelMessageStore mongoDbChannelMessageStore) {
+    <span class="hl-keyword">return</span> IntegrationFlows.from((Channels c) -&gt;
+            c.priority(<span class="hl-string">"priorityChannel"</span>, mongoDbChannelMessageStore, <span class="hl-string">"priorityGroup"</span>))
+            ....
+            .get();
+}</pre>
+<p>Another option to customize the <code class="literal">QueueChannel</code> environment is provided by the <code class="literal">ref</code> attribute of the <code class="literal">&lt;int:queue&gt;</code> sub-element or its particular constructor.
+This attribute supplies the reference to any <code class="literal">java.util.Queue</code> implementation.
+For example, a Hazelcast distributed <a class="ulink" href="https://hazelcast.com/use-cases/imdg/imdg-messaging/" target="_top"><code class="literal">IQueue</code></a> can be configured as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> HazelcastInstance hazelcastInstance() {
+    <span class="hl-keyword">return</span> Hazelcast.newHazelcastInstance(<span class="hl-keyword">new</span> Config()
+                                           .setProperty(<span class="hl-string">"hazelcast.logging.type"</span>, <span class="hl-string">"log4j"</span>));
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> PollableChannel distributedQueue() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> QueueChannel(hazelcastInstance()
+                              .getQueue(<span class="hl-string">"springIntegrationQueue"</span>));
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-configuration-pubsubchannel" href="#channel-configuration-pubsubchannel"></a><code class="literal">PublishSubscribeChannel</code> Configuration</h4></div></div></div>
+
+<p>To create a <code class="literal">PublishSubscribeChannel</code>, use the &lt;publish-subscribe-channel/&gt; element.
+When using this element, you can also specify the <code class="literal">task-executor</code> used for publishing messages (if none is specified, it publishes in the sender&#8217;s thread), as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:publish-subscribe-channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"pubsubChannel"</span> <span class="hl-attribute">task-executor</span>=<span class="hl-value">"someExecutor"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>If you provide a resequencer or aggregator downstream from a <code class="literal">PublishSubscribeChannel</code>, you can set the <span class="emphasis"><em>apply-sequence</em></span> property on the channel to <code class="literal">true</code>.
+Doing so indicates that the channel should set the <code class="literal">sequence-size</code> and <code class="literal">sequence-number</code> message headers as well as the correlation ID prior to passing along the messages.
+For example, if there are five subscribers, the <code class="literal">sequence-size</code> would be set to <code class="literal">5</code>, and the messages would have <code class="literal">sequence-number</code> header values ranging from <code class="literal">1</code> to <code class="literal">5</code>.</p>
+<p>Along with the <code class="literal">Executor</code>, you can also configure an <code class="literal">ErrorHandler</code>.
+By default, the <code class="literal">PublishSubscribeChannel</code> uses a <code class="literal">MessagePublishingErrorHandler</code> implementation to send an error to the <code class="literal">MessageChannel</code> from the <code class="literal">errorChannel</code> header or into the global <code class="literal">errorChannel</code> instance.
+If an <code class="literal">Executor</code> is not configured, the <code class="literal">ErrorHandler</code> is ignored and exceptions are thrown directly to the caller&#8217;s thread.</p>
+<p>If you provide a <code class="literal">Resequencer</code> or <code class="literal">Aggregator</code> downstream from a <code class="literal">PublishSubscribeChannel</code>, you can set the <span class="emphasis"><em>apply-sequence</em></span> property on the channel to <code class="literal">true</code>.
+Doing so indicates that the channel should set the sequence-size and sequence-number message headers as well as the correlation ID prior to passing along the messages.
+For example, if there are five subscribers, the sequence-size would be set to <code class="literal">5</code>, and the messages would have sequence-number header values ranging from <code class="literal">1</code> to <code class="literal">5</code>.</p>
+<p>The following example shows how to set the <code class="literal">apply-sequence</code> header to <code class="literal">true</code>:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:publish-subscribe-channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"pubsubChannel"</span> <span class="hl-attribute">apply-sequence</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">apply-sequence</code> value is <code class="literal">false</code> by default so that a publish-subscribe channel can send the exact same message instances to multiple outbound channels.
+Since Spring Integration enforces immutability of the payload and header references, when the flag is set to <code class="literal">true</code>, the channel creates new <code class="literal">Message</code> instances with the same payload reference but different header values.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-configuration-executorchannel" href="#channel-configuration-executorchannel"></a><code class="literal">ExecutorChannel</code></h4></div></div></div>
+
+<p>To create an <code class="literal">ExecutorChannel</code>, add the <code class="literal">&lt;dispatcher&gt;</code> sub-element with a <code class="literal">task-executor</code> attribute.
+The attribute&#8217;s value can reference any <code class="literal">TaskExecutor</code> within the context.
+For example, doing so enables configuration of a thread pool for dispatching messages to subscribed handlers.
+As mentioned earlier, doing so breaks the single-threaded execution context between sender and receiver so that any active transaction context is not shared by the invocation of the handler (that is, the handler may throw an <code class="literal">Exception</code>, but the <code class="literal">send</code> invocation has already returned successfully).
+The following example shows how to use the <code class="literal">dispatcher</code> element and specify an executor in the <code class="literal">task-executor</code> attribute:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"executorChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:dispatcher</span> <span class="hl-attribute">task-executor</span>=<span class="hl-value">"someExecutor"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">load-balancer</code> and <code class="literal">failover</code> options are also both available on the &lt;dispatcher/&gt; sub-element, as described earlier in <a class="xref" href="messaging-channels-section.html#channel-configuration-directchannel" title="DirectChannel Configuration">the section called &#8220;<code class="literal">DirectChannel</code> Configuration&#8221;</a>.
+The same defaults apply.
+Consequently, the channel has a round-robin load-balancing strategy with failover enabled unless explicit configuration is provided for one or both of those attributes, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"executorChannelWithoutFailover"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:dispatcher</span> <span class="hl-attribute">task-executor</span>=<span class="hl-value">"someExecutor"</span> <span class="hl-attribute">failover</span>=<span class="hl-value">"false"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-configuration-prioritychannel" href="#channel-configuration-prioritychannel"></a><code class="literal">PriorityChannel</code> Configuration</h4></div></div></div>
+
+<p>To create a <code class="literal">PriorityChannel</code>, use the <code class="literal">&lt;priority-queue/&gt;</code> sub-element, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"priorityChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:priority-queue</span> <span class="hl-attribute">capacity</span>=<span class="hl-value">"20"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+<p>By default, the channel consults the <code class="literal">priority</code> header of the message.
+However, you can instead provide a custom <code class="literal">Comparator</code> reference.
+Also, note that the <code class="literal">PriorityChannel</code> (like the other types) does support the <code class="literal">datatype</code> attribute.
+As with the <code class="literal">QueueChannel</code>, it also supports a <code class="literal">capacity</code> attribute.
+The following example demonstrates all of these:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"priorityChannel"</span> <span class="hl-attribute">datatype</span>=<span class="hl-value">"example.Widget"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:priority-queue</span> <span class="hl-attribute">comparator</span>=<span class="hl-value">"widgetComparator"</span>
+                    <span class="hl-attribute">capacity</span>=<span class="hl-value">"10"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+<p>Since version 4.0, the <code class="literal">priority-channel</code> child element supports the <code class="literal">message-store</code> option (<code class="literal">comparator</code> and <code class="literal">capacity</code> are not allowed in that case).
+The message store must be a <code class="literal">PriorityCapableChannelMessageStore</code>.
+Implementations of the <code class="literal">PriorityCapableChannelMessageStore</code> are currently provided for <code class="literal">Redis</code>, <code class="literal">JDBC</code>, and <code class="literal">MongoDB</code>.
+See <a class="xref" href="messaging-channels-section.html#channel-configuration-queuechannel" title="QueueChannel Configuration">the section called &#8220;<code class="literal">QueueChannel</code> Configuration&#8221;</a> and <a class="xref" href="system-management-chapter.html#message-store" title="12.4&nbsp;Message Store">Section&nbsp;12.4, &#8220;Message Store&#8221;</a> for more information.
+You can find sample configuration in <a class="xref" href="jdbc.html#jdbc-message-store-channels" title="21.4.3&nbsp;Backing Message Channels">Section&nbsp;21.4.3, &#8220;Backing Message Channels&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-configuration-rendezvouschannel" href="#channel-configuration-rendezvouschannel"></a><code class="literal">RendezvousChannel</code> Configuration</h4></div></div></div>
+
+<p>A <code class="literal">RendezvousChannel</code> is created when the queue sub-element is a <code class="literal">&lt;rendezvous-queue&gt;</code>.
+It does not provide any additional configuration options to those described earlier, and its queue does not accept any capacity value, since it is a zero-capacity direct handoff queue.
+The following example shows how to declare a <code class="literal">RendezvousChannel</code>:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"rendezvousChannel"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int:rendezvous-queue/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-configuration-threadlocalchannel" href="#channel-configuration-threadlocalchannel"></a>Scoped Channel Configuration</h4></div></div></div>
+
+<p>Any channel can be configured with a <code class="literal">scope</code> attribute, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"threadLocalChannel"</span> <span class="hl-attribute">scope</span>=<span class="hl-value">"thread"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-configuration-interceptors" href="#channel-configuration-interceptors"></a>Channel Interceptor Configuration</h4></div></div></div>
+
+<p>Message channels may also have interceptors, as described in <a class="xref" href="messaging-channels-section.html#channel-interceptors" title="6.1.3&nbsp;Channel Interceptors">Section&nbsp;6.1.3, &#8220;Channel Interceptors&#8221;</a>.
+The <code class="literal">&lt;interceptors/&gt;</code> sub-element can be added to a <code class="literal">&lt;channel/&gt;</code> (or the more specific element types).
+You can provide the <code class="literal">ref</code> attribute to reference any Spring-managed object that implements the <code class="literal">ChannelInterceptor</code> interface, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:interceptors&gt;</span>
+        <span class="hl-tag">&lt;ref</span> <span class="hl-attribute">bean</span>=<span class="hl-value">"trafficMonitoringInterceptor"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/int:interceptors&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+<p>In general, we recommend defining the interceptor implementations in a separate location, since they usually provide common behavior that can be reused across multiple channels.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="global-channel-configuration-interceptors" href="#global-channel-configuration-interceptors"></a>Global Channel Interceptor Configuration</h4></div></div></div>
+
+<p>Channel interceptors provide a clean and concise way of applying cross-cutting behavior per individual channel.
+If the same behavior should be applied on multiple channels, configuring the same set of interceptors for each channel would not be the most efficient way.
+To avoid repeated configuration while also enabling interceptors to apply to multiple channels, Spring Integration provides global interceptors.
+Consider the following pair of examples:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel-interceptor</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"input*, thing2*, thing1, !cat*"</span> <span class="hl-attribute">order</span>=<span class="hl-value">"3"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"thing1.thing2SampleInterceptor"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel-interceptor&gt;</span></pre>
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel-interceptor</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"myInterceptor"</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"input*, thing2*, thing1, !cat*"</span> <span class="hl-attribute">order</span>=<span class="hl-value">"3"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"myInterceptor"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"thing1.thing2SampleInterceptor"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Each <code class="literal">&lt;channel-interceptor/&gt;</code> element lets you define a global interceptor, which is applied on all channels that match any patterns defined by the <code class="literal">pattern</code> attribute.
+In the preceding case, the global interceptor is applied on the <span class="emphasis"><em>thing1</em></span> channel and all other channels that begin with <span class="emphasis"><em>thing2</em></span> or <span class="emphasis"><em>input</em></span> but not to channels starting with <span class="emphasis"><em>thing3</em></span> (since version 5.0).</p>
+<div class="warning" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Warning"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="images/warning.png"></td><th align="left">Warning</th></tr><tr><td align="left" valign="top">
+<p>The addition of this syntax to the pattern causes one possible (though perhaps unlikely) problem.
+If you have a bean named <code class="literal">!thing1</code> and you included a pattern of <code class="literal">!thing1</code> in your channel interceptor&#8217;s  <code class="literal">pattern</code> patterns, it no longer matches.
+The pattern now matches all beans not named <code class="literal">thing1</code>.
+In this case, you can escape the <code class="literal">!</code> in the pattern with <code class="literal">\</code>.
+The pattern <code class="literal">\!thing1</code> matches a bean named <code class="literal">!thing1</code>.</p>
+</td></tr></table></div>
+<p>The order attribute lets you manage where this interceptor is injected when there are multiple interceptors on a given channel.
+For example, channel <span class="emphasis"><em>inputChannel</em></span> could have individual interceptors configured locally (see below), as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inputChannel"</span><span class="hl-tag">&gt;</span>&nbsp;
+  <span class="hl-tag">&lt;int:interceptors&gt;</span>
+    <span class="hl-tag">&lt;int:wire-tap</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"logger"</span><span class="hl-tag">/&gt;</span>&nbsp;
+  <span class="hl-tag">&lt;/int:interceptors&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+<p>A reasonable question is "<code class="literal">how is a global interceptor injected in relation to other interceptors configured locally or through other global interceptor definitions?</code>"
+The current implementation provides a simple mechanism for defining the order of interceptor execution.
+A positive number in the <code class="literal">order</code> attribute ensures interceptor injection after any existing interceptors, while a negative number ensures that the interceptor is injected before existing interceptors.
+This means that, in the preceding example, the global interceptor is injected after (since its <code class="literal">order</code> is greater than <code class="literal">0</code>) the <span class="emphasis"><em>wire-tap</em></span> interceptor configured locally.
+If there were another global interceptor with a matching <code class="literal">pattern</code>, its order would be determined by comparing the values of both interceptors' <code class="literal">order</code> attributes.
+To inject a global interceptor before the existing interceptors, use a negative value for the <code class="literal">order</code> attribute.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Note that both the <code class="literal">order</code> and <code class="literal">pattern</code> attributes are optional.
+The default value for <code class="literal">order</code> will be 0 and for <code class="literal">pattern</code>, the default is <span class="emphasis"><em>*</em></span> (to match all channels).</p>
+</td></tr></table></div>
+<p>Starting with version 4.3.15, you can configure the <code class="literal">spring.integration.postProcessDynamicBeans = true</code> property to apply any global interceptors to dynamically created <code class="literal">MessageChannel</code> beans.
+See <a class="xref" href="configuration.html#global-properties" title="E.4&nbsp;Global Properties">Section&nbsp;E.4, &#8220;Global Properties&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-wiretap" href="#channel-wiretap"></a>Wire Tap</h4></div></div></div>
+
+<p>As mentioned earlier, Spring Integration provides a simple wire tap interceptor.
+You can configure a wire tap on any channel within an <code class="literal">&lt;interceptors/&gt;</code> element.
+Doing so is especially useful for debugging and can be used in conjunction with Spring Integration&#8217;s logging channel adapter as follows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"in"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:interceptors&gt;</span>
+        <span class="hl-tag">&lt;int:wire-tap</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"logger"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;/int:interceptors&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span>
+
+<span class="hl-tag">&lt;int:logging-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"logger"</span> <span class="hl-attribute">level</span>=<span class="hl-value">"DEBUG"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>The <span class="emphasis"><em>logging-channel-adapter</em></span> also accepts an <span class="emphasis"><em>expression</em></span> attribute so that you can evaluate a SpEL expression against the <span class="emphasis"><em>payload</em></span> and <span class="emphasis"><em>headers</em></span> variables.
+Alternatively, to log the full message <code class="literal">toString()</code> result, provide a value of <code class="literal">true</code> for the <span class="emphasis"><em>log-full-message</em></span> attribute.
+By default, it is <code class="literal">false</code> so that only the payload is logged.
+Setting it to <code class="literal">true</code> enables logging of all headers in addition to the payload.
+The <span class="emphasis"><em>expression</em></span> option provides the most flexibility (for example, <code class="literal">expression="payload.user.name"</code>).</p>
+</td></tr></table></div>
+<p>One of the common misconceptions about the wire tap and other similar components (<a class="xref" href="message-publishing.html#message-publishing-config" title="B.1&nbsp;Message Publishing Configuration">Section&nbsp;B.1, &#8220;Message Publishing Configuration&#8221;</a>) is that they are automatically asynchronous in nature.
+By default, wire tap as a component is not invoked asynchronously.
+Instead, Spring Integration focuses on a single unified approach to configuring asynchronous behavior: the message channel.
+What makes certain parts of the message flow synchronous or asynchronous is the type of Message Channel that has been configured within that flow.
+That is one of the primary benefits of the message channel abstraction.
+From the inception of the framework, we have always emphasized the need and the value of the message channel as a first-class citizen of the framework.
+It is not just an internal, implicit realization of the EIP pattern. It is fully exposed as a configurable component to the end user.
+So, the wire tap component is only responsible for performing the following tasks:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Intercept a message flow by tapping into a channel (for example, <code class="literal">channelA</code>)
+</li><li class="listitem">
+Grab each message
+</li><li class="listitem">
+Send the message to another channel (for example, <code class="literal">channelB</code>)
+</li></ul></div>
+<p>It is essentially a variation of the bridge pattern, but it is encapsulated within a channel definition (and hence easier to enable and disable without disrupting a flow).
+Also, unlike the bridge, it basically forks another message flow.
+Is that flow synchronous or asynchronous? The answer depends on the type of message channel that <span class="emphasis"><em>channelB</em></span> is.
+We have the following options: direct channel, pollable channel, and executor channel.
+The last two break the thread boundary, making communication over such channels asynchronous, because the dispatching of the message from that channel to its subscribed handlers happens on a different thread than the one used to send the message to that channel.
+That is what is going to make your wire-tap flow synchronous or asynchronous.
+It is consistent with other components within the framework (such as message publisher) and adds a level of consistency and simplicity by sparing you from worrying in advance (other than writing thread-safe code) about whether a particular piece of code should be implemented as synchronous or asynchronous.
+The actual wiring of two pieces of code (say, component A and component B) over a message channel is what makes their collaboration synchronous or asynchronous.
+You may even want to change from synchronous to asynchronous in the future, and message channel lets you to do it swiftly without ever touching the code.</p>
+<p>One final point regarding the wire tap is that, despite the rationale provided above for not being asynchronous by default, you should keep in mind that it is usually desirable to hand off the message as soon as possible.
+Therefore, it would be quite common to use an asynchronous channel option as the wire tap&#8217;s outbound channel.
+However we doe not enforce asynchronous behavior by default.
+There are a number of use cases that would break if we did, including that you might not want to break a transactional boundary.
+Perhaps you use the wire tap pattern for auditing purposes, and you do want the audit messages to be sent within the original transaction.
+As an example, you might connect the wire tap to a JMS outbound channel adapter.
+That way, you get the best of both worlds: 1) the sending of a JMS Message can occur within the transaction while 2) it is still a "<code class="literal">fire-and-forget</code>" action, thereby preventing any noticeable delay in the main message flow.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Starting with version 4.0, it is important to avoid circular references when an interceptor (such as the <a class="ulink" href="https://docs.spring.io/autorepo/docs/spring-integration/current/api/org/springframework/integration/channel/interceptor/WireTap.html" target="_top"><code class="literal">WireTap</code> class</a>) references a channel.
+You need to exclude such channels from those being intercepted by the current interceptor.
+This can be done with appropriate patterns or programmatically.
+If you have a custom <code class="literal">ChannelInterceptor</code> that references a <code class="literal">channel</code>, consider implementing <code class="literal">VetoCapableInterceptor</code>.
+That way, the framework asks the interceptor if it is OK to intercept each channel that is a candidate, based on the supplied pattern.
+You can also add runtime protection in the interceptor methods to ensure that the channel is not one that is referenced by the interceptor.
+The <code class="literal">WireTap</code> uses both of these techniques.</p>
+</td></tr></table></div>
+<p>Starting with version 4.3, the <code class="literal">WireTap</code> has additional constructors that take a <code class="literal">channelName</code> instead of a
+<code class="literal">MessageChannel</code> instance.
+This can be convenient for Java configuration and when channel auto-creation logic is being used.
+The target <code class="literal">MessageChannel</code> bean is resolved from the provided <code class="literal">channelName</code> later, on the first interaction with the
+interceptor.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Channel resolution requires a <code class="literal">BeanFactory</code>, so the wire tap instance must be a Spring-managed bean.</p>
+</td></tr></table></div>
+<p>This late-binding approach also allows simplification of typical wire-tapping patterns with Java DSL configuration, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> PollableChannel myChannel() {
+    <span class="hl-keyword">return</span> MessageChannels.queue()
+            .wireTap(<span class="hl-string">"loggingFlow.input"</span>)
+            .get();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow loggingFlow() {
+    <span class="hl-keyword">return</span> f -&gt; f.log();
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="conditional-wiretap" href="#conditional-wiretap"></a>Conditional Wire Taps</h4></div></div></div>
+
+<p>Wire taps can be made conditional by using the <code class="literal">selector</code> or <code class="literal">selector-expression</code> attributes.
+The <code class="literal">selector</code> references a <code class="literal">MessageSelector</code> bean, which can determine at runtime whether the message should go to the tap channel.
+Similarly, the <code class="literal">selector-expression</code> is a boolean SpEL expression that performs the same purpose: If the expression evaluates to <code class="literal">true</code>, the message is sent to the tap channel.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="channel-global-wiretap" href="#channel-global-wiretap"></a>Global Wire Tap Configuration</h4></div></div></div>
+
+<p>It is possible to configure a global wire tap as a special case of the <a class="xref" href="messaging-channels-section.html#global-channel-configuration-interceptors" title="Global Channel Interceptor Configuration">the section called &#8220;Global Channel Interceptor Configuration&#8221;</a>.
+To do so, configure a top level <code class="literal">wire-tap</code> element.
+Now, in addition to the normal <code class="literal">wire-tap</code> namespace support, the <code class="literal">pattern</code> and <code class="literal">order</code> attributes are supported and work in exactly the same way as they do for the <code class="literal">channel-interceptor</code>.
+The following examlpe shows how to configure a global wire tap:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:wire-tap</span> <span class="hl-attribute">pattern</span>=<span class="hl-value">"input*, thing2*, thing1"</span> <span class="hl-attribute">order</span>=<span class="hl-value">"3"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"wiretapChannel"</span><span class="hl-tag">/&gt;</span></pre>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>A global wire tap provides a convenient way to configure a single-channel wire tap externally without modifying the existing channel configuration.
+To do so, set the <code class="literal">pattern</code> attribute to the target channel name.
+For example, you can use this technique to configure a test case to verify messages on a channel.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="channel-special-channels" href="#channel-special-channels"></a>6.1.6&nbsp;Special Channels</h3></div></div></div>
+
+<p>If namespace support is enabled, two special channels are defined within the application context by default: <code class="literal">errorChannel</code> and <code class="literal">nullChannel</code>.
+The <span class="emphasis"><em>nullChannel</em></span> acts like <code class="literal">/dev/null</code>, logging any message sent to it at the <code class="literal">DEBUG</code> level and returning immediately.
+Any time you face channel resolution errors for a reply that you do not care about, you can set the affected component&#8217;s <code class="literal">output-channel</code> attribute to <span class="emphasis"><em>nullChannel</em></span> (the name, <span class="emphasis"><em>nullChannel</em></span>, is reserved within the application context).
+The <span class="emphasis"><em>errorChannel</em></span> is used internally for sending error messages and may be overridden with a custom configuration.
+This is discussed in greater detail in <a class="xref" href="configuration.html#namespace-errorhandler" title="E.3&nbsp;Error Handling">Section&nbsp;E.3, &#8220;Error Handling&#8221;</a>.</p>
+<p>See also <a class="xref" href="java-dsl.html#java-dsl-channels" title="11.2&nbsp;Message Channels">Section&nbsp;11.2, &#8220;Message Channels&#8221;</a> in the Java DSL chapter for more information about message channel and interceptors.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="polling-consumer" href="#polling-consumer"></a>6.2&nbsp;Poller</h2></div></div></div>
+
+<p>This section describes how polling works in Spring Integration.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_polling_consumer" href="#_polling_consumer"></a>6.2.1&nbsp;Polling Consumer</h3></div></div></div>
+
+<p>When Message Endpoints (Channel Adapters) are connected to channels and instantiated, they produce one of the following instances:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="ulink" href="http://static.springsource.org/spring-integration/api/org/springframework/integration/endpoint/PollingConsumer.html" target="_top"><code class="literal">PollingConsumer</code></a>
+</li><li class="listitem">
+<a class="ulink" href="http://static.springsource.org/spring-integration/api/org/springframework/integration/endpoint/EventDrivenConsumer.html" target="_top"><code class="literal">EventDrivenConsumer</code></a>
+</li></ul></div>
+<p>The actual implementation depends on the type of channel to which these endpoints connect.
+A channel adapter connected to a channel that implements the <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/index.html?org/springframework/messaging/SubscribableChannel.html" target="_top"><code class="literal">org.springframework.messaging.SubscribableChannel</code></a> interface produces an instance of <code class="literal">EventDrivenConsumer</code>.
+On the other hand, a channel adapter connected to a channel that implements the  <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/index.html?org/springframework/messaging/PollableChannel.html" target="_top"><code class="literal">org.springframework.messaging.PollableChannel</code></a> interface (such as a <code class="literal">QueueChannel</code>) produces an instance of <code class="literal">PollingConsumer</code>.</p>
+<p>Polling consumers let Spring Integration components actively poll for Messages rather than process messages in an event-driven manner.</p>
+<p>They represent a critical cross-cutting concern in many messaging scenarios.
+In Spring Integration, polling consumers are based on the pattern with the same name, which is described in the book <span class="emphasis"><em>Enterprise Integration Patterns</em></span>, by Gregor Hohpe and Bobby Woolf.
+You can find a description of the pattern on the <a class="ulink" href="http://www.enterpriseintegrationpatterns.com/PollingConsumer.html" target="_top">book&#8217;s website</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="pollable-message-source" href="#pollable-message-source"></a>6.2.2&nbsp;Pollable Message Source</h3></div></div></div>
+
+<p>Spring Integration offers a second variation of the polling consumer pattern.
+When inbound channel adapters are used, these adapters are often wrapped by a <code class="literal">SourcePollingChannelAdapter</code>.
+For example, when retrieving messages from a remote FTP Server location, the adapter described in <a class="xref" href="ftp.html#ftp-inbound" title="18.4&nbsp;FTP Inbound Channel Adapter">Section&nbsp;18.4, &#8220;FTP Inbound Channel Adapter&#8221;</a> is configured with a poller to periodically retrieve messages.
+So, when components are configured with pollers, the resulting instances are of one of the following types:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="ulink" href="http://static.springsource.org/spring-integration/api/org/springframework/integration/endpoint/PollingConsumer.html" target="_top"><code class="literal">PollingConsumer</code></a>
+</li><li class="listitem">
+<a class="ulink" href="http://static.springsource.org/spring-integration/api/org/springframework/integration/endpoint/SourcePollingChannelAdapter.html" target="_top"><code class="literal">SourcePollingChannelAdapter</code></a>
+</li></ul></div>
+<p>This means that pollers are used in both inbound and outbound messaging scenarios.
+Here are some use cases in which pollers are used:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Polling certain external systems, such as FTP Servers, Databases, and Web Services
+</li><li class="listitem">
+Polling internal (pollable) message channels
+</li><li class="listitem">
+Polling internal services (such as repeatedly executing methods on a Java class)
+</li></ul></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>AOP advice classes can be applied to pollers, in an <code class="literal">advice-chain</code>, such as a transaction advice to start a transaction.
+Starting with version 4.1, a <code class="literal">PollSkipAdvice</code> is provided.
+Pollers use triggers to determine the time of the next poll.
+The <code class="literal">PollSkipAdvice</code> can be used to suppress (skip) a poll, perhaps because there is some downstream condition that would prevent the message being processed.
+To use this advice, you have to provide it with an implementation of a <code class="literal">PollSkipStrategy</code>.
+Starting with version 4.2.5, a <code class="literal">SimplePollSkipStrategy</code> is provided.
+To use it, you can add an instance as a bean to the application context, inject it into a <code class="literal">PollSkipAdvice</code>, and add that to the poller&#8217;s
+advice chain.
+To skip polling, call <code class="literal">skipPolls()</code>.
+To resume polling, call <code class="literal">reset()</code>.
+Version 4.2 added more flexibility in this area.
+See <a class="xref" href="messaging-channels-section.html#conditional-pollers" title="6.2.4&nbsp;Conditional Pollers for Message Sources">Section&nbsp;6.2.4, &#8220;Conditional Pollers for Message Sources&#8221;</a>.</p>
+</td></tr></table></div>
+<p>This chapter is meant to only give a high-level overview of polling consumers and how they fit into the concept of message channels (see <a class="xref" href="messaging-channels-section.html#channel" title="6.1&nbsp;Message Channels">Section&nbsp;6.1, &#8220;Message Channels&#8221;</a>) and channel adapters (see <a class="xref" href="messaging-channels-section.html#channel-adapter" title="6.3&nbsp;Channel Adapter">Section&nbsp;6.3, &#8220;Channel Adapter&#8221;</a>).
+For more information regarding messaging endpoints in general and polling consumers in particular, see <a class="xref" href="messaging-endpoints-chapter.html#endpoint" title="10.1&nbsp;Message Endpoints">Section&nbsp;10.1, &#8220;Message Endpoints&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="deferred-acks-message-source" href="#deferred-acks-message-source"></a>6.2.3&nbsp;Deferred Acknowledgment Pollable Message Source</h3></div></div></div>
+
+<p>Starting with version 5.0.1, certain modules provide <code class="literal">MessageSource</code> implementations that support deferring acknowledgment until the downstream flow completes (or hands off the message to another thread).
+This is currently limited to the <code class="literal">AmqpMessageSource</code> and the <code class="literal">KafkaMessageSource</code> provided by the <a class="ulink" href="https://github.com/spring-projects/spring-integration-kafka" target="_top"><code class="literal">spring-kafka-integration</code> extension project, version 3.0.1 or higher</a>.</p>
+<p>With these message sources, the <code class="literal">IntegrationMessageHeaderAccessor.ACKNOWLEDGMENT_CALLBACK</code> header (see <a class="xref" href="message.html#message-header-accessor" title="7.2.1&nbsp;MessageHeaderAccessor API">Section&nbsp;7.2.1, &#8220;<code class="literal">MessageHeaderAccessor</code> API&#8221;</a>) is added to the message.
+The value of the header is an instance of <code class="literal">AcknowledgmentCallback</code>, as the following example shows:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@FunctionalInterface</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> AcknowledgmentCallback {
+
+    <span class="hl-keyword">void</span> acknlowledge(Status status);
+
+    <span class="hl-keyword">boolean</span> isAcknowledged();
+
+    <span class="hl-keyword">void</span> noAutoAck();
+
+    <span class="hl-keyword">default</span> <span class="hl-keyword">boolean</span> isAutoAck();
+
+    enum Status {
+
+        <strong class="hl-tag" style="color: blue">/**
+         * Mark the message as accepted.
+         */</strong>
+        ACCEPT,
+
+        <strong class="hl-tag" style="color: blue">/**
+         * Mark the message as rejected.
+         */</strong>
+        REJECT,
+
+        <strong class="hl-tag" style="color: blue">/**
+         * Reject the message and requeue so that it will be redelivered.
+         */</strong>
+        REQUEUE
+
+    }
+
+}</pre>
+<p>Not all message sources (for example, Kafka) support the <code class="literal">REJECT</code> status.
+It is treated the same as <code class="literal">ACCEPT</code>.</p>
+<p>Applications can acknowledge a message at any time, as the following example shows:</p>
+<pre class="programlisting">Message&lt;?&gt; received = source.receive();
+
+...
+
+StaticMessageHeaderAccessor.getAcknowledgmentCallback(received)
+        .acknowledge(Status.ACCEPT);</pre>
+<p>If the <code class="literal">MessageSource</code> is wired into a <code class="literal">SourcePollingChannelAdapter</code>, when the poller thread returns to the adapter after the downstream flow completes, the adapter checks whether the acknowledgment has already been acknowledged and, if not, sets its status to <code class="literal">ACCEPT</code> it (or <code class="literal">REJECT</code> if the flow throws an exception).
+The status values are defined in the <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/support/AcknowledgmentCallback.Status.html" target="_top"><code class="literal">AcknowledgmentCallback.Status</code> enumeration</a>.</p>
+<p>Spring Integration provides <code class="literal">MessageSourcePollingTemplate</code> to perform ad-hoc polling of a <code class="literal">MessageSource</code>.
+This, too, takes care of setting <code class="literal">ACCEPT</code> or <code class="literal">REJECT</code> on the <code class="literal">AcknowledgmentCallback</code> when the <code class="literal">MessageHandler</code> callback returns (or throws an exception).
+The following example shows how to poll with the <code class="literal">MessageSourcePollingTemplate</code>:</p>
+<pre class="programlisting">MessageSourcePollingTemplate template =
+    <span class="hl-keyword">new</span> MessageSourcePollingTemplate(<span class="hl-keyword">this</span>.source);
+template.poll(h -&gt; {
+    ...
+});</pre>
+<p>In both cases (<code class="literal">SourcePollingChannelAdapter</code> and <code class="literal">MessageSourcePollingTemplate</code>), you can disable auto ack/nack by calling <code class="literal">noAutoAck()</code> on the callback.
+You might do this if you hand off the message to another thread and wish to acknowledge later.
+Not all implementations support this (for example, Apache Kafka does not, because the offset commit has to be performed on the same thread).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="conditional-pollers" href="#conditional-pollers"></a>6.2.4&nbsp;Conditional Pollers for Message Sources</h3></div></div></div>
+
+<p>This section covers how to use conditional pollers.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_background" href="#_background"></a>Background</h4></div></div></div>
+
+<p><code class="literal">Advice</code> objects, in an <code class="literal">advice-chain</code> on a poller, advise the whole polling task (both message retrieval and processing).
+These "<code class="literal">around advice</code>" methods do not have access to any context for the poll&#8201;&#8212;&#8201;only the poll itself.
+This is fine for requirements such as making a task transactional or skipping a poll due to some external condition, as discussed earlier.
+What if we wish to take some action depending on the result of the <code class="literal">receive</code> part of the poll or if we want to adjust the poller depending on conditions? For those instances, Spring Integration offers "<code class="literal">Smart</code>" Polling.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_literal_smart_literal_polling" href="#_literal_smart_literal_polling"></a>"<code class="literal">Smart</code>" Polling</h4></div></div></div>
+
+<p>Version 4.2 introduced the <code class="literal">AbstractMessageSourceAdvice</code>.
+Any <code class="literal">Advice</code> objects in the <code class="literal">advice-chain</code> that subclass this class are applied only to the receive operation.
+Such classes implement the following methods:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">beforeReceive(MessageSource&lt;?&gt; source)</code>
+This method is called before the <code class="literal">MessageSource.receive()</code> method.
+It lets you examine and reconfigure the source. Returning <code class="literal">false</code> cancels this poll (similar to the <code class="literal">PollSkipAdvice</code> mentioned earlier).
+</li><li class="listitem">
+<code class="literal">Message&lt;?&gt; afterReceive(Message&lt;?&gt; result, MessageSource&lt;?&gt; source)</code>
+This method is called after the <code class="literal">receive()</code> method.
+Again, you can reconfigure the source or take any action (perhaps depending on the result, which can be <code class="literal">null</code> if there was no message created by the source).
+You can even return a different message
+</li></ul></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important: Thread safety"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Thread safety</th></tr><tr><td align="left" valign="top">
+
+<p>If an advice mutates the <code class="literal">MessageSource</code>, you should not configure the poller with a <code class="literal">TaskExecutor</code>.
+If an advice mutates the source, such mutations are not thread safe and could cause unexpected results, especially with high frequency pollers.
+If you need to process poll results concurrently, consider using a downstream <code class="literal">ExecutorChannel</code> instead of adding an executor to the poller.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important: Advice Chain Ordering"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Advice Chain Ordering</th></tr><tr><td align="left" valign="top">
+
+<p>You should understand how the advice chain is processed during initialization.
+<code class="literal">Advice</code> objects that do not extend <code class="literal">AbstractMessageSourceAdvice</code> are applied to the whole poll process and are all invoked first, in order, before any <code class="literal">AbstractMessageSourceAdvice</code>.
+Then <code class="literal">AbstractMessageSourceAdvice</code> objects are invoked in order around the <code class="literal">MessageSource</code> <code class="literal">receive()</code> method.
+If you have, for example, <code class="literal">Advice</code> objects <code class="literal">a, b, c, d</code>, where <code class="literal">b</code> and <code class="literal">d</code> are <code class="literal">AbstractMessageSourceAdvice</code>, the objects are applied in the following order: <code class="literal">a, c, b, d</code>.
+Also, if a <code class="literal">MessageSource</code> is already a <code class="literal">Proxy</code>, the <code class="literal">AbstractMessageSourceAdvice</code> is invoked after any existing <code class="literal">Advice</code> objects.
+If you wish to change the order, you must wire up the proxy yourself.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_literal_simpleactiveidlemessagesourceadvice_literal" href="#_literal_simpleactiveidlemessagesourceadvice_literal"></a><code class="literal">SimpleActiveIdleMessageSourceAdvice</code></h4></div></div></div>
+
+<p>This advice is a simple implementation of <code class="literal">AbstractMessageSourceAdvice</code>.
+When used in conjunction with a <code class="literal">DynamicPeriodicTrigger</code>, it adjusts the polling frequency, depending on whether or not the previous poll resulted in a message or not.
+The poller must also have a reference to the same <code class="literal">DynamicPeriodicTrigger</code>.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important: Important: Async Handoff"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important: Async Handoff</th></tr><tr><td align="left" valign="top">
+
+<p><code class="literal">SimpleActiveIdleMessageSourceAdvice</code> modifies the trigger based on the <code class="literal">receive()</code> result.
+This works only if the advice is called on the poller thread.
+It does not work if the poller has a <code class="literal">task-executor</code>.
+To use this advice where you wish to use async operations after the result of a poll, do the async handoff later, perhaps by using an <code class="literal">ExecutorChannel</code>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_literal_compoundtriggeradvice_literal" href="#_literal_compoundtriggeradvice_literal"></a><code class="literal">CompoundTriggerAdvice</code></h4></div></div></div>
+
+<p>This advice allows the selection of one of two triggers based on whether a poll returns a message or not.
+Consider a poller that uses a <code class="literal">CronTrigger</code>.
+<code class="literal">CronTrigger</code> instances are immutable, so they cannot be altered once constructed.
+Consider a use case where we want to use a cron expression to trigger a poll once each hour but, if no message is
+received, poll once per minute and, when a message is retrieved, revert to using the cron expression.</p>
+<p>The advice (and poller) use a <code class="literal">CompoundTrigger</code> for this purpose.
+The trigger&#8217;s <code class="literal">primary</code> trigger can be a <code class="literal">CronTrigger</code>.
+When the advice detects that no message is received, it adds the secondary trigger to the <code class="literal">CompoundTrigger</code>.
+When the <code class="literal">CompoundTrigger</code> instance&#8217;s <code class="literal">nextExecutionTime</code> method is invoked, it delegates to the secondary trigger, if
+present.
+Otherwise, it delegates to the primary trigger.</p>
+<p>The poller must also have a reference to the same <code class="literal">CompoundTrigger</code>.</p>
+<p>The following example shows the configuration for the hourly cron expression with a fallback to every minute:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"nullChannel"</span> <span class="hl-attribute">auto-startup</span>=<span class="hl-value">"false"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.endpoint.PollerAdviceTests.Source"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">trigger</span>=<span class="hl-value">"compoundTrigger"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int:advice-chain&gt;</span>
+            <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.aop.CompoundTriggerAdvice"</span><span class="hl-tag">&gt;</span>
+                <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"compoundTrigger"</span><span class="hl-tag">/&gt;</span>
+                <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"secondary"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;/bean&gt;</span>
+        <span class="hl-tag">&lt;/int:advice-chain&gt;</span>
+    <span class="hl-tag">&lt;/int:poller&gt;</span>
+<span class="hl-tag">&lt;/int:inbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"compoundTrigger"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.util.CompoundTrigger"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"primary"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"primary"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.scheduling.support.CronTrigger"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"0 0 * * * *"</span><span class="hl-tag"> /&gt;</span> <span class="hl-comment">&lt;!-- top of every hour --&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"secondary"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.scheduling.support.PeriodicTrigger"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"60000"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important: Important: Async Handoff"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important: Async Handoff</th></tr><tr><td align="left" valign="top">
+
+<p><code class="literal">CompoundTriggerAdvice</code> modifies the trigger based on the <code class="literal">receive()</code> result.
+This works only if the advice is called on the poller thread.
+It does not work if the poller has a <code class="literal">task-executor</code>.
+To use this advice where you wish to use async operations after the result of a poll, do the async handoff later, perhaps by using an <code class="literal">ExecutorChannel</code>.</p>
+</td></tr></table></div>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="channel-adapter" href="#channel-adapter"></a>6.3&nbsp;Channel Adapter</h2></div></div></div>
+
+<p>A channel adapter is a message endpoint that enables connecting a single sender or receiver to a message channel.
+Spring Integration provides a number of adapters to support various transports, such as JMS, file, HTTP, web services, mail, and more.
+Upcoming chapters of this reference guide discuss each adapter.
+However, this chapter focuses on the simple but flexible method-invoking channel adapter support.
+There are both inbound and outbound adapters, and each may be configured with XML elements provided in the core namespace.
+These provide an easy way to extend Spring Integration, as long as you have a method that can be invoked as either a source or a destination.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="channel-adapter-namespace-inbound" href="#channel-adapter-namespace-inbound"></a>6.3.1&nbsp;Configuring An Inbound Channel Adapter</h3></div></div></div>
+
+<p>An <code class="literal">inbound-channel-adapter</code> element can invoke any method on a Spring-managed object and send a non-null return value to a <code class="literal">MessageChannel</code> after converting the method&#8217;s output to a <code class="literal">Message</code>.
+When the adapter&#8217;s subscription is activated, a poller tries to receive messages from the source.
+The poller is scheduled with the <code class="literal">TaskScheduler</code> according to the provided configuration.
+To configure the polling interval or cron expression for an individual channel adapter, you can provide a <span class="emphasis"><em>poller</em></span> element with one of the scheduling attributes, such as <span class="emphasis"><em>fixed-rate</em></span> or <span class="emphasis"><em>cron</em></span>.
+The following example defines two <code class="literal">inbound-channel-adapter</code> instances:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"source1"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"method1"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"channel1"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"5000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:inbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"source2"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"method2"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"channel2"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">cron</span>=<span class="hl-value">"30 * 9-17 * * MON-FRI"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel-adapter&gt;</span></pre>
+</div>
+<p>See also <a class="xref" href="messaging-channels-section.html#channel-adapter-expressions-and-scripts" title="6.3.3&nbsp;Channel Adapter Expressions and Scripts">Section&nbsp;6.3.3, &#8220;Channel Adapter Expressions and Scripts&#8221;</a>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If no poller is provided, then a single default poller must be registered within the context.
+See <a class="xref" href="messaging-endpoints-chapter.html#endpoint-namespace" title="10.1.4&nbsp;Endpoint Namespace Support">Section&nbsp;10.1.4, &#8220;Endpoint Namespace Support&#8221;</a> for more detail.</p>
+</td></tr></table></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important: Important: Poller Configuration"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important: Poller Configuration</th></tr><tr><td align="left" valign="top">
+
+<p>Some <code class="literal">inbound-channel-adapter</code> types are backed by a <code class="literal">SourcePollingChannelAdapter</code>, which means they contain a poller configuration that polls the <code class="literal">MessageSource</code> (to invoke a custom method that produces the value that becomes a <code class="literal">Message</code> payload) based on the configuration specified in the Poller.
+The following example shows the configuration of two pollers:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"1"</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"10"</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>In the the first configuration, the polling task is invoked once per poll, and, during each task (poll), the method (which results in the production of the message) is invoked once, based on the <code class="literal">max-messages-per-poll</code> attribute value.
+In the second configuration, the polling task is invoked 10 times per poll or until it returns <span class="emphasis"><em>null</em></span>, thus possibly producing ten messages per poll while each poll happens at one-second intervals.
+However, what happens if the configuration looks like the following example:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Note that there is no <code class="literal">max-messages-per-poll</code> specified.
+As we cover later, the identical poller configuration in the <code class="literal">PollingConsumer</code> (for example, service-activator, filter, router, and others) would have a default value of -1 for <code class="literal">max-messages-per-poll</code>, which means "<code class="literal">execute the polling task non-stop unless the polling method returns null (perhaps because there are no more messages in the `QueueChannel</code>)`" and then sleep for one second.</p>
+<p>However, in the <code class="literal">SourcePollingChannelAdapter</code>, it is a bit different.
+The default value for <code class="literal">max-messages-per-poll</code> is <code class="literal">1</code>, unless you explicitly set it to a negative value (such as <code class="literal">-1</code>).
+This makes sure that the poller can react to lifecycle events (such as start and stop) and prevents it from potentially spinning in an infinite loop if the implementation of the custom method of the <code class="literal">MessageSource</code> has a potential to never return null and happens to be non-interruptible.</p>
+<p>However, if you are sure that your method can return null and you need to poll for as many sources as available per each poll, you should explicitly set <code class="literal">max-messages-per-poll</code> to a negative value, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"-1"</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="channel-adapter-namespace-outbound" href="#channel-adapter-namespace-outbound"></a>6.3.2&nbsp;Configuring An Outbound Channel Adapter</h3></div></div></div>
+
+<p>An <code class="literal">outbound-channel-adapter</code> element can also connect a <code class="literal">MessageChannel</code> to any POJO consumer method that should be invoked with the payload of messages sent to that channel.
+The following example shows how to define an outbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"channel1"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"target"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"handle"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"target"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.MyPojo"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>If the channel being adapted is a <code class="literal">PollableChannel</code>, you must provide a poller sub-element, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"channel2"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"target"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"handle"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"3000"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int:outbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"target"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.MyPojo"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>You should use a <code class="literal">ref</code> attribute if the POJO consumer implementation can be reused in other <code class="literal">&lt;outbound-channel-adapter&gt;</code> definitions.
+However, if the consumer implementation is referenced by only a single definition of the <code class="literal">&lt;outbound-channel-adapter&gt;</code>, you can define it as an inner bean, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"channel"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"handle"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.Foo"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:outbound-channel-adapter&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Using both the <code class="literal">ref</code> attribute and an inner handler definition in the same <code class="literal">&lt;outbound-channel-adapter&gt;</code> configuration is not allowed, as it creates an ambiguous condition.
+Such a configuration results in an exception being thrown.</p>
+</td></tr></table></div>
+<p>Any channel adapter can be created without a <code class="literal">channel</code> reference, in which case it implicitly creates an instance of <code class="literal">DirectChannel</code>.
+The created channel&#8217;s name matches the <code class="literal">id</code> attribute of the <code class="literal">&lt;inbound-channel-adapter&gt;</code> or <code class="literal">&lt;outbound-channel-adapter&gt;</code> element.
+Therefore, if <code class="literal">channel</code> is not provided, <code class="literal">id</code> is required.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="channel-adapter-expressions-and-scripts" href="#channel-adapter-expressions-and-scripts"></a>6.3.3&nbsp;Channel Adapter Expressions and Scripts</h3></div></div></div>
+
+<p>Like many other Spring Integration components, the <code class="literal">&lt;inbound-channel-adapter&gt;</code> and <code class="literal">&lt;outbound-channel-adapter&gt;</code> also provide support for SpEL expression evaluation.
+To use SpEL, provide the expression string in the <span class="emphasis"><em>expression</em></span> attribute instead of providing the <span class="emphasis"><em>ref</em></span> and <span class="emphasis"><em>method</em></span> attributes that are used for method-invocation on a bean.
+When an expression is evaluated, it follows the same contract as method-invocation where: the expression for an <code class="literal">&lt;inbound-channel-adapter&gt;</code> generates a message any time the evaluation result is a non-null value, while the expression for an <code class="literal">&lt;outbound-channel-adapter&gt;</code> must be the equivalent of a void-returning method invocation.</p>
+<p>Starting with Spring Integration 3.0, an <code class="literal">&lt;int:inbound-channel-adapter/&gt;</code> can also be configured with a SpEL <code class="literal">&lt;expression/&gt;</code> (or even with a <code class="literal">&lt;script/&gt;</code>) sub-element, for when more sophistication is required than can be achieved with the simple <span class="emphasis"><em>expression</em></span> attribute.
+If you provide a script as a <code class="literal">Resource</code> by using the <code class="literal">location</code> attribute, you can also set <code class="literal">refresh-check-delay</code>, which allows the resource to be periodically refreshed.
+If you want the script to be checked on each poll, you would need to coordinate this setting with the poller&#8217;s trigger, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:inbound-channel-adapter</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"source1"</span> <span class="hl-attribute">method</span>=<span class="hl-value">"method1"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"channel1"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"1"</span> <span class="hl-attribute">fixed-delay</span>=<span class="hl-value">"5000"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;script:script</span> <span class="hl-attribute">lang</span>=<span class="hl-value">"ruby"</span> <span class="hl-attribute">location</span>=<span class="hl-value">"Foo.rb"</span> <span class="hl-attribute">refresh-check-delay</span>=<span class="hl-value">"5000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:inbound-channel-adapter&gt;</span></pre>
+</div>
+<p>See also the <code class="literal">cacheSeconds</code> property on the <code class="literal">ReloadableResourceBundleExpressionSource</code> when using the <code class="literal">&lt;expression/&gt;</code> sub-element.
+For more information regarding expressions, see <a class="xref" href="spel.html" title="Appendix&nbsp;A.&nbsp;Spring Expression Language (SpEL)">Appendix&nbsp;A, <i>Spring Expression Language (SpEL)</i></a>. For scripts, see <a class="xref" href="messaging-endpoints-chapter.html#groovy" title="10.8&nbsp;Groovy support">Section&nbsp;10.8, &#8220;Groovy support&#8221;</a> and <a class="xref" href="messaging-endpoints-chapter.html#scripting" title="10.7&nbsp;Scripting Support">Section&nbsp;10.7, &#8220;Scripting Support&#8221;</a>.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">&lt;int:inbound-channel-adapter/&gt;</code> is endpoint starts a message flow by periodically triggering to poll some underlying <code class="literal">MessageSource</code>.
+Since, at the time of polling, there is no message object, expressions and scripts do not have access to a root <code class="literal">Message</code>, so there are no payload or headers properties that are available in most other messaging SpEL expressions.
+The script can generate and return a complete <code class="literal">Message</code> object with headers and payload or only a payload, which is added to a message with basic headers.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="bridge" href="#bridge"></a>6.4&nbsp;Messaging Bridge</h2></div></div></div>
+
+<p>A messaging bridge is a relatively trivial endpoint that connects two message channels or channel adapters.
+For example, you may want to connect a <code class="literal">PollableChannel</code> to a <code class="literal">SubscribableChannel</code> so that the subscribing endpoints do not have to worry about any polling configuration.
+Instead, the messaging bridge provides the polling configuration.</p>
+<p>By providing an intermediary poller between two channels, you can use a messaging bridge to throttle inbound messages.
+The poller&#8217;s trigger determines the rate at which messages arrive on the second channel, and the poller&#8217;s <code class="literal">maxMessagesPerPoll</code> property enforces a limit on the throughput.</p>
+<p>Another valid use for a messaging bridge is to connect two different systems.
+In such a scenario, Spring Integration&#8217;s role is limited to making the connection between these systems and managing a poller, if necessary.
+It is probably more common to have at least a transformer between the two systems, to translate between their formats.
+In that case, the channels can be provided as the <span class="emphasis"><em>input-channel</em></span> and <span class="emphasis"><em>output-channel</em></span> of a transformer endpoint.
+If data format translation is not required, the messaging bridge may indeed be sufficient.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="bridge-namespace" href="#bridge-namespace"></a>6.4.1&nbsp;Configuring a Bridge with XML</h3></div></div></div>
+
+<p>You can use the <code class="literal">&lt;bridge&gt;</code> element is used to create a messaging bridge between two message channels or channel adapters.
+To do so, provide the <code class="literal">input-channel</code> and <code class="literal">output-channel</code> attributes, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:bridge</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"input"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"output"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>As mentioned above, a common use case for the messaging bridge is to connect a <code class="literal">PollableChannel</code> to a <code class="literal">SubscribableChannel</code>.
+When performing this role, the messaging bridge may also serve as a throttler:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:bridge</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"pollable"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"subscribable"</span><span class="hl-tag">&gt;</span>
+     <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"10"</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"5000"</span><span class="hl-tag">/&gt;</span>
+ <span class="hl-tag">&lt;/int:bridge&gt;</span></pre>
+</div>
+<p>You can use a similar mechanism to connecting channel adapters.
+The following example shows a simple "<code class="literal">echo</code>" between the <code class="literal">stdin</code> and <code class="literal">stdout</code> adapters from Spring Integration&#8217;s <code class="literal">stream</code> namespace:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-stream:stdin-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"stdin"</span><span class="hl-tag">/&gt;</span>
+
+ <span class="hl-tag">&lt;int-stream:stdout-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"stdout"</span><span class="hl-tag">/&gt;</span>
+
+ <span class="hl-tag">&lt;int:bridge</span> <span class="hl-attribute">id</span>=<span class="hl-value">"echo"</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"stdin"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"stdout"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Similar configurations work for other (potentially more useful) Channel Adapter bridges, such as file-to-JMS or mail-to-file.
+Upcoming chapters cover the various channel adapters.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If no <span class="emphasis"><em>output-channel</em></span> is defined on a bridge, the reply channel provided by the inbound message is used, if available.
+If neither an output nor a reply channel is available, an exception is thrown.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="bridge-annot" href="#bridge-annot"></a>6.4.2&nbsp;Configuring a Bridge with Java Configuration</h3></div></div></div>
+
+<p>The following example shows how to configure a bridge in Java by using the <code class="literal">@BridgeFrom</code> annotation:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> PollableChannel polled() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> QueueChannel();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@BridgeFrom(value = "polled", poller = @Poller(fixedDelay = "5000", maxMessagesPerPoll = "10"))</span></em>
+<span class="hl-keyword">public</span> SubscribableChannel direct() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+}</pre>
+</div>
+<p>The following example shows how to configure a bridge in Java by using the <code class="literal">@BridgeTo</code> annotation:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@BridgeTo(value = "direct", poller = @Poller(fixedDelay = "5000", maxMessagesPerPoll = "10"))</span></em>
+<span class="hl-keyword">public</span> PollableChannel polled() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> QueueChannel();
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> SubscribableChannel direct() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+}</pre>
+<p>Alternately, you can use a <code class="literal">BridgeHandler</code>, as the following example shows:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "polled",
+        poller = @Poller(fixedRate = "5000", maxMessagesPerPoll = "10"))</span></em>
+<span class="hl-keyword">public</span> BridgeHandler bridge() {
+    BridgeHandler bridge = <span class="hl-keyword">new</span> BridgeHandler();
+    bridge.setOutputChannelName(<span class="hl-string">"direct"</span>);
+    <span class="hl-keyword">return</span> bridge;
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="bridge-dsl" href="#bridge-dsl"></a>6.4.3&nbsp;Configuring a Bridge with the Java DSL</h3></div></div></div>
+
+<p>You can use the Java Domain Specific Language (DSL) to configure a bridge, as the following example shows:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow bridgeFlow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"polled"</span>)
+            .bridge(e -&gt; e.poller(Pollers.fixedDelay(<span class="hl-number">5000</span>).maxMessagesPerPoll(<span class="hl-number">10</span>)))
+            .channel(<span class="hl-string">"direct"</span>)
+            .get();
+}</pre>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="spring-integration-core-messaging.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-core-messaging.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="message.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Part&nbsp;IV.&nbsp;Core Messaging&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;7.&nbsp;Message</td></tr></table></div></body></html>

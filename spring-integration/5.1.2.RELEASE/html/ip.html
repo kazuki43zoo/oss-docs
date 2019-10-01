@@ -1,0 +1,1377 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>34.&nbsp;TCP and UDP Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="syslog.html" title="33.&nbsp;Syslog Support"><link rel="next" href="webflux.html" title="35.&nbsp;WebFlux Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">34.&nbsp;TCP and UDP Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="syslog.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="webflux.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="ip" href="#ip"></a>34.&nbsp;TCP and UDP Support</h2></div></div></div>
+
+<p>Spring Integration provides channel adapters for receiving and sending messages over internet protocols.
+Both UDP (User Datagram Protocol) and TCP (Transmission Control Protocol) adapters are provided.
+Each adapter provides for one-way communication over the underlying protocol.
+In addition, Spring Integration provides simple inbound and outbound TCP gateways.
+These are used when two-way communication is needed.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-ip<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-ip:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ip-intro" href="#ip-intro"></a>34.1&nbsp;Introduction</h2></div></div></div>
+
+<p>Two flavors each of UDP inbound and outbound channel adapters are provided:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">UnicastSendingMessageHandler</code> sends a datagram packet to a single destination.
+</li><li class="listitem">
+<code class="literal">UnicastReceivingChannelAdapter</code> receives incoming datagram packets.
+</li><li class="listitem">
+<code class="literal">MulticastSendingMessageHandler</code> sends (broadcasts) datagram packets to a multicast address.
+</li><li class="listitem">
+<code class="literal">MulticastReceivingChannelAdapter</code> receives incoming datagram packets by joining to a multicast address.
+</li></ul></div>
+<p>TCP inbound and outbound channel adapters are provided:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">TcpSendingMessageHandler</code> sends messages over TCP.
+</li><li class="listitem">
+<code class="literal">TcpReceivingChannelAdapter</code> receives messages over TCP.
+</li></ul></div>
+<p>An inbound TCP gateway is provided.
+It allows for simple request-response processing.
+While the gateway can support any number of connections, each connection can only be processed serially.
+The thread that reads from the socket waits for, and sends, the response before reading again.
+If the connection factory is configured for single use connections, the connection is closed after the socket times out.</p>
+<p>An outbound TCP gateway is provided.
+It allows for simple request-response processing.
+If the associated connection factory is configured for single-use connections, a new connection is immediately created for each new request.
+Otherwise, if the connection is in use, the calling thread blocks on the connection until either a response is received or a timeout or I/O error occurs.</p>
+<p>The TCP and UDP inbound channel adapters and the TCP inbound gateway support the <code class="literal">error-channel</code> attribute.
+This provides the same basic functionality as described in <a class="xref" href="messaging-endpoints-chapter.html#gateway-proxy" title="10.4.1&nbsp;Enter the GatewayProxyFactoryBean">Section&nbsp;10.4.1, &#8220;Enter the <code class="literal">GatewayProxyFactoryBean</code>&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="udp-adapters" href="#udp-adapters"></a>34.2&nbsp;UDP Adapters</h2></div></div></div>
+
+<p>This section describes how to configure and use the UDP adapters.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_outbound_udp_adapters_xml_configuration" href="#_outbound_udp_adapters_xml_configuration"></a>34.2.1&nbsp;Outbound UDP Adapters (XML Configuration)</h3></div></div></div>
+
+<p>The following example configures a UDP outbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:udp-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"udpOut"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"somehost"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"11111"</span>
+    <span class="hl-attribute">multicast</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>When setting <code class="literal">multicast</code> to <code class="literal">true</code>, you should also provide the multicast address in the host attribute.</p>
+</td></tr></table></div>
+<p>UDP is an efficient but unreliable protocol.
+Spring Integration adds two attributes to improve reliability: <code class="literal">check-length</code> and <code class="literal">acknowledge</code>.
+When <code class="literal">check-length</code> is set to <code class="literal">true</code>, the adapter precedes the message data with a length field (four bytes in network byte order).
+This enables the receiving side to verify the length of the packet received.
+If a receiving system uses a buffer that is too short to contain the packet, the packet can be truncated.
+The <code class="literal">length</code> header provides a mechanism to detect this.</p>
+<p>Starting with version 4.3, you can set the <code class="literal">port</code> to <code class="literal">0</code>, in which case the operating system chooses the port.
+The chosen port can be discovered by invoking <code class="literal">getPort()</code> after the adapter is started and <code class="literal">isListening()</code> returns <code class="literal">true</code>.</p>
+<p>The preceding example shows an outbound channel adapter that adds length checking to the datagram packets:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:udp-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"udpOut"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"somehost"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"11111"</span>
+    <span class="hl-attribute">multicast</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">check-length</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>The recipient of the packet must also be configured to expect a length to precede the actual data.
+For a Spring Integration UDP inbound channel adapter, set its <code class="literal">check-length</code> attribute.</p>
+</td></tr></table></div>
+<p>The second reliability improvement allows an application-level acknowledgment protocol to be used.
+The receiver must send an acknowledgment to the sender within a specified time.</p>
+<p>The following example shows an outbound channel adapter that adds length checking to the datagram packets and waits for an acknowledgment:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:udp-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"udpOut"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"somehost"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"11111"</span>
+    <span class="hl-attribute">multicast</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">check-length</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">acknowledge</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">ack-host</span>=<span class="hl-value">"thishost"</span>
+    <span class="hl-attribute">ack-port</span>=<span class="hl-value">"22222"</span>
+    <span class="hl-attribute">ack-timeout</span>=<span class="hl-value">"10000"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"exampleChannel"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>Setting <code class="literal">acknowledge</code> to <code class="literal">true</code> implies that the recipient of the packet can interpret the header added to the packet containing acknowledgment data (host and port).
+Most likely, the recipient is a Spring Integration inbound channel adapter.</p>
+</td></tr></table></div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>When multicast is true, an additional attribute (<code class="literal">min-acks-for-success</code>) specifies how many acknowledgments must be received within the <code class="literal">ack-timeout</code>.</p>
+</td></tr></table></div>
+<p>Starting with version 4.3, you can set the <code class="literal">ackPort</code> to <code class="literal">0</code>, in which case the operating system chooses the port.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_outbound_udp_adapters_java_configuration" href="#_outbound_udp_adapters_java_configuration"></a>34.2.2&nbsp;Outbound UDP Adapters (Java Configuration)</h3></div></div></div>
+
+<p>The following example shows how to configure an outbound UDP adapter with Java:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "udpOut")</span></em>
+<span class="hl-keyword">public</span> UnicastSendingMessageHandler handler() {
+	<span class="hl-keyword">return</span> <span class="hl-keyword">new</span> UnicastSendingMessageHandler(<span class="hl-string">"localhost"</span>, <span class="hl-number">11111</span>);
+}</pre>
+</div>
+<p>(or <code class="literal">MulticastSendingChannelAdapter</code> for multicast).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_outbound_udp_adapters_java_dsl_configuration" href="#_outbound_udp_adapters_java_dsl_configuration"></a>34.2.3&nbsp;Outbound UDP Adapters (Java DSL Configuration)</h3></div></div></div>
+
+<p>The following example shows how to configure an outbound UDP adapter with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow udpOutFlow() {
+	<span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"udpOut"</span>)
+			.handle(Udp.outboundAdapter(<span class="hl-string">"localhost"</span>, <span class="hl-number">1234</span>))
+			.get();
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_inbound_udp_adapters_xml_configuration" href="#_inbound_udp_adapters_xml_configuration"></a>34.2.4&nbsp;Inbound UDP Adapters (XML Configuration)</h3></div></div></div>
+
+<p>The following example shows how to configure a basic unicast inbound udp channel adapter.</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:udp-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"udpReceiver"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"udpOutChannel"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"11111"</span>
+    <span class="hl-attribute">receive-buffer-size</span>=<span class="hl-value">"500"</span>
+    <span class="hl-attribute">multicast</span>=<span class="hl-value">"false"</span>
+    <span class="hl-attribute">check-length</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The following example shows how to configure a basic multicast inbound udp channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:udp-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"udpReceiver"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"udpOutChannel"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"11111"</span>
+    <span class="hl-attribute">receive-buffer-size</span>=<span class="hl-value">"500"</span>
+    <span class="hl-attribute">multicast</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">multicast-address</span>=<span class="hl-value">"225.6.7.8"</span>
+    <span class="hl-attribute">check-length</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>By default, reverse DNS lookups are done on inbound packets to convert IP addresses to hostnames for use in message headers.
+In environments where DNS is not configured, this can cause delays.
+You can override this default behavior by setting the <code class="literal">lookup-host</code> attribute to <code class="literal">false</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_inbound_udp_adapters_java_configuration" href="#_inbound_udp_adapters_java_configuration"></a>34.2.5&nbsp;Inbound UDP Adapters (Java Configuration)</h3></div></div></div>
+
+<p>The following example shows how to configure an inbound UDP adapter with Java:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> UnicastReceivingChannelAdapter udpIn() {
+	UnicastReceivingChannelAdapter adapter = <span class="hl-keyword">new</span> UnicastReceivingChannelAdapter(<span class="hl-number">11111</span>);
+	adapter.setOutputChannelName(<span class="hl-string">"udpChannel"</span>);
+	<span class="hl-keyword">return</span> adapter;
+}</pre>
+<p>The following example shows how to configure an inbound UDP adapter with the Java DSL:</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_inbound_udp_adapters_java_dsl_configuration" href="#_inbound_udp_adapters_java_dsl_configuration"></a>34.2.6&nbsp;Inbound UDP Adapters (Java DSL Configuration)</h3></div></div></div>
+
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow udpIn() {
+	<span class="hl-keyword">return</span> IntegrationFlows.from(Udp.inboundAdapter(<span class="hl-number">11111</span>))
+			.channel(<span class="hl-string">"udpChannel"</span>)
+			.get();
+}</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_server_listening_events" href="#_server_listening_events"></a>34.2.7&nbsp;Server Listening Events</h3></div></div></div>
+
+<p>Starting with version 5.0.2, a <code class="literal">UdpServerListeningEvent</code> is emitted when an inbound adapter is started and has begun listening.
+This is useful when the adapter is configured to listen on port 0, meaning that the operating system chooses the port.
+It can also be used instead of polling <code class="literal">isListening()</code>, if you need to wait before starting some other process that will
+connect to the socket.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_advanced_outbound_configuration" href="#_advanced_outbound_configuration"></a>34.2.8&nbsp;Advanced Outbound Configuration</h3></div></div></div>
+
+<p>The <code class="literal">&lt;int-ip:udp-outbound-channel-adapter&gt;</code> (<code class="literal">UnicastSendingMessageHandler</code>) has <code class="literal">destination-expression</code> and <code class="literal">socket-expression</code> options.</p>
+<p>You can use the <code class="literal">destination-expression</code> as a runtime alternative to the hardcoded <code class="literal">host</code>-<code class="literal">port</code> pair to determine the destination address for the outgoing datagram packet against a <code class="literal">requestMessage</code> (with the root object for the evaluation context).
+The expression must evaluate to an <code class="literal">URI</code>, a <code class="literal">String</code> in the URI style (see <a class="ulink" href="http://www.ietf.org/rfc/rfc2396.txt" target="_top">RFC-2396</a>), or a <code class="literal">SocketAddress</code>.
+You can also use the inbound <code class="literal">IpHeaders.PACKET_ADDRESS</code> header for this expression.
+In the framework, the <code class="literal">DatagramPacketMessageMapper</code> populates this header when we receive datagrams in the <code class="literal">UnicastReceivingChannelAdapter</code> and convert them to messages.
+The header value is exactly the result of <code class="literal">DatagramPacket.getSocketAddress()</code> of the incoming datagram.</p>
+<p>With the <code class="literal">socket-expression</code>, the outbound channel adapter can use (for example) an inbound channel adapter socket to send datagrams through the same port which they were received.
+It is useful in a scenario where our application works as a UDP server and clients operate behind network address translation (NAT).
+This expression must evaluate to a <code class="literal">DatagramSocket</code>.
+The <code class="literal">requestMessage</code> is used as the root object for the evaluation context.
+You cannot use the <code class="literal">socket-expression</code> parameter with the <code class="literal">multicast</code> and <code class="literal">acknowledge</code> parameters.
+The following example shows how to configure a UDP inbound channel adapter with a transformer that converts to upper case and uses a socket:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:udp-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inbound"</span> <span class="hl-attribute">port</span>=<span class="hl-value">"0"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"in"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"in"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int:transformer</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"new String(payload).toUpperCase()"</span>
+                       <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"out"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:udp-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outbound"</span>
+                        <span class="hl-attribute">socket-expression</span>=<span class="hl-value">"@inbound.socket"</span>
+                        <span class="hl-attribute">destination-expression</span>=<span class="hl-value">"headers['ip_packetAddress']"</span>
+                        <span class="hl-attribute">channel</span>=<span class="hl-value">"out"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<p>The following example shows the equivalent configuration with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow udpEchoUpcaseServer() {
+	<span class="hl-keyword">return</span> IntegrationFlows.from(Udp.inboundAdapter(<span class="hl-number">11111</span>).id(<span class="hl-string">"udpIn"</span>))
+			.&lt;<span class="hl-keyword">byte</span>[], String&gt;transform(p -&gt; <span class="hl-keyword">new</span> String(p).toUpperCase())
+			.handle(Udp.outboundAdapter(<span class="hl-string">"headers['ip_packetAddress']"</span>)
+					.socketExpression(<span class="hl-string">"@udpIn.socket"</span>))
+			.get();
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="tcp-connection-factories" href="#tcp-connection-factories"></a>34.3&nbsp;TCP Connection Factories</h2></div></div></div>
+
+<p>For TCP, the configuration of the underlying connection is provided by using a connection factory.
+Two types of connection factory are provided: a client connection factory and a server connection factory.
+Client connection factories establish outgoing connections.
+Server connection factories listen for incoming connections.</p>
+<p>An outbound channel adapter uses a client connection factory, but you can also provide a reference to a client connection factory to an inbound channel adapter.
+That adapter receives any incoming messages that are received on connections created by the outbound adapter.</p>
+<p>An inbound channel adapter or gateway uses a server connection factory.
+(In fact, the connection factory cannot function without one).
+You can also provide a reference to a server connection factory to an outbound adapter.
+You can then use that adapter to send replies to incoming messages on the same connection.</p>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>Reply messages are routed to the connection only if the reply contains the <code class="literal">ip_connectionId</code> header that was inserted into the original message by the connection factory.</p>
+</td></tr></table></div>
+<div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Tip"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="images/tip.png"></td><th align="left">Tip</th></tr><tr><td align="left" valign="top">
+<p>This is the extent of message correlation performed when sharing connection factories between inbound and outbound adapters.
+Such sharing allows for asynchronous two-way communication over TCP.
+By default, only payload information is transferred using TCP.
+Therefore, any message correlation must be performed by downstream components such as aggregators or other endpoints.
+Support for transferring selected headers was introduced in version 3.0.
+For more information, see <a class="xref" href="ip.html#ip-correlation" title="34.8&nbsp;TCP Message Correlation">Section&nbsp;34.8, &#8220;TCP Message Correlation&#8221;</a>.</p>
+</td></tr></table></div>
+<p>You may give  a reference to a connection factory to a maximum of one adapter of each type.</p>
+<p>Spring Integration provides connection factories that use <code class="literal">java.net.Socket</code> and <code class="literal">java.nio.channel.SocketChannel</code>.</p>
+<p>The following example shows a simple server connection factory that uses <code class="literal">java.net.Socket</code> connections:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"1234"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The following example shows a simple server connection factory that uses <code class="literal">java.nio.channel.SocketChannel</code> connections:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"1234"</span>
+    <span class="hl-attribute">using-nio</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Starting with Spring Integration version 4.2, if the server is configured to listen on a random port (by setting the port to <code class="literal">0</code>), you can get the actual port chosen by the OS by using <code class="literal">getPort()</code>.
+Also, <code class="literal">getServerSocketAddress()</code> lets you get the complete <code class="literal">SocketAddress</code>.
+See the <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/ip/tcp/connection/TcpServerConnectionFactory.html" target="_top">Javadoc for the <code class="literal">TcpServerConnectionFactory</code> interface</a> for more information.</p>
+</td></tr></table></div>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"localhost"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"1234"</span>
+    <span class="hl-attribute">single-use</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">so-timeout</span>=<span class="hl-value">"10000"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The following example shows a client connection factory that uses <code class="literal">java.net.Socket</code> connections and creates a new connection for each message:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"localhost"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"1234"</span>
+    <span class="hl-attribute">single-use</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">so-timeout</span>=<span class="hl-value">"10000"</span>
+    <span class="hl-attribute">using-nio</span>=<span class="hl-value">true</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>TCP is a streaming protocol.
+This means that some structure has to be provided to data transported over TCP so that the receiver can demarcate the data into discrete messages.
+Connection factories are configured to use serializers and deserializers to convert between the message payload and the bits that are sent over TCP.
+This is accomplished by providing a deserializer and a serializer for inbound and outbound messages, respectively.
+Spring Integration provides a number of standard serializers and deserializers.</p>
+<p><code class="literal">ByteArrayCrlfSerializer</code><sup>*</sup> converts a byte array to a stream of bytes followed by carriage return and linefeed characters (<code class="literal">\r\n</code>).
+This is the default serializer (and deserializer) and can be used (for example) with telnet as a client.</p>
+<p>The <code class="literal">ByteArraySingleTerminatorSerializer</code><sup>*</sup> converts a byte array to a stream of bytes followed by a single termination character (the default is <code class="literal">0x00</code>).</p>
+<p>The <code class="literal">ByteArrayLfSerializer</code><sup>*</sup> converts a byte array to a stream of bytes followed by a single linefeed character (<code class="literal">0x0a</code>).</p>
+<p>The <code class="literal">ByteArrayStxEtxSerializer</code><sup>*</sup> converts a byte array to a stream of bytes preceded by an STX (<code class="literal">0x02</code>) and followed by an ETX (<code class="literal">0x03</code>).</p>
+<p>The <code class="literal">ByteArrayLengthHeaderSerializer</code> converts a byte array to a stream of bytes preceded by a binary length in network byte order (big endian).
+This an efficient deserializer because it does not have to parse every byte to look for a termination character sequence.
+It can also be used for payloads that contain binary data.
+The preceding serializers support only text in the payload.
+The default size of the length header is four bytes (an Integer), allowing for messages up to (2^31 - 1) bytes.
+However, the <code class="literal">length</code> header can be a single byte (unsigned) for messages up to 255 bytes, or an unsigned short (2 bytes) for messages up to (2^16 - 1) bytes.
+If you need any other format for the header, you can subclass <code class="literal">ByteArrayLengthHeaderSerializer</code> and provide implementations for the <code class="literal">readHeader</code> and <code class="literal">writeHeader</code> methods.
+The absolute maximum data size is (2^31 - 1) bytes.</p>
+<p>The <code class="literal">ByteArrayRawSerializer</code><sup>*</sup>, converts a byte array to a stream of bytes and adds no additional message demarcation data.
+With this serializer (and deserializer), the end of a message is indicated by the client closing the socket in an orderly fashion.
+When using this serializer, message reception hangs until the client closes the socket or a timeout occurs.
+A timeout does not result in a message.
+When this serializer is being used and the client is a Spring Integration application, the client must use a connection factory that is configured with <code class="literal">single-use="true"</code>.
+Doing so causes the adapter to close the socket after sending the message.
+The serializer does not, by itself, close the connection.
+You should use this serializer only with the connection factories used by channel adapters (not gateways), and the connection factories should be used by either an inbound or outbound adapter but not both.
+See also <code class="literal">ByteArrayElasticRawDeserializer</code>, later in this section.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Before version 4.2.2, when using non-blocking I/O (NIO), this serializer treated a timeout (during read) as an end of file, and the data read so far was emitted as a message.
+This is unreliable and should not be used to delimit messages.
+It now treats such conditions as an exception.
+In the unlikely event that you use it this way, you can restore the previous behavior by setting the <code class="literal">treatTimeoutAsEndOfMessage</code> constructor argument to <code class="literal">true</code>.</p>
+</td></tr></table></div>
+<p>Each of these is a subclass of <code class="literal">AbstractByteArraySerializer</code>, which implements both <code class="literal">org.springframework.core.serializer.Serializer</code> and <code class="literal">org.springframework.core.serializer.Deserializer</code>.
+For backwards compatibility, connections that use any subclass of <code class="literal">AbstractByteArraySerializer</code> for serialization also accept a <code class="literal">String</code> that is first converted to a byte array.
+Each of these serializers and deserializers converts an input stream that contains the corresponding format to a byte array payload.</p>
+<p>To avoid memory exhaustion due to a badly behaved client (one that does not adhere to the protocol of the configured serializer), these serializers impose a maximum message size.
+If an incoming message exceeds this size, an exception is thrown.
+The default maximum message size is 2048 bytes.
+You can increase it by setting the <code class="literal">maxMessageSize</code> property.
+If you use the default serializer or deserializer and wish to increase the maximum message size, you must declare the maximum message size as an explicit bean with the <code class="literal">maxMessageSize</code> property set and configure the connection factory to use that bean.</p>
+<p>The classes marked with <sup>*</sup> earlier in this section use an intermediate buffer and copy the decoded data to a final buffer of the correct
+size.
+Starting with version 4.3, you can configure these buffers by setting a <code class="literal">poolSize</code> property to let these raw buffers be reused instead of being allocated and discarded for each message, which is the default behavior.
+Setting the property to a negative value creates a pool that has no bounds.
+If the pool is bounded, you can also set the <code class="literal">poolWaitTimeout</code> property (in milliseconds), after which an exception is thrown if no buffer becomes available.
+It defaults to infinity.
+Such an exception causes the socket to be closed.</p>
+<p>If you wish to use the same mechanism in custom deserializers, you can extend <code class="literal">AbstractPooledBufferByteArraySerializer</code> (instead of its super class, <code class="literal">AbstractByteArraySerializer</code>) and implement <code class="literal">doDeserialize()</code> instead of <code class="literal">deserialize()</code>.
+The buffer is automatically returned to the pool.
+<code class="literal">AbstractPooledBufferByteArraySerializer</code> also provides a convenient utility method: <code class="literal">copyToSizedArray()</code>.</p>
+<p>Version 5.0 added the <code class="literal">ByteArrayElasticRawDeserializer</code>.
+This is similar to the deserializer side of <code class="literal">ByteArrayRawSerializer</code> above, except that it is not necessary to set a <code class="literal">maxMessageSize</code>.
+Internally, it uses a <code class="literal">ByteArrayOutputStream</code> that lets the buffer grow as needed.
+The client must close the socket in an orderly manner to signal end of message.</p>
+<p>The <code class="literal">MapJsonSerializer</code> uses a Jackson <code class="literal">ObjectMapper</code> to convert between a <code class="literal">Map</code> and JSON.
+You can use this serializer in conjunction with a <code class="literal">MessageConvertingTcpMessageMapper</code> and a <code class="literal">MapMessageConverter</code> to transfer selected headers and the payload in JSON.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The Jackson <code class="literal">ObjectMapper</code> cannot demarcate messages in the stream.
+Therefore, the <code class="literal">MapJsonSerializer</code> needs to delegate to another serializer or deserializer to handle message demarcation.
+By default, a <code class="literal">ByteArrayLfSerializer</code> is used, resulting in messages with a format of <code class="literal">&lt;json&gt;&lt;LF&gt;</code> on the wire, but you can configure it to use others instead. (The next example shows how to do so.)</p>
+</td></tr></table></div>
+<p>The final standard serializer is <code class="literal">org.springframework.core.serializer.DefaultSerializer</code>, which you can use to convert serializable objects with Java serialization.
+<code class="literal">org.springframework.core.serializer.DefaultDeserializer</code> is provided for inbound deserialization of streams that contain serializable objects.</p>
+<p>To implement a custom serializer and deserializer pair, implement the <code class="literal">org.springframework.core.serializer.Deserializer</code> and <code class="literal">org.springframework.core.serializer.Serializer</code> interfaces.</p>
+<p>If you do not wish to use the default serializer and deserializer (<code class="literal">ByteArrayCrLfSerializer</code>), you must set the <code class="literal">serializer</code> and <code class="literal">deserializer</code> attributes on the connection factory.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"javaSerializer"</span>
+      <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.core.serializer.DefaultSerializer"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"javaDeserializer"</span>
+      <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.core.serializer.DefaultDeserializer"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"1234"</span>
+    <span class="hl-attribute">deserializer</span>=<span class="hl-value">"javaDeserializer"</span>
+    <span class="hl-attribute">serializer</span>=<span class="hl-value">"javaSerializer"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>A server connection factory that uses <code class="literal">java.net.Socket</code> connections and uses Java serialization on the wire.</p>
+<p>For full details of the attributes available on connection factories, see <a class="link" href="ip.html#ip-annotation" title="34.14&nbsp;Annotation-Based Configuration">the reference</a> at the end of this section.</p>
+<p>By default, reverse DNS lookups are done on inbound packets to convert IP addresses to hostnames for use in message headers.
+In environments where DNS is not configured, this can cause connection delays.
+You can override this default behavior by setting the <code class="literal">lookup-host</code> attribute to <code class="literal">false</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>You can also modify the attributes of sockets and socket factories.
+See <a class="xref" href="ip.html#ssl-tls" title="34.10&nbsp;SSL/TLS Support">Section&nbsp;34.10, &#8220;SSL/TLS Support&#8221;</a>.
+As noted there, such modifications are possible whether or not SSL is being used.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="caching-cf" href="#caching-cf"></a>34.3.1&nbsp;TCP Caching Client Connection Factory</h3></div></div></div>
+
+<p>As <a class="link" href="ip.html#ip-intro" title="34.1&nbsp;Introduction">noted earlier</a>, TCP sockets can be <span class="emphasis"><em>single-use</em></span> (one request or response) or shared.
+Shared sockets do not perform well with outbound gateways in high-volume environments, because the socket can only process one request or response at a time.</p>
+<p>To improve performance, you can use collaborating channel adapters instead of gateways, but that requires application-level message correlation.
+See <a class="xref" href="ip.html#ip-correlation" title="34.8&nbsp;TCP Message Correlation">Section&nbsp;34.8, &#8220;TCP Message Correlation&#8221;</a> for more information.</p>
+<p>Spring Integration 2.2 introduced a caching client connection factory, which uses a pool of shared sockets, letting a gateway process multiple concurrent requests with a pool of shared connections.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="failover-cf" href="#failover-cf"></a>34.3.2&nbsp;TCP Failover Client Connection Factory</h3></div></div></div>
+
+<p>You can configure a TCP connection factory that supports failover to one or more other servers.
+When sending a message, the factory iterates over all its configured factories until either the message can be sent or no connection can be found.
+Initially, the first factory in the configured list is used.
+If a connection subsequently fails, the next factory becomes the current factory.
+The following example shows how to configure a failover client connection factory:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"failCF"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.ip.tcp.connection.FailoverClientConnectionFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;list&gt;</span>
+            <span class="hl-tag">&lt;ref</span> <span class="hl-attribute">bean</span>=<span class="hl-value">"clientFactory1"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;ref</span> <span class="hl-attribute">bean</span>=<span class="hl-value">"clientFactory2"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/list&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When using the failover connection factory, the <code class="literal">singleUse</code> property must be consistent between the factory itself and the list of factories it is configured to use.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="tcp-affinity-cf" href="#tcp-affinity-cf"></a>34.3.3&nbsp;TCP Thread Affinity Connection Factory</h3></div></div></div>
+
+<p>Spring Integration version 5.0 introduced this connection factory.
+It binds a connection to the calling thread, and the same connection is reused each time that thread sends a message.
+This continues until the connection is closed (by the server or the network) or until the thread calls the <code class="literal">releaseConnection()</code> method.
+The connections themselves are provided by another client factory implementation, which must be configured to provide non-shared (single-use) connections so that each thread gets a connection.</p>
+<p>The following example shows how to configure a TCP thread affinity connection factory:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> TcpNetClientConnectionFactory cf() {
+    TcpNetClientConnectionFactory cf = <span class="hl-keyword">new</span> TcpNetClientConnectionFactory(<span class="hl-string">"localhost"</span>,
+            Integer.parseInt(System.getProperty(PORT)));
+    cf.setSingleUse(true);
+    <span class="hl-keyword">return</span> cf;
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> ThreadAffinityClientConnectionFactory tacf() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> ThreadAffinityClientConnectionFactory(cf());
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "out")</span></em>
+<span class="hl-keyword">public</span> TcpOutboundGateway outGate() {
+    TcpOutboundGateway outGate = <span class="hl-keyword">new</span> TcpOutboundGateway();
+    outGate.setConnectionFactory(tacf());
+    outGate.setReplyChannelName(<span class="hl-string">"toString"</span>);
+    <span class="hl-keyword">return</span> outGate;
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ip-interceptors" href="#ip-interceptors"></a>34.4&nbsp;TCP Connection Interceptors</h2></div></div></div>
+
+<p>You can configure connection factories with a reference to a <code class="literal">TcpConnectionInterceptorFactoryChain</code>.
+You can use interceptors to add behavior to connections, such as negotiation, security, and other options.
+No interceptors are currently provided by the framework, but see <a class="ulink" href="https://github.com/spring-projects/spring-integration/blob/master/spring-integration-ip/src/test/java/org/springframework/integration/ip/tcp/InterceptedSharedConnectionTests.java" target="_top"><code class="literal">InterceptedSharedConnectionTests</code> in the source repository</a> for an example.</p>
+<p>The <code class="literal">HelloWorldInterceptor</code> used in the test case works as follows:</p>
+<p>The interceptor is first configured with a client connection factory.
+When the first message is sent over an intercepted connection, the interceptor sends <span class="emphasis"><em>Hello</em></span> over the connection and expects to receive <span class="emphasis"><em>world!</em></span>.
+When that occurs, the negotiation is complete and the original message is sent.
+Further messages that use the same connection are sent without any additional negotiation.</p>
+<p>When configured with a server connection factory, the interceptor requires the first message to be <span class="emphasis"><em>Hello</em></span> and, if it is, returns <span class="emphasis"><em>world!</em></span>.
+Otherwise it throws an exception that causes the connection to be closed.</p>
+<p>All <code class="literal">TcpConnection</code> methods are intercepted.
+Interceptor instances are created for each connection by an interceptor factory.
+If an interceptor is stateful, the factory should create a new instance for each connection.
+If there is no state, the same interceptor can wrap each connection.
+Interceptor factories are added to the configuration of an interceptor factory chain, which you can provide to a connection factory by setting the <code class="literal">interceptor-factory</code> attribute.
+Interceptors must extend <code class="literal">TcpConnectionInterceptorSupport</code>.
+Factories must implement the <code class="literal">TcpConnectionInterceptorFactory</code> interface.
+<code class="literal">TcpConnectionInterceptorSupport</code> has passthrough methods.
+By extending this class, you only need to implement those methods you wish to intercept.</p>
+<p>The following example shows how to configure a connection interceptor factory chain:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"helloWorldInterceptorFactory"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.ip.tcp.connection.TcpConnectionInterceptorFactoryChain"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"interceptors"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;array&gt;</span>
+            <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.ip.tcp.connection.HelloWorldInterceptorFactory"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/array&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"12345"</span>
+    <span class="hl-attribute">using-nio</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">single-use</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">interceptor-factory-chain</span>=<span class="hl-value">"helloWorldInterceptorFactory"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"localhost"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"12345"</span>
+    <span class="hl-attribute">single-use</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">so-timeout</span>=<span class="hl-value">"100000"</span>
+    <span class="hl-attribute">using-nio</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">interceptor-factory-chain</span>=<span class="hl-value">"helloWorldInterceptorFactory"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="tcp-events" href="#tcp-events"></a>34.5&nbsp;TCP Connection Events</h2></div></div></div>
+
+<p>Beginning with version 3.0, changes to <code class="literal">TcpConnection</code> instances are reported by <code class="literal">TcpConnectionEvent</code> instances.
+<code class="literal">TcpConnectionEvent</code> is a subclass of <code class="literal">ApplicationEvent</code> and can thus be received by any <code class="literal">ApplicationListener</code> defined in the <code class="literal">ApplicationContext</code>&#8201;&#8212;&#8201;for example <a class="link" href="applicationevent.html#appevent-inbound" title="15.1&nbsp;Receiving Spring Application Events">an event inbound channel adapter</a>.</p>
+<p><code class="literal">TcpConnectionEvents</code> have the following properties:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">connectionId</code>: The connection identifier, which you can use in a message header to send data to the connection.
+</li><li class="listitem">
+<code class="literal">connectionFactoryName</code>: The bean name of the connection factory to which the connection belongs.
+</li><li class="listitem">
+<code class="literal">throwable</code>: The <code class="literal">Throwable</code> (for <code class="literal">TcpConnectionExceptionEvent</code> events only).
+</li><li class="listitem">
+<code class="literal">source</code>: The <code class="literal">TcpConnection</code>. You can use this, for example, to determine the remote IP Address with <code class="literal">getHostAddress()</code> (cast required).
+</li></ul></div>
+<p>In addition, since version 4.0, the standard deserializers discussed in <a class="xref" href="ip.html#tcp-connection-factories" title="34.3&nbsp;TCP Connection Factories">Section&nbsp;34.3, &#8220;TCP Connection Factories&#8221;</a> now emit <code class="literal">TcpDeserializationExceptionEvent</code> instances when they encounter problems while decoding the data stream.
+These events contain the exception, the buffer that was in the process of being built, and an offset into the buffer (if available) at the point where the exception occurred.
+Applications can use a normal <code class="literal">ApplicationListener</code> or an <code class="literal">ApplicationEventListeningMessageProducer</code> (see <a class="xref" href="applicationevent.html#appevent-inbound" title="15.1&nbsp;Receiving Spring Application Events">Section&nbsp;15.1, &#8220;Receiving Spring Application Events&#8221;</a>) to capture these events, allowing analysis of the problem.</p>
+<p>Starting with versions 4.0.7 and 4.1.3, <code class="literal">TcpConnectionServerExceptionEvent</code> instances are published whenever an unexpected exception occurs on a server socket (such as a <code class="literal">BindException</code> when the server socket is in use).
+These events have a reference to the connection factory and the cause.</p>
+<p>Starting with version 4.2, <code class="literal">TcpConnectionFailedCorrelationEvent</code> instances are published whenever an endpoint (inbound gateway or
+collaborating outbound channel adapter) receives a message that cannot be routed to a connection because the
+<code class="literal">ip_connectionId</code> header is invalid.
+Outbound gateways also publish this event when a late reply is received (the sender thread has timed out).
+The event contains the connection ID as well as an exception in the <code class="literal">cause</code> property, which contains the failed message.</p>
+<p>Starting with version 4.3, a <code class="literal">TcpConnectionServerListeningEvent</code> is emitted when a server connection factory is started.
+This is useful when the factory is configured to listen on port 0, meaning that the operating system chooses the port.
+It can also be used instead of polling <code class="literal">isListening()</code>, if you need to wait before starting some other process that connects to the socket.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>To avoid delaying the listening thread from accepting connections, the event is published on a separate thread.</p>
+</td></tr></table></div>
+<p>Starting with version 4.3.2, a <code class="literal">TcpConnectionFailedEvent</code> is emitted whenever a client connection cannot be created.
+The source of the event is the connection factory, which you can use to determine the host and port to which the connection could not be established.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="tcp-adapters" href="#tcp-adapters"></a>34.6&nbsp;TCP Adapters</h2></div></div></div>
+
+<p>TCP inbound and outbound channel adapters that use connection factories <a class="link" href="ip.html#tcp-events" title="34.5&nbsp;TCP Connection Events">mentioned earlier</a> are provided.
+These adapters have two relevant attributes: <code class="literal">connection-factory</code> and <code class="literal">channel</code>.
+The <code class="literal">connection-factory</code> attribute indicates which connection factory is to be used to manage connections for the adapter.
+The <code class="literal">channel</code> attribute specifies the channel on which messages arrive at an outbound adapter and on which messages are placed by an inbound adapter.
+While both inbound and outbound adapters can share a connection factory, server connection factories are always "<code class="literal">owned</code>" by an inbound adapter.
+Client connection factories are always "<code class="literal">owned</code>" by an outbound adapter.
+Only one adapter of each type may get a reference to a connection factory.
+The following example shows how to define client and server TCP connection factories:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"javaSerializer"</span>
+      <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.core.serializer.DefaultSerializer"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"javaDeserializer"</span>
+      <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.core.serializer.DefaultDeserializer"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"server"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"1234"</span>
+    <span class="hl-attribute">deserializer</span>=<span class="hl-value">"javaDeserializer"</span>
+    <span class="hl-attribute">serializer</span>=<span class="hl-value">"javaSerializer"</span>
+    <span class="hl-attribute">using-nio</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">single-use</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"localhost"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"#{server.port}"</span>
+    <span class="hl-attribute">single-use</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">so-timeout</span>=<span class="hl-value">"10000"</span>
+    <span class="hl-attribute">deserializer</span>=<span class="hl-value">"javaDeserializer"</span>
+    <span class="hl-attribute">serializer</span>=<span class="hl-value">"javaSerializer"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"input"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"replies"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:queue/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outboundClient"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"input"</span>
+    <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"client"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inboundClient"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"replies"</span>
+    <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"client"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inboundServer"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"loop"</span>
+    <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"server"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int-ip:tcp-outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outboundServer"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"loop"</span>
+    <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"server"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"loop"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>In the preceding configuration, messages arriving in the <code class="literal">input</code> channel are serialized over connections created by <code class="literal">client</code> connection factory, received at the server, and placed on the <code class="literal">loop</code> channel.
+Since <code class="literal">loop</code> is the input channel for <code class="literal">outboundServer</code>, the message is looped back over the same connection, received by <code class="literal">inboundClient</code>, and deposited in the <code class="literal">replies</code> channel.
+Java serialization is used on the wire.</p>
+<p>Normally, inbound adapters use a <code class="literal">type="server"</code> connection factory, which listens for incoming connection requests.
+In some cases, you may want to establish the connection in reverse, such that the inbound adapter connects to an external server and then waits for inbound messages on that connection.</p>
+<p>This topology is supported by setting <code class="literal">client-mode="true"</code> on the inbound adapter.
+In this case, the connection factory must be of type <code class="literal">client</code> and must have <code class="literal">single-use</code> set to <code class="literal">false</code>.</p>
+<p>Two additional attributes support this mechanism. <code class="literal">retry-interval</code> specifies (in milliseconds) how often the framework attempts to reconnect after a connection failure.
+<code class="literal">scheduler</code> supplies a <code class="literal">TaskScheduler</code> to schedule the connection attempts and to test that the connection is still active.</p>
+<p>If you don&#8217;t provide a scheduler, the framework&#8217;s default <a class="link" href="configuration.html#namespace-taskscheduler" title="E.2&nbsp;Configuring the Task Scheduler">taskScheduler</a> bean is used.</p>
+<p>For an outbound adapter, the connection is normally established when the first message is sent.
+<code class="literal">client-mode="true"</code> on an outbound adapter causes the connection to be established when the adapter is started.
+By default, adapters are automatically started.
+Again, the connection factory must be of type <code class="literal">client</code> and have <code class="literal">single-use="false"</code>.
+<code class="literal">retry-interval</code> and <code class="literal">scheduler</code> are also supported.
+If a connection fails, it is re-established either by the scheduler or when the next message is sent.</p>
+<p>For both inbound and outbound, if the adapter is started, you can force the adapter to establish a connection by sending a <code class="literal">&lt;control-bus /&gt;</code> command: <code class="literal">@adapter_id.retryConnection()</code>.
+Then you can examine the current state with <code class="literal">@adapter_id.isClientModeConnected()</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="tcp-gateways" href="#tcp-gateways"></a>34.7&nbsp;TCP Gateways</h2></div></div></div>
+
+<p>The inbound TCP gateway <code class="literal">TcpInboundGateway</code> and outbound TCP gateway <code class="literal">TcpOutboundGateway</code> use a server and client connection factory, respectively.
+Each connection can process a single request or response at a time.</p>
+<p>The inbound gateway, after constructing a message with the incoming payload and sending it to the <code class="literal">requestChannel</code>, waits for a response and sends the payload from the response message by writing it to the connection.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>For the inbound gateway, you must retain or populate, the <code class="literal">ip_connectionId</code> header, because it is used to correlate the message to a connection.
+Messages that originate at the gateway automatically have the header set.
+If the reply is constructed as a new message, you need to set the header.
+The header value can be captured from the incoming message.</p>
+</td></tr></table></div>
+<p>As with inbound adapters, inbound gateways normally use a <code class="literal">type="server"</code> connection factory, which listens for incoming connection requests.
+In some cases, you may want to establish the connection in reverse, such that the inbound gateway connects to an external server and then waits for and replies to inbound messages on that connection.</p>
+<p>This topology is supported by using <code class="literal">client-mode="true"</code> on the inbound gateway.
+In this case, the connection factory must be of type <code class="literal">client</code> and must have <code class="literal">single-use</code> set to <code class="literal">false</code>.</p>
+<p>Two additional attributes support this mechanism.
+<code class="literal">retry-interval</code> specifies (in milliseconds) how often the framework tries to reconnect after a connection failure.
+<code class="literal">scheduler</code> supplies a <code class="literal">TaskScheduler</code> to schedule the connection attempts and to test that the connection is still active.</p>
+<p>If the gateway is started, you may force the gateway to establish a connection by sending a &lt;control-bus /&gt; command: <code class="literal">@adapter_id.retryConnection()</code> and examine the current state with <code class="literal">@adapter_id.isClientModeConnected()</code>.</p>
+<p>The outbound gateway, after sending a message over the connection, waits for a response, constructs a response message, and puts it on the reply channel.
+Communications over the connections are single-threaded.
+Only one message can be handled at a time.
+If another thread attempts to send a message before the current response has been received, it blocks until any previous requests are complete (or time out).
+If, however, the client connection factory is configured for single-use connections, each new request gets its own connection and is processed immediately.
+The following example configures an inbound TCP gateway:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:tcp-inbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inGateway"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"tcpChannel"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"replyChannel"</span>
+    <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"cfServer"</span>
+    <span class="hl-attribute">reply-timeout</span>=<span class="hl-value">"10000"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>If a connection factory configured with the default serializer or deserializer is used, messages is <code class="literal">\r\n</code> delimited data and the gateway can be used by a simple client such as telnet.</p>
+<p>The following example shows an outbound TCP gateway:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:tcp-outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outGateway"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"tcpChannel"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"replyChannel"</span>
+    <span class="hl-attribute">connection-factory</span>=<span class="hl-value">"cfClient"</span>
+    <span class="hl-attribute">request-timeout</span>=<span class="hl-value">"10000"</span>
+    <span class="hl-attribute">remote-timeout</span>=<span class="hl-value">"10000"</span><span class="hl-tag">/&gt;</span> <span class="hl-comment">&lt;!-- or e.g.
+remote-timeout-expression="headers['timeout']" --&gt;</span></pre>
+</div>
+<p><code class="literal">client-mode</code> is not currently available with the outbound gateway.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ip-correlation" href="#ip-correlation"></a>34.8&nbsp;TCP Message Correlation</h2></div></div></div>
+
+<p>One goal of the IP endpoints is to provide communication with systems other than Spring Integration applications.
+For this reason, only message payloads are sent and received by default.
+Since 3.0, you can transfer headers by using JSON, Java serialization, or custom serializers and deserializers.
+See <a class="xref" href="ip.html#ip-headers" title="34.8.3&nbsp;Transferring Headers">Section&nbsp;34.8.3, &#8220;Transferring Headers&#8221;</a> for more information.
+No message correlation is provided by the framework (except when using the gateways) or collaborating channel adapters on the server side.
+<a class="link" href="ip.html#ip-collaborating-adapters" title="34.8.2&nbsp;Collaborating Outbound and Inbound Channel Adapters">Later in this document</a>, we discuss the various correlation techniques available to applications.
+In most cases, this requires specific application-level correlation of messages, even when message payloads contain some natural correlation data (such as an order number).</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="ip-gateways" href="#ip-gateways"></a>34.8.1&nbsp;Gateways</h3></div></div></div>
+
+<p>Gateways automatically correlate messages.
+However, you should use an outbound gateway for relatively low-volume applications.
+When you configure the connection factory to use a single shared connection for all message pairs (<span class="emphasis"><em>single-use="false"</em></span>), only one message can be processed at a time.
+A new message has to wait until the reply to the previous message has been received.
+When a connection factory is configured for each new message to use a new connection (<span class="emphasis"><em>single-use="true"</em></span>), this restriction does not apply.
+While this setting can give higher throughput than a shared connection environment, it comes with the overhead of opening and closing a new connection for each message pair.</p>
+<p>Therefore, for high-volume messages, consider using a collaborating pair of channel adapters.
+However, to do so, you need to provide collaboration logic.</p>
+<p>Another solution, introduced in Spring Integration 2.2, is to use a <code class="literal">CachingClientConnectionFactory</code>, which allows the use of a pool of shared connections.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="ip-collaborating-adapters" href="#ip-collaborating-adapters"></a>34.8.2&nbsp;Collaborating Outbound and Inbound Channel Adapters</h3></div></div></div>
+
+<p>To achieve high-volume throughput (avoiding the pitfalls of using gateways, as <a class="link" href="ip.html#ip-gateways" title="34.8.1&nbsp;Gateways">mentioned earlier</a>) you can configure a pair of collaborating outbound and inbound channel adapters.
+You can also use collaborating adapters (server-side or client-side) for totally asynchronous communication (rather than with request-reply semantics).
+On the server side, message correlation is automatically handled by the adapters, because the inbound adapter adds a header that allows the outbound adapter to determine which connection to use when sending the reply message.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>On the server side, you must populate the <code class="literal">ip_connectionId</code> header, because it is used to correlate the message to a connection.
+Messages that originate at the inbound adapter automatically have the header set.
+If you wish to construct other messages to send, you need to set the header.
+You can get the header value from an incoming message.</p>
+</td></tr></table></div>
+<p>On the client side, the application must provide its own correlation logic, if needed.
+You can do so in a number of ways.</p>
+<p>If the message payload has some natural correlation data (such as a transaction ID or an order number) and you have no need to retain any information (such as a reply channel header) from the original outbound message, the correlation is simple and would be done at the application level in any case.</p>
+<p>If the message payload has some natural correlation data (such as a transaction ID or an order number), but you need to retain some information (such as a reply channel header) from the original outbound message, you can retain a copy of the original outbound message (perhaps by using a publish-subscribe channel) and use an aggregator to recombine the necessary data.</p>
+<p>For either of the previous two scenarios, if the payload has no natural correlation data, you can provide a transformer upstream of the outbound channel adapter to enhance the payload with such data.
+Such a transformer may transform the original payload to a new object that contains both the original payload and some subset of the message headers.
+Of course, live objects (such as reply channels) from the headers cannot be included in the transformed payload.</p>
+<p>If you choose such a strategy, you need to ensure the connection factory has an appropriate serializer-deserializer pair to handle such a payload (such as <code class="literal">DefaultSerializer</code> and <code class="literal">DefaultDeserializer</code>, which use java serialization, or a custom serializer and deserializer).
+The <code class="literal">ByteArray*Serializer</code> options mentioned in <a class="xref" href="ip.html#tcp-connection-factories" title="34.3&nbsp;TCP Connection Factories">Section&nbsp;34.3, &#8220;TCP Connection Factories&#8221;</a>, including the default <code class="literal">ByteArrayCrLfSerializer</code>, do not support such payloads unless the transformed payload is a <code class="literal">String</code> or <code class="literal">byte[]</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Before the 2.2 release, when collaborating channel adapters used a client connection factory, the <code class="literal">so-timeout</code> attribute defaulted to the default reply timeout (10 seconds).
+This meant that, if no data were received by the inbound adapter for this period of time, the socket was closed.</p>
+<p>This default behavior was not appropriate in a truly asynchronous environment, so it now defaults to an infinite timeout.
+You can reinstate the previous default behavior by setting the <code class="literal">so-timeout</code> attribute on the client connection factory to 10000 milliseconds.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="ip-headers" href="#ip-headers"></a>34.8.3&nbsp;Transferring Headers</h3></div></div></div>
+
+<p>TCP is a streaming protocol.
+<code class="literal">Serializers</code> and <code class="literal">Deserializers</code> demarcate messages within the stream.
+Prior to 3.0, only message payloads (<code class="literal">String</code> or <code class="literal">byte[]</code>) could be transferred over TCP.
+Beginning with 3.0, you can transfer selected headers as well as the payload.
+However, "<code class="literal">live</code>" objects, such as the <code class="literal">replyChannel</code> header, cannot be serialized.</p>
+<p>Sending header information over TCP requires some additional configuration.</p>
+<p>The first step is to provide the <code class="literal">ConnectionFactory</code> with a <code class="literal">MessageConvertingTcpMessageMapper</code> that uses the <code class="literal">mapper</code> attribute.
+This mapper delegates to any <code class="literal">MessageConverter</code> implementation to convert the message to and from some object that can be serialized and deserialized by the configured <code class="literal">serializer</code> and <code class="literal">deserializer</code>.</p>
+<p>Spring Integration provides a <code class="literal">MapMessageConverter</code>, which allows the specification of a list of headers that are added to a <code class="literal">Map</code> object, along with the payload.
+The generated Map has two entries: <code class="literal">payload</code> and <code class="literal">headers</code>.
+The <code class="literal">headers</code> entry is itself a <code class="literal">Map</code> and contains the selected headers.</p>
+<p>The second step is to provide a serializer and a deserializer that can convert between a <code class="literal">Map</code> and some wire format.
+This can be a custom <code class="literal">Serializer</code> or <code class="literal">Deserializer</code>, which you typically need if the peer system is not a Spring Integration application.</p>
+<p>Spring Integration provides a <code class="literal">MapJsonSerializer</code> to convert a <code class="literal">Map</code> to and from JSON.
+It uses a Spring Integration <code class="literal">JsonObjectMapper</code>.
+You can provide a custom <code class="literal">JsonObjectMapper</code> if needed.
+By default, the serializer inserts a linefeed (<code class="literal">0x0a</code>) character between objects.
+See the <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/ip/tcp/serializer/MapJsonSerializer.html" target="_top">Javadoc</a> for more information.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">JsonObjectMapper</code> uses whichever version of <code class="literal">Jackson</code> is on the classpath.</p>
+</td></tr></table></div>
+<p>You can also use standard Java serialization of the <code class="literal">Map</code>, by using the <code class="literal">DefaultSerializer</code> and <code class="literal">DefaultDeserializer</code>.</p>
+<p>The following example shows the configuration of a connection factory that transfers the <code class="literal">correlationId</code>, <code class="literal">sequenceNumber</code>, and <code class="literal">sequenceSize</code> headers by using JSON:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"localhost"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"12345"</span>
+    <span class="hl-attribute">mapper</span>=<span class="hl-value">"mapper"</span>
+    <span class="hl-attribute">serializer</span>=<span class="hl-value">"jsonSerializer"</span>
+    <span class="hl-attribute">deserializer</span>=<span class="hl-value">"jsonSerializer"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"mapper"</span>
+      <span class="hl-attribute">class</span>=<span class="hl-value">"o.sf.integration.ip.tcp.connection.MessageConvertingTcpMessageMapper"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">name</span>=<span class="hl-value">"messageConverter"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.sf.integration.support.converter.MapMessageConverter"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"headerNames"</span><span class="hl-tag">&gt;</span>
+                <span class="hl-tag">&lt;list&gt;</span>
+                    <span class="hl-tag">&lt;value&gt;</span>correlationId<span class="hl-tag">&lt;/value&gt;</span>
+                    <span class="hl-tag">&lt;value&gt;</span>sequenceNumber<span class="hl-tag">&lt;/value&gt;</span>
+                    <span class="hl-tag">&lt;value&gt;</span>sequenceSize<span class="hl-tag">&lt;/value&gt;</span>
+                <span class="hl-tag">&lt;/list&gt;</span>
+            <span class="hl-tag">&lt;/property&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"jsonSerializer"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.sf.integration.ip.tcp.serializer.MapJsonSerializer"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<p>A message sent with the preceding configuration, with a payload of <span class="emphasis"><em>something</em></span> would appear on the wire as follows:</p>
+<div class="informalexample">
+<pre class="programlisting">{"headers":{"correlationId":"things","sequenceSize":5,"sequenceNumber":1},"payload":"something"}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="note_nio" href="#note_nio"></a>34.9&nbsp;About Non-blocking I/O (NIO)</h2></div></div></div>
+
+<p>Using NIO (see <code class="literal">using-nio</code> in <a class="xref" href="ip.html#ip-endpoint-reference" title="34.12&nbsp;IP Configuration Attributes">Section&nbsp;34.12, &#8220;IP Configuration Attributes&#8221;</a>) avoids dedicating a thread to read from each socket.
+For a small number of sockets, you are likely to find that not using NIO, together with an asynchronous handoff (such as to a <code class="literal">QueueChannel</code>), performs as well as or better than using NIO.</p>
+<p>You should consider using NIO when handling a large number of connections.
+However, the use of NIO has some other ramifications.
+A pool of threads (in the task executor) is shared across all the sockets.
+Each incoming message is assembled and sent to the configured channel as a separate unit of work on a thread selected from that pool.
+Two sequential messages arriving on the same socket might be processed by different threads.
+This means that the order in which the messages are sent to the channel is indeterminate.
+Strict ordering of the messages arriving on the socket is not maintained.</p>
+<p>For some applications, this is not an issue.
+For others, it is a problem.
+If you require strict ordering, consider setting <code class="literal">using-nio</code> to <code class="literal">false</code> and using an asynchronous handoff.</p>
+<p>Alternatively, you can insert a resequencer downstream of the inbound endpoint to return the messages to their proper sequence.
+If you set <code class="literal">apply-sequence</code> to <code class="literal">true</code> on the connection factory, messages arriving on a TCP connection have <code class="literal">sequenceNumber</code> and <code class="literal">correlationId</code> headers set.
+The resequencer uses these headers to return the messages to their proper sequence.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_pool_size" href="#_pool_size"></a>34.9.1&nbsp;Pool Size</h3></div></div></div>
+
+<p>The pool size attribute is no longer used.
+Previously, it specified the size of the default thread pool when a task-executor was not specified.
+It was also used to set the connection backlog on server sockets.
+The first function is no longer needed (see the next paragraph).
+The second function is replaced by the <code class="literal">backlog</code> attribute.</p>
+<p>Previously, when using a fixed thread pool task executor (which was the default) with NIO, it was possible to get a deadlock and processing would stop.
+The problem occurred when a buffer was full, a thread reading from the socket was trying to add more data to the buffer, and no threads were available to make space in the buffer.
+This only occurred with a very small pool size, but it could be possible under extreme conditions.
+Since 2.2, two changes have eliminated this problem.
+First, the default task executor is a cached thread pool executor.
+Second, deadlock detection logic has been added such that, if thread starvation occurs, instead of deadlocking, an exception is thrown, thus releasing the deadlocked resources.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Now that the default task executor is unbounded, it is possible that an out-of-memory condition might occur with high rates of incoming messages, if message processing takes extended time.
+If your application exhibits this type of behavior, you should use a pooled task executor with an appropriate pool size, but see <a class="link" href="ip.html#io-thread-pool-task-executor-caller-runs" title="34.9.2&nbsp;Thread Pool Task Executor with CALLER_RUNS Policy">the next section</a>.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="io-thread-pool-task-executor-caller-runs" href="#io-thread-pool-task-executor-caller-runs"></a>34.9.2&nbsp;Thread Pool Task Executor with <code class="literal">CALLER_RUNS</code> Policy</h3></div></div></div>
+
+<p>You should keep in mind some important considerations when you use a fixed thread pool with the <code class="literal">CallerRunsPolicy</code> (<code class="literal">CALLER_RUNS</code> when using the <code class="literal">&lt;task/&gt;</code> namespace) and the queue capacity is small.</p>
+<p>The following does not apply if you do not use a fixed thread pool.</p>
+<p>With NIO connections, there are three distinct task types. The I/O selector processing is performed on one dedicated thread (detecting events, accepting new connections, and dispatching the I/O read operations to other threads by using the task executor).
+When an I/O reader thread (to which the read operation is dispatched) reads data, it hands off to another thread to assemble the incoming message.
+Large messages can take several reads to complete.
+These "<code class="literal">assembler</code>" threads can block while waiting for data.
+When a new read event occurs, the reader determines if this socket already has an assembler and, if not, runs a new one.
+When the assembly process is complete, the assembler thread is returned to the pool.</p>
+<p>This can cause a deadlock when the pool is exhausted, the <code class="literal">CALLER_RUNS</code> rejection policy is in use, and the task queue is full.
+When the pool is empty and there is no room in the queue, the IO selector thread receives an <code class="literal">OP_READ</code> event and dispatches the read by using the executor.
+The queue is full, so the selector thread itself starts the read process.
+Now it detects that there is no assembler for this socket and, before it does the read, fires off an assembler.
+Again, the queue is full, and the selector thread becomes the assembler.
+The assembler is now blocked, waiting for the data to be read, which never happens.
+The connection factory is now deadlocked because the selector thread cannot handle new events.</p>
+<p>To avoid this deadlock, we must avoid the selector (or reader) threads performing the assembly task.
+We want to use separate pools for the IO and assembly operations.</p>
+<p>The framework provides a <code class="literal">CompositeExecutor</code>, which allows the configuration of two distinct executors: one for performing IO operations and one for message assembly.
+In this environment, an IO thread can never become an assembler thread, and the deadlock cannot occur.</p>
+<p>In addition, the task executors should be configured to use an <code class="literal">AbortPolicy</code> (<code class="literal">ABORT</code> when using <code class="literal">&lt;task&gt;</code>).
+When an I/O task cannot be completed, it is deferred for a short time and continually retried until it can be completed and have an assembler allocated.
+By default, the delay is 100ms, but you can change it by setting the <code class="literal">readDelay</code> property on the connection factory (<code class="literal">read-delay</code> when configuring with the XML namespace).</p>
+<p>The following three examples shows how to configure the composite executor:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">private</span> CompositeExecutor compositeExecutor() {
+    ThreadPoolTaskExecutor ioExec = <span class="hl-keyword">new</span> ThreadPoolTaskExecutor();
+    ioExec.setCorePoolSize(<span class="hl-number">4</span>);
+    ioExec.setMaxPoolSize(<span class="hl-number">10</span>);
+    ioExec.setQueueCapacity(<span class="hl-number">0</span>);
+    ioExec.setThreadNamePrefix(<span class="hl-string">"io-"</span>);
+    ioExec.setRejectedExecutionHandler(<span class="hl-keyword">new</span> AbortPolicy());
+    ioExec.initialize();
+    ThreadPoolTaskExecutor assemblerExec = <span class="hl-keyword">new</span> ThreadPoolTaskExecutor();
+    assemblerExec.setCorePoolSize(<span class="hl-number">4</span>);
+    assemblerExec.setMaxPoolSize(<span class="hl-number">10</span>);
+    assemblerExec.setQueueCapacity(<span class="hl-number">0</span>);
+    assemblerExec.setThreadNamePrefix(<span class="hl-string">"assembler-"</span>);
+    assemblerExec.setRejectedExecutionHandler(<span class="hl-keyword">new</span> AbortPolicy());
+    assemblerExec.initialize();
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> CompositeExecutor(ioExec, assemblerExec);
+}</pre>
+</div>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"myTaskExecutor"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.util.CompositeExecutor"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"io"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"assembler"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;task:executor</span> <span class="hl-attribute">id</span>=<span class="hl-value">"io"</span> <span class="hl-attribute">pool-size</span>=<span class="hl-value">"4-10"</span> <span class="hl-attribute">queue-capacity</span>=<span class="hl-value">"0"</span> <span class="hl-attribute">rejection-policy</span>=<span class="hl-value">"ABORT"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;task:executor</span> <span class="hl-attribute">id</span>=<span class="hl-value">"assembler"</span> <span class="hl-attribute">pool-size</span>=<span class="hl-value">"4-10"</span> <span class="hl-attribute">queue-capacity</span>=<span class="hl-value">"0"</span> <span class="hl-attribute">rejection-policy</span>=<span class="hl-value">"ABORT"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"myTaskExecutor"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.util.CompositeExecutor"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"threadNamePrefix"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"io-"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"corePoolSize"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"4"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"maxPoolSize"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"8"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"queueCapacity"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"0"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"rejectedExecutionHandler"</span><span class="hl-tag">&gt;</span>
+                <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"java.util.concurrent.ThreadPoolExecutor.AbortPolicy"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;/property&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"threadNamePrefix"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"assembler-"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"corePoolSize"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"4"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"maxPoolSize"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"10"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"queueCapacity"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"0"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"rejectedExecutionHandler"</span><span class="hl-tag">&gt;</span>
+                <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"java.util.concurrent.ThreadPoolExecutor.AbortPolicy"</span><span class="hl-tag"> /&gt;</span>
+            <span class="hl-tag">&lt;/property&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ssl-tls" href="#ssl-tls"></a>34.10&nbsp;SSL/TLS Support</h2></div></div></div>
+
+<p>Secure Sockets Layer/Transport Layer Security is supported.
+When using NIO, the JDK 5+ <code class="literal">SSLEngine</code> feature is used to handle handshaking after the connection is established.
+When not using NIO, standard <code class="literal">SSLSocketFactory</code> and <code class="literal">SSLServerSocketFactory</code> objects are used to create connections.
+A number of strategy interfaces are provided to allow significant customization.
+The default implementations of these interfaces provide for the simplest way to get started with secure communications.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="ip-ssl-tls-getting-started" href="#ip-ssl-tls-getting-started"></a>34.10.1&nbsp;Getting Started</h3></div></div></div>
+
+<p>Regardless of whether you use NIO, you need to configure the <code class="literal">ssl-context-support</code> attribute on the connection factory.
+This attribute references a &lt;bean/&gt; definition that describes the location and passwords for the required key stores.</p>
+<p>SSL/TLS peers require two keystores each:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+A keystore that contains private and public key pairs to identify the peer
+</li><li class="listitem">
+<p class="simpara">A truststore that contains the public keys for peers that are trusted.
+See the documentation for the <code class="literal">keytool</code> utility provided with the JDK.
+The essential steps are</p>
+<div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+Create a new key pair and store it in a keystore.
+</li><li class="listitem">
+Export the public key.
+</li><li class="listitem">
+Import the public key into the peer&#8217;s truststore.
+</li><li class="listitem">
+Repeat for the other peer.
+</li></ol></div>
+</li></ul></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>It is common in test cases to use the same key stores on both peers, but this should be avoided for production.</p>
+</td></tr></table></div>
+<p>After establishing the key stores, the next step is to indicate their locations to the <code class="literal">TcpSSLContextSupport</code> bean and provide a reference to that bean to the connection factory.</p>
+<p>The following example configures an SSL connection:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sslContextSupport"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"o.sf.integration.ip.tcp.connection.support.DefaultTcpSSLContextSupport"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"client.ks"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"client.truststore.ks"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"secret"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"secret"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;ip:tcp-connection-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"clientFactory"</span>
+    <span class="hl-attribute">type</span>=<span class="hl-value">"client"</span>
+    <span class="hl-attribute">host</span>=<span class="hl-value">"localhost"</span>
+    <span class="hl-attribute">port</span>=<span class="hl-value">"1234"</span>
+    <span class="hl-attribute">ssl-context-support</span>=<span class="hl-value">"sslContextSupport"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<p>The <code class="literal">DefaulTcpSSLContextSupport</code> class also has an optional <code class="literal">protocol</code> property, which can be <code class="literal">SSL</code> or <code class="literal">TLS</code> (the default).</p>
+<p>The keystore file names (the first two constructor arguments) use the Spring <code class="literal">Resource</code> abstraction.
+By default, the files are located on the classpath, but you can override this by using the <code class="literal">file:</code> prefix (to find the files on the filesystem instead).</p>
+<p>Starting with version 4.3.6, when you use NIO, you can specify an <code class="literal">ssl-handshake-timeout</code> (in seconds) on the connection factory.
+This timeout (the default is 30 seconds) is used during SSL handshake when waiting for data.
+If the timeout is exceeded, the process is aborted and the socket is closed.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="tcp-ssl-host-verification" href="#tcp-ssl-host-verification"></a>34.10.2&nbsp;Host Verification</h3></div></div></div>
+
+<p>Starting with version 5.0.8, you can configure whether or not to enable host verification.
+Starting with version 5.1, it is enabled by default; the mechanism to disable it depends on whether or not you are using NIO.</p>
+<p>Host verification is used to ensure the server you are connected to matches information in the certificate, even if the certificate is trusted.</p>
+<p>When using NIO, configure the <code class="literal">DefaultTcpNioSSLConnectionSupport</code>, for example.</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> DefaultTcpNioSSLConnectionSupport connectionSupport() {
+    DefaultTcpSSLContextSupport sslContextSupport = <span class="hl-keyword">new</span> DefaultTcpSSLContextSupport(<span class="hl-string">"test.ks"</span>,
+            <span class="hl-string">"test.truststore.ks"</span>, <span class="hl-string">"secret"</span>, <span class="hl-string">"secret"</span>);
+    sslContextSupport.setProtocol(<span class="hl-string">"SSL"</span>);
+    DefaultTcpNioSSLConnectionSupport tcpNioConnectionSupport =
+            <span class="hl-keyword">new</span> DefaultTcpNioSSLConnectionSupport(sslContextSupport, false);
+    <span class="hl-keyword">return</span> tcpNioConnectionSupport;
+}</pre>
+</div>
+<p>The second constructor argument disables host verification.
+The <code class="literal">connectionSupport</code> bean is then injected into the NIO connection factory.</p>
+<p>When not using NIO, the configuration is in the <code class="literal">TcpSocketSupport</code>:</p>
+<div class="informalexample">
+<pre class="programlisting">connectionFactory.setTcpSocketSupport(<span class="hl-keyword">new</span> DefaultTcpSocketSupport(false));</pre>
+</div>
+<p>Again, the constructor argument disables host verification.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="tcp-advanced-techniques" href="#tcp-advanced-techniques"></a>34.11&nbsp;Advanced Techniques</h2></div></div></div>
+
+<p>This section covers advanced techniques that you may find to be helpful in certain situations.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_strategy_interfaces" href="#_strategy_interfaces"></a>34.11.1&nbsp;Strategy Interfaces</h3></div></div></div>
+
+<p>In many cases, the configuration described earlier is all that is needed to enable secure communication over TCP/IP.
+However, Spring Integration provides a number of strategy interfaces to allow customization and modification of socket factories and sockets:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">TcpSSLContextSupport</code>
+</li><li class="listitem">
+<code class="literal">TcpSocketFactorySupport</code>
+</li><li class="listitem">
+<code class="literal">TcpSocketSupport</code>
+</li><li class="listitem">
+<code class="literal">TcpNetConnectionSupport</code>
+</li><li class="listitem">
+<code class="literal">TcpNioConnectionSupport</code>
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_the_literal_tcpsslcontextsupport_literal_strategy_interface" href="#_the_literal_tcpsslcontextsupport_literal_strategy_interface"></a>The <code class="literal">TcpSSLContextSupport</code> Strategy Interface</h4></div></div></div>
+
+<p>The following listing shows the <code class="literal">TcpSSLContextSupport</code> strategy interface:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> TcpSSLContextSupport {
+
+    SSLContext getSSLContext() <span class="hl-keyword">throws</span> Exception;
+
+}</pre>
+</div>
+<p>Implementations of the <code class="literal">TcpSSLContextSupport</code> interface are responsible for creating an <code class="literal">SSLContext</code> object.
+The implementation provided by the framework is the <code class="literal">DefaultTcpSSLContextSupport</code>, <a class="link" href="ip.html#ip-ssl-tls-getting-started" title="34.10.1&nbsp;Getting Started">described earlier</a>.
+If you require different behavior, implement this interface and provide the connection factory with a reference to a bean of your class' implementation.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_the_literal_tcpsocketfactorysupport_literal_strategy_interface" href="#_the_literal_tcpsocketfactorysupport_literal_strategy_interface"></a>The <code class="literal">TcpSocketFactorySupport</code> Strategy Interface</h4></div></div></div>
+
+<p>The following listing shows the definition of the <code class="literal">TcpSocketFactorySupport</code> strategy interface:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> TcpSocketFactorySupport {
+
+    ServerSocketFactory getServerSocketFactory();
+
+    SocketFactory getSocketFactory();
+
+}</pre>
+</div>
+<p>Implementations of this interface are responsible for obtaining references to <code class="literal">ServerSocketFactory</code> and <code class="literal">SocketFactory</code>.
+Two implementations are provided.
+The first is <code class="literal">DefaultTcpNetSocketFactorySupport</code> for non-SSL sockets (when no <code class="literal">ssl-context-support</code> attribute is defined).
+This uses the JDK&#8217;s default factories.
+The second implementation is <code class="literal">DefaultTcpNetSSLSocketFactorySupport</code>.
+By default, this is used when an <code class="literal">ssl-context-support</code> attribute is defined.
+It uses the <code class="literal">SSLContext</code> created by that bean to create the socket factories.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>This interface applies only if <code class="literal">using-nio</code> is <code class="literal">false</code>.
+NIO does not use socket factories.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_the_literal_tcpsocketsupport_literal_strategy_interface" href="#_the_literal_tcpsocketsupport_literal_strategy_interface"></a>The <code class="literal">TcpSocketSupport</code> Strategy Interface</h4></div></div></div>
+
+<p>The following listing shows the definition of the <code class="literal">TcpSocketSupport</code> strategy interface:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> TcpSocketSupport {
+
+    <span class="hl-keyword">void</span> postProcessServerSocket(ServerSocket serverSocket);
+
+    <span class="hl-keyword">void</span> postProcessSocket(Socket socket);
+
+}</pre>
+</div>
+<p>Implementations of this interface can modify sockets after they are created and after all configured attributes have been applied but before the sockets are used.
+This applies whether you use NIO or not.
+For example, you could use an implementation of this interface to modify the supported cipher suites on an SSL socket, or you could add a listener that gets notified after SSL handshaking is complete.
+The sole implementation provided by the framework is the <code class="literal">DefaultTcpSocketSupport</code>, which does not modify the sockets in any way.</p>
+<p>To supply your own implementation of <code class="literal">TcpSocketFactorySupport</code> or <code class="literal">TcpSocketSupport</code>, provide the connection factory with references to beans of your custom type by setting the <code class="literal">socket-factory-support</code> and <code class="literal">socket-support</code> attributes, respectively.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_the_literal_tcpnetconnectionsupport_literal_strategy_interface" href="#_the_literal_tcpnetconnectionsupport_literal_strategy_interface"></a>The <code class="literal">TcpNetConnectionSupport</code> Strategy Interface</h4></div></div></div>
+
+<p>The following listing shows the definition of the <code class="literal">TcpNetConnectionSupport</code> strategy interface:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> TcpNetConnectionSupport {
+
+	TcpNetConnection createNewConnection(Socket socket,
+			<span class="hl-keyword">boolean</span> server, <span class="hl-keyword">boolean</span> lookupHost,
+			ApplicationEventPublisher applicationEventPublisher,
+			String connectionFactoryName) <span class="hl-keyword">throws</span> Exception;
+
+}</pre>
+</div>
+<p>This interface is invoked to create objects of type <code class="literal">TcpNetConnection</code> (or its subclasses).
+The framework provides a single implementation (<code class="literal">DefatulTcpNetConnectionSupport</code>), which, by default, creates simple <code class="literal">TcpNetConnection</code> objects.
+It has two properties: <code class="literal">pushbackCapable</code> and <code class="literal">pushbackBufferSize</code>.
+When push back is enabled, the implementation returns a subclass that wraps the connection&#8217;s <code class="literal">InputStream</code> in a <code class="literal">PushbackInputStream</code>.
+Aligned with the <code class="literal">PushbackInputStream</code> default, the buffer size defaults to 1.
+This lets deserializers "<code class="literal">unread</code>" (push back) bytes into the stream.
+The following trivial example shows how it might be used in a delegating deserializer that "<code class="literal">peeks</code>" at the first byte to determine which deserializer to invoke:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> CompositeDeserializer <span class="hl-keyword">implements</span> Deserializer&lt;<span class="hl-keyword">byte</span>[]&gt; {
+
+    <span class="hl-keyword">private</span> <span class="hl-keyword">final</span> ByteArrayStxEtxSerializer stxEtx = <span class="hl-keyword">new</span> ByteArrayStxEtxSerializer();
+
+    <span class="hl-keyword">private</span> <span class="hl-keyword">final</span> ByteArrayCrLfSerializer crlf = <span class="hl-keyword">new</span> ByteArrayCrLfSerializer();
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">byte</span>[] deserialize(InputStream inputStream) <span class="hl-keyword">throws</span> IOException {
+        PushbackInputStream pbis = (PushbackInputStream) inputStream;
+        <span class="hl-keyword">int</span> first = pbis.read();
+        <span class="hl-keyword">if</span> (first &lt; <span class="hl-number">0</span>) {
+            <span class="hl-keyword">throw</span> <span class="hl-keyword">new</span> SoftEndOfStreamException();
+        }
+        pbis.unread(first);
+        <span class="hl-keyword">if</span> (first == ByteArrayStxEtxSerializer.STX) {
+            <span class="hl-keyword">this</span>.receivedStxEtx = true;
+            <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.stxEtx.deserialize(pbis);
+        }
+        <span class="hl-keyword">else</span> {
+            <span class="hl-keyword">this</span>.receivedCrLf = true;
+            <span class="hl-keyword">return</span> <span class="hl-keyword">this</span>.crlf.deserialize(pbis);
+        }
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_the_literal_tcpnioconnectionsupport_literal_strategy_interface" href="#_the_literal_tcpnioconnectionsupport_literal_strategy_interface"></a>The <code class="literal">TcpNioConnectionSupport</code> Strategy Interface</h4></div></div></div>
+
+<p>The following listing shows the definition of the <code class="literal">TcpNioConnectionSupport</code> strategy interface:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> TcpNioConnectionSupport {
+
+    TcpNioConnection createNewConnection(SocketChannel socketChannel,
+            <span class="hl-keyword">boolean</span> server, <span class="hl-keyword">boolean</span> lookupHost,
+            ApplicationEventPublisher applicationEventPublisher,
+            String connectionFactoryName) <span class="hl-keyword">throws</span> Exception;
+
+}</pre>
+</div>
+<p>This interface is invoked to create <code class="literal">TcpNioConnection</code> objects (or objects from subclasses).
+Spring Integration provides two implementations: <code class="literal">DefaultTcpNioSSLConnectionSupport</code> and <code class="literal">DefaultTcpNioConnectionSupport</code>.
+Which one is  used depends on whether SSL is in use.
+A common use case is to subclass <code class="literal">DefaultTcpNioSSLConnectionSupport</code> and override <code class="literal">postProcessSSLEngine</code>.
+See the <a class="link" href="ip.html#ssl-client-authentication-example" title="34.11.2&nbsp;Example: Enabling SSL Client Authentication">SSL client authentication example</a>.
+As with the <code class="literal">DefaultTcpNetConnectionSupport</code>, these implementations also support push back.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="ssl-client-authentication-example" href="#ssl-client-authentication-example"></a>34.11.2&nbsp;Example: Enabling SSL Client Authentication</h3></div></div></div>
+
+<p>To enable client certificate authentication when you use SSL, the technique depends on whether you use NIO.
+When you do not NIO , provide a custom <code class="literal">TcpSocketSupport</code> implementation to post-process the server socket:</p>
+<div class="informalexample">
+<pre class="programlisting">serverFactory.setTcpSocketSupport(<span class="hl-keyword">new</span> DefaultTcpSocketSupport() {
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> postProcessServerSocket(ServerSocket serverSocket) {
+        ((SSLServerSocket) serverSocket).setNeedClientAuth(true);
+    }
+
+});</pre>
+</div>
+<p>(When you use XML configuration, provide a reference to your bean by setting the <code class="literal">socket-support</code> attribute).</p>
+<p>When you use NIO, provide a custom <code class="literal">TcpNioSslConnectionSupport</code> implementation to post-process the <code class="literal">SSLEngine</code>, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> DefaultTcpNioSSLConnectionSupport tcpNioConnectionSupport() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DefaultTcpNioSSLConnectionSupport(serverSslContextSupport) {
+
+            <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+            <span class="hl-keyword">protected</span> <span class="hl-keyword">void</span> postProcessSSLEngine(SSLEngine sslEngine) {
+                sslEngine.setNeedClientAuth(true);
+            }
+
+    }
+}
+
+<em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> TcpNioServerConnectionFactory server() {
+    ...
+    serverFactory.setTcpNioConnectionSupport(tcpNioConnectionSupport());
+    ...
+}</pre>
+</div>
+<p>(When you use XML configuration, since version 4.3.7, provide a reference to your bean by setting the <code class="literal">nio-connection-support</code> attribute).</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ip-endpoint-reference" href="#ip-endpoint-reference"></a>34.12&nbsp;IP Configuration Attributes</h2></div></div></div>
+
+<p>The following table describes attributes that you can set to configure IP connections:</p>
+<div class="table"><a name="d5e21810" href="#d5e21810"></a><p class="title"><b>Table&nbsp;34.1.&nbsp;Connection Factory Attributes</b></p><div class="table-contents">
+
+<table summary="Connection Factory Attributes" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"><col class="col_4"><col class="col_5"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">Client?</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">Server?</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Allowed Values</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">type</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>client, server</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Determines whether the connection factory is a client or a server.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">host</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>N</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The host name or IP address of the destination.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">port</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The port.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">serializer</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>An implementation of <code class="literal">Serializer</code> used to serialize the payload.
+Defaults to <code class="literal">ByteArrayCrLfSerializer</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">deserializer</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>An implementation of <code class="literal">Deserializer</code> used to deserialize the payload.
+Defaults to <code class="literal">ByteArrayCrLfSerializer</code></p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">using-nio</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Whether or not connection uses NIO.
+Refer to the <code class="literal">java.nio</code> package for more information.
+See <a class="xref" href="ip.html#note_nio" title="34.9&nbsp;About Non-blocking I/O (NIO)">Section&nbsp;34.9, &#8220;About Non-blocking I/O (NIO)&#8221;</a>.
+Default: <code class="literal">false</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">using-direct-buffers</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>N</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When using NIO, whether or not the connection uses direct buffers.
+Refer to the <code class="literal">java.nio.ByteBuffer</code> documentation for more information.
+Must be <code class="literal">false</code> if <code class="literal">using-nio</code> is <code class="literal">false</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">apply-sequence</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When you use NIO, it may be necessary to resequence messages.
+When this attribute is set to <code class="literal">true</code>, <code class="literal">correlationId</code> and <code class="literal">sequenceNumber</code> headers are added to received messages.
+See <a class="xref" href="ip.html#note_nio" title="34.9&nbsp;About Non-blocking I/O (NIO)">Section&nbsp;34.9, &#8220;About Non-blocking I/O (NIO)&#8221;</a>.
+Default: <code class="literal">false</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-timeout</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Defaults to <code class="literal">0</code> (infinity), except for server connection factories with <code class="literal">single-use="true"</code>.
+In that case, it defaults to the default reply timeout (10 seconds).</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-send-buffer-size</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <code class="literal">java.net.Socket.</code>
+<code class="literal">setSendBufferSize()</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-receive-buffer-size</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <code class="literal">java.net.Socket.</code>
+<code class="literal">setReceiveBufferSize()</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-keep-alive</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <code class="literal">java.net.Socket.setKeepAlive()</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-linger</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Sets <code class="literal">linger</code> to <code class="literal">true</code> with the supplied value.
+See <code class="literal">java.net.Socket.setSoLinger()</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-tcp-no-delay</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <code class="literal">java.net.Socket.setTcpNoDelay()</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-traffic-class</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <code class="literal">java.net.Socket.</code>
+<code class="literal">setTrafficClass()</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">local-address</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>N</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>On a multi-homed system, specifies an IP address for the interface to which the socket is bound.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">task-executor</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Specifies a specific executor to be used for socket handling.
+If not supplied, an internal cached thread executor is used.
+Needed on some platforms that require the use of specific task executors, such as a <code class="literal">WorkManagerTaskExecutor</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">single-use</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Specifies whether a connection can be used for multiple messages.
+If <code class="literal">true</code>, a new connection is used for each message.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">pool-size</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>N</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>N</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>This attribute is no longer used.
+For backward compatibility, it sets the backlog, but you should use <code class="literal">backlog</code> to specify the connection backlog in server factories.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">backlog</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>N</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Sets the connection backlog for server factories.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">lookup-host</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Specifies whether reverse lookups are done on IP addresses to convert to host names for use in message headers.
+If false, the IP address is used instead.
+Default: <code class="literal">true</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">interceptor-factory-chain</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <a class="xref" href="ip.html#ip-interceptors" title="34.4&nbsp;TCP Connection Interceptors">Section&nbsp;34.4, &#8220;TCP Connection Interceptors&#8221;</a>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ssl-context-support</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <code class="literal">&lt;&lt;ssl-tls&gt;&gt;</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">socket-factory-support</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <code class="literal">&lt;&lt;ssl-tls&gt;&gt;</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">socket-support</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <a class="xref" href="ip.html#ssl-tls" title="34.10&nbsp;SSL/TLS Support">Section&nbsp;34.10, &#8220;SSL/TLS Support&#8221;</a>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">nio-connection-support</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <a class="xref" href="ip.html#tcp-advanced-techniques" title="34.11&nbsp;Advanced Techniques">Section&nbsp;34.11, &#8220;Advanced Techniques&#8221;</a>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">read-delay</code></p></td><td style="border-right: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; " align="center" valign="top"><p>Y</p></td><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p>long &gt; 0</p></td><td style="" align="left" valign="top"><p>The delay (in milliseconds) before retrying a read after the previous attempt failed due to insufficient threads.
+Default: 100.
+Only applies if <code class="literal">using-nio</code> is <code class="literal">true</code>.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>The following table describes attributes that you can set to configure UDP inbound channel adapters:</p>
+<div class="table"><a name="ip-udp-ib-atts" href="#ip-udp-ib-atts"></a><p class="title"><b>Table&nbsp;34.2.&nbsp;UDP Inbound Channel Adapter Attributes</b></p><div class="table-contents">
+
+<table summary="UDP Inbound Channel Adapter Attributes" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">Allowed Values</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">port</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The port on which the adapter listens.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">multicast</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Whether or not the UDP adapter uses multicast.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">multicast-address</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When multicast is true, the multicast address to which the adapter joins.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">pool-size</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Specifies how many packets can be handled concurrently.
+It only applies if task-executor is not configured.
+Default: 5.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>task-executor</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Specifies a specific executor to be used for socket handling.
+If not supplied, an internal pooled executor is used.
+Needed on some platforms that require the use of specific task executors such as a <code class="literal">WorkManagerTaskExecutor</code>.
+See pool-size for thread requirements.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">receive-buffer-size</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The size of the buffer used to receive <code class="literal">DatagramPackets</code>.
+Usually set to the maximum transmission unit (MTU) size.
+If a smaller buffer is used than the size of the sent packet, truncation can occur.
+You can detect this by using the <code class="literal">check-length</code> attribute..</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">check-length</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Whether or not a UDP adapter expects a data length field in the packet received.
+Used to detect packet truncation.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-timeout</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See the <code class="literal">setSoTimeout()</code> methods in <code class="literal">java.net.DatagramSocket</code> for more information.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-send-buffer-size</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Used for UDP acknowledgment packets.
+See the setSendBufferSize() methods in <code class="literal">java.net.DatagramSocket</code> for more information.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-receive-buffer-size</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <code class="literal">java.net.DatagramSocket.setReceiveBufferSize()</code> for more information.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">local-address</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>On a multi-homed system, specifies an IP address for the interface to which the socket is bound.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">error-channel</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>If a downstream component throws an exception, the <code class="literal">MessagingException</code> message that contains the exception and failed message is sent to this channel.</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">lookup-host</code></p></td><td style="border-right: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="" align="left" valign="top"><p>Specifies whether reverse lookups are done on IP addresses to convert to host names for use in message headers.
+If <code class="literal">false</code>, the IP address is used instead.
+Default: <code class="literal">true</code>.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>The following table describes attributes that you can set to configure UDP outbound channel adapters:</p>
+<div class="table"><a name="d5e22309" href="#d5e22309"></a><p class="title"><b>Table&nbsp;34.3.&nbsp;UDP Outbound Channel Adapter Attributes</b></p><div class="table-contents">
+
+<table summary="UDP Outbound Channel Adapter Attributes" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">Allowed Values</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">host</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The host name or ip address of the destination.
+For multicast udp adapters, the multicast address.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">port</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The port on the destination.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">multicast</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Whether or not the udp adapter uses multicast.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">acknowledge</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Whether or not a UDP adapter requires an acknowledgment from the destination.
+When enabled, it requires setting the following four attributes: <code class="literal">ack-host</code>, <code class="literal">ack-port</code>, <code class="literal">ack-timeout</code>, and <code class="literal">min-acks-for- success</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ack-host</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When <code class="literal">acknowledge</code> is <code class="literal">true</code>, indicates the host or IP address to which the acknowledgment should be sent.
+Usually the current host, but may be different&#8201;&#8212;&#8201;for example, when Network Address Translation (NAT) is being used.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ack-port</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When <code class="literal">acknowledge</code> is <code class="literal">true</code>, indicates the port to which the acknowledgment should be sent.
+The adapter listens on this port for acknowledgments.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ack-timeout</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When <code class="literal">acknowledge</code> is <code class="literal">true</code>, indicates the time in milliseconds that the adapter waits for an acknowledgment.
+If an acknowledgment is not received in time, the adapter throws an exception.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">min-acks-for- success</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Defaults to 1.
+For multicast adapters, you can set this to a larger value, which requires acknowledgments from multiple destinations.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">check-length</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Whether or not a UDP adapter includes a data length field in the packet sent to the destination.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">time-to-live</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>For multicast adapters, specifies the time-to-live attribute for the <code class="literal">MulticastSocket</code>.
+Controls the scope of the multicasts.
+Refer to the Java API documentation for more information.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-timeout</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See <code class="literal">java.net.DatagramSocket</code> setSoTimeout() methods for more information.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-send-buffer-size</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>See the <code class="literal">setSendBufferSize()</code> methods in <code class="literal">java.net.DatagramSocket</code> for more information.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">so-receive-buffer-size</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Used for UDP acknowledgment packets.
+See the <code class="literal">setReceiveBufferSize()</code> methods in <code class="literal">java.net.DatagramSocket</code> for more information.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>local-address</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>On a multi-homed system, for the UDP adapter, specifies an IP address for the interface to which the socket is bound for reply messages.
+For a multicast adapter, it also determines which interface the multicast packets are sent over.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">task-executor</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Specifies a specific executor to be used for acknowledgment handling.
+If not supplied, an internal single threaded executor is used.
+Needed on some platforms that require the use of specific task executors, such as a <code class="literal">WorkManagerTaskExecutor</code>.
+One thread is dedicated to handling acknowledgments (if the <code class="literal">acknowledge</code> option is true).</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">destination-expression</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p>SpEL expression</p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>A SpEL expression to be evaluated to determine which <code class="literal">SocketAddress</code> to use as a destination address for the
+outgoing UDP packets.</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">socket-expression</code></p></td><td style="border-right: 0.5pt solid ; " align="center" valign="top"><p>SpEL expression</p></td><td style="" align="left" valign="top"><p>A SpEL expression to be evaluated to determine which datagram socket use for sending outgoing UDP packets.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>The following table describes attributes that you can set to configure TCP inbound channel adapters:</p>
+<div class="table"><a name="d5e22470" href="#d5e22470"></a><p class="title"><b>Table&nbsp;34.4.&nbsp;TCP Inbound Channel Adapter Attributes</b></p><div class="table-contents">
+
+<table summary="TCP Inbound Channel Adapter Attributes" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">Allowed Values</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">channel</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The channel to which inbound messages is sent.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">connection-factory</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>If the connection factory has a type of <code class="literal">server</code>, the factory is "<code class="literal">owned</code>" by this adapter.
+If it has a type of <code class="literal">client</code>, it is "<code class="literal">owned</code>" by an outbound channel adapter, and this adapter receives any incoming messages on the connection created by the outbound adapter.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">error-channel</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>If an exception is thrown by a downstream component, the <code class="literal">MessagingException</code> message containing the exception and the failed message is sent to this channel.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">client-mode</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When <code class="literal">true</code>, the inbound adapter acts as a client with respect to establishing the connection and then receiving incoming messages on that connection.
+Default: <code class="literal">false</code>.
+See also <code class="literal">retry-interval</code> and <code class="literal">scheduler</code>.
+The connection factory must be of type <code class="literal">client</code> and have <code class="literal">single-use</code> set to <code class="literal">false</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">retry-interval</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When in <code class="literal">client-mode</code>, specifies the number of milliseconds to wait between connection attempts or after a connection failure.
+Default: 60000 (60 seconds).</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">scheduler</code></p></td><td style="border-right: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="" align="left" valign="top"><p>Specifies a <code class="literal">TaskScheduler</code> to use for managing the <code class="literal">client-mode</code> connection.
+If not specified, it defaults to the global Spring Integration <code class="literal">taskScheduler</code> bean, which has a default pool size of 10.
+See <a class="xref" href="configuration.html#namespace-taskscheduler" title="E.2&nbsp;Configuring the Task Scheduler">Section&nbsp;E.2, &#8220;Configuring the Task Scheduler&#8221;</a>.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>The following table describes attributes that you can set to configure TCP outbound channel adapters:</p>
+<div class="table"><a name="d5e22548" href="#d5e22548"></a><p class="title"><b>Table&nbsp;34.5.&nbsp;TCP Outbound Channel Adapter Attributes</b></p><div class="table-contents">
+
+<table summary="TCP Outbound Channel Adapter Attributes" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">Allowed Values</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">channel</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The channel on which outbound messages arrive.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">connection-factory</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>If the connection factory has a type of <code class="literal">client</code>, the factory is "<code class="literal">owned</code>" by this adapter.
+If it has a type of <code class="literal">server</code>, it is "<code class="literal">owned</code>" by an inbound channel adapter, and this adapter tries to correlate messages to the connection on which an original inbound message was received.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">client-mode</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When <code class="literal">true</code>, the outbound adapter tries to establish the connection as soon as it is started.
+When <code class="literal">false</code>, the connection is established when the first message is sent.
+Default: <code class="literal">false</code>.
+See also <code class="literal">retry-interval</code> and <code class="literal">scheduler</code>.
+The connection factory must be of type <code class="literal">client</code> and have <code class="literal">single-use</code> set to <code class="literal">false</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">retry-interval</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When in <code class="literal">client-mode</code>, specifies the number of milliseconds to wait between connection attempts or after a connection failure.
+Default: 60000 (60 seconds).</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">scheduler</code></p></td><td style="border-right: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="" align="left" valign="top"><p>Specifies a <code class="literal">TaskScheduler</code> to use for managing the <code class="literal">client-mode</code> connection.
+If not specified, it defaults to the global Spring Integration <code class="literal">taskScheduler</code> bean, which has a default pool size of 10.
+See <a class="xref" href="configuration.html#namespace-taskscheduler" title="E.2&nbsp;Configuring the Task Scheduler">Section&nbsp;E.2, &#8220;Configuring the Task Scheduler&#8221;</a>.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>The following table describes attributes that you can set to configure TCP inbound gateways:</p>
+<div class="table"><a name="d5e22619" href="#d5e22619"></a><p class="title"><b>Table&nbsp;34.6.&nbsp;TCP Inbound Gateway Attributes</b></p><div class="table-contents">
+
+<table summary="TCP Inbound Gateway Attributes" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">Allowed Values</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">connection-factory</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The connection factory must be of type server.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">request-channel</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The channel to which incoming messages are sent.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">reply-channel</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The channel on which reply messages may arrive.
+Usually, replies arrive on a temporary reply channel added to the inbound message header.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">reply-timeout</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The time in milliseconds for which the gateway waits for a reply.
+Default: 1000 (1 second).</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">error-channel</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>If an exception is thrown by a downstream component, the <code class="literal">MessagingException</code> message containing the exception and the failed message is sent to this channel.
+Any reply from that flow is then returned as a response by the gateway.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">client-mode</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When <code class="literal">true</code>, the inbound gateway acts as a client with respect to establishing the connection and then receiving (and replying to) incoming messages on that connection.
+Default: false.
+See also <code class="literal">retry-interval</code> and <code class="literal">scheduler</code>.
+The connection factory must be of type <code class="literal">client</code> and have <code class="literal">single-use</code> set to <code class="literal">false</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">retry-interval</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>When in <code class="literal">client-mode</code>, specifies the number of milliseconds to wait between connection attempts or after a connection failure.
+Default: 60000 (60 seconds).</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">scheduler</code></p></td><td style="border-right: 0.5pt solid ; " align="center" valign="top"><p><code class="literal">true</code>, <code class="literal">false</code></p></td><td style="" align="left" valign="top"><p>Specifies a <code class="literal">TaskScheduler</code> to use for managing the <code class="literal">client-mode</code> connection.
+If not specified, it defaults to the global Spring Integration <code class="literal">taskScheduler</code> bean, which has a default pool size of 10.
+See <a class="xref" href="configuration.html#namespace-taskscheduler" title="E.2&nbsp;Configuring the Task Scheduler">Section&nbsp;E.2, &#8220;Configuring the Task Scheduler&#8221;</a>.</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+<p>The following table describes attributes that you can set to configure TCP outbound gateways:</p>
+<div class="table"><a name="tcp-ob-gateway-attributes" href="#tcp-ob-gateway-attributes"></a><p class="title"><b>Table&nbsp;34.7.&nbsp;TCP Outbound Gateway Attributes</b></p><div class="table-contents">
+
+<table summary="TCP Outbound Gateway Attributes" style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">Allowed Values</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Attribute Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">connection-factory</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The connection factory must be of type <code class="literal">client</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">request-channel</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The channel on which outgoing messages arrive.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">reply-channel</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>Optional.
+The channel to which reply messages are sent.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">remote-timeout</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The time in milliseconds for which the gateway waits for a reply from the remote system.
+Mutually exclusive with <code class="literal">remote-timeout-expression</code>.
+Default: 10000 (10 seconds).
+Note: In versions prior to 4.2 this value defaulted to <code class="literal">reply-timeout</code> (if set).</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">remote-timeout-expression</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>A SpEL expression that is evaluated against the message to determine the time in milliseconds for which the gateway waits for a reply from the remote system.
+Mutually exclusive with <code class="literal">remote-timeout</code>.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">request-timeout</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>If a single-use connection factory is not being used, the time in milliseconds for which the gateway waits to get access to the shared connection.</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">reply-timeout</code></p></td><td style="border-right: 0.5pt solid ; " align="center" valign="top">&nbsp;</td><td style="" align="left" valign="top"><p>The time in milliseconds for which the gateway waits when sending the reply to the reply-channel.
+Only applies if the reply-channel might block (such as a bounded QueueChannel that is currently full).</p></td></tr></tbody></table>
+</div></div><br class="table-break">
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ip-msg-headers" href="#ip-msg-headers"></a>34.13&nbsp;IP Message Headers</h2></div></div></div>
+
+<p>
+<b>IP Message Headers.&nbsp;</b>
+This module uses the following <code class="literal">MessageHeader</code> instances:
+</p>
+<div class="informaltable">
+<table style="border-collapse: collapse;border-top: 0.5pt solid ; border-bottom: 0.5pt solid ; border-left: 0.5pt solid ; border-right: 0.5pt solid ; "><colgroup><col class="col_1"><col class="col_2"><col class="col_3"></colgroup><thead><tr><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">Header Name</th><th style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top">IpHeaders Constant</th><th style="border-bottom: 0.5pt solid ; " align="left" valign="top">Description</th></tr></thead><tbody><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ip_hostname</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">HOSTNAME</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The host name from which a TCP message or UDP packet was received.
+If <code class="literal">lookupHost</code> is <code class="literal">false</code>, this contains the IP address.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ip_address</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">IP_ADDRESS</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The IP address from which a TCP message or UDP packet was received.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ip_port</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">PORT</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The remote port for a UDP packet.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p>ip_localInetAddress</p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">IP_LOCAL_ADDRESS</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The local <code class="literal">InetAddress</code> to which the socket is connected (since version 4.2.5).</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ip_ackTo</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ACKADDRESS</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The remote IP address to which UDP application-level acknowledgments are sent.
+The framework includes acknowledgment information in the data packet.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ip_ackId</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ACK_ID</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>A correlation ID for UDP application-level acknowledgments.
+The framework includes acknowledgment information in the data packet.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ip_tcp_remotePort</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">REMOTE_PORT</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>The remote port for a TCP connection.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ip_connectionId</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">CONNECTION_ID</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>A unique identifier for a TCP connection.
+Set by the framework for inbound messages.
+When sending to a server-side inbound channel adapter or replying to an inbound gateway, this header is required so that the endpoint can determine the connection to which to send the message.</p></td></tr><tr><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ip_actualConnectionId</code></p></td><td style="border-right: 0.5pt solid ; border-bottom: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">ACTUAL_CONNECTION_ID</code></p></td><td style="border-bottom: 0.5pt solid ; " align="left" valign="top"><p>For information only.
+When using a cached or failover client connection factory, it contains the actual underlying connection ID.</p></td></tr><tr><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">contentType</code></p></td><td style="border-right: 0.5pt solid ; " align="left" valign="top"><p><code class="literal">MessageHeaders.</code>
+<code class="literal">CONTENT_TYPE</code></p></td><td style="" align="left" valign="top"><p>An optional content type for inbound messages
+Described after this table.
+Note that, unlike the other header constants, this constant is in the <code class="literal">MessageHeaders</code> class, not the <code class="literal">IpHeaders</code> class.</p></td></tr></tbody></table>
+</div>
+<p>For inbound messages, <code class="literal">ip_hostname</code>, <code class="literal">ip_address</code>, <code class="literal">ip_tcp_remotePort</code>, and <code class="literal">ip_connectionId</code> are mapped by the default
+<code class="literal">TcpHeaderMapper</code>.
+If you set the mapper&#8217;s <code class="literal">addContentTypeHeader</code> property to <code class="literal">true</code>, the mapper sets the <code class="literal">contentType</code> header (<code class="literal">application/octet-stream;charset="UTF-8"</code>, by default).
+You can change the default by setting the <code class="literal">contentType</code> property.
+You can add additional headers by subclassing <code class="literal">TcpHeaderMapper</code> and overriding the <code class="literal">supplyCustomHeaders</code> method.
+For example, when you use SSL, you can add properties of the <code class="literal">SSLSession</code> by obtaining the session object from the
+<code class="literal">TcpConnection</code> object, which is provided as an argument to the <code class="literal">supplyCustomHeaders</code> method.</p>
+<p>For outbound messages, <code class="literal">String</code> payloads are converted to <code class="literal">byte[]</code> with the default (<code class="literal">UTF-8</code>) charset.
+Set the <code class="literal">charset</code> property to change the default.</p>
+<p>When customizing the mapper properties or subclassing, declare the mapper as a bean and provide an instance to the connection factory by using the <code class="literal">mapper</code> property</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ip-annotation" href="#ip-annotation"></a>34.14&nbsp;Annotation-Based Configuration</h2></div></div></div>
+
+<p>The following example from the samples repository shows some of the configuration options available when you use  annotations instead of XML:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@EnableIntegration</span></em> <a name="CO50-1" href="#CO50-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em> <a name="CO50-2" href="#CO50-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+<em><span class="hl-annotation" style="color: gray">@Configuration</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">class</span> Config {
+
+    <em><span class="hl-annotation" style="color: gray">@Value(${some.port})</span></em>
+    <span class="hl-keyword">private</span> <span class="hl-keyword">int</span> port;
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway(defaultRequestChannel="toTcp")</span></em> <a name="CO50-3" href="#CO50-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> Gateway {
+
+        String viaTcp(String in);
+
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel="toTcp")</span></em> <a name="CO50-4" href="#CO50-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+    <span class="hl-keyword">public</span> MessageHandler tcpOutGate(AbstractClientConnectionFactory connectionFactory) {
+        TcpOutboundGateway gate = <span class="hl-keyword">new</span> TcpOutboundGateway();
+        gate.setConnectionFactory(connectionFactory);
+        gate.setOutputChannelName(<span class="hl-string">"resultToString"</span>);
+        <span class="hl-keyword">return</span> gate;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em> <a name="CO50-5" href="#CO50-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+    <span class="hl-keyword">public</span> TcpInboundGateway tcpInGate(AbstractServerConnectionFactory connectionFactory)  {
+        TcpInboundGateway inGate = <span class="hl-keyword">new</span> TcpInboundGateway();
+        inGate.setConnectionFactory(connectionFactory);
+        inGate.setRequestChannel(fromTcp());
+        <span class="hl-keyword">return</span> inGate;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageChannel fromTcp() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> DirectChannel();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@MessageEndpoint</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">class</span> Echo { <a name="CO50-6" href="#CO50-6"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span>
+
+        <em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel="fromTcp", outputChannel="toEcho")</span></em>
+        <span class="hl-keyword">public</span> String convert(<span class="hl-keyword">byte</span>[] bytes) {
+            <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> String(bytes);
+        }
+
+        <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel="toEcho")</span></em>
+        <span class="hl-keyword">public</span> String upCase(String in) {
+            <span class="hl-keyword">return</span> in.toUpperCase();
+        }
+
+        <em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel="resultToString")</span></em>
+        <span class="hl-keyword">public</span> String convertResult(<span class="hl-keyword">byte</span>[] bytes) {
+            <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> String(bytes);
+        }
+
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> AbstractClientConnectionFactory clientCF() { <a name="CO50-7" href="#CO50-7"></a><span><img src="images/callouts/7.png" alt="7" border="0"></span>
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> TcpNetClientConnectionFactory(<span class="hl-string">"localhost"</span>, <span class="hl-keyword">this</span>.port);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> AbstractServerConnectionFactory serverCF() { <a name="CO50-8" href="#CO50-8"></a><span><img src="images/callouts/8.png" alt="8" border="0"></span>
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> TcpNetServerConnectionFactory(<span class="hl-keyword">this</span>.port);
+    }
+
+}</pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO50-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Standard Spring Integration annotation enabling the infrastructure for an integration application.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO50-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Searches for <code class="literal">@MessagingGateway</code> interfaces.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO50-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The entry point to the client-side of the flow. The calling application can use <code class="literal">@Autowired</code> for this <code class="literal">Gateway</code> bean
+and invoke its method.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO50-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Outbound endpoints consist of a <code class="literal">MessageHandler</code> and a consumer that wraps it. In this scenario, the
+<code class="literal">@ServiceActivator</code> configures the endpoint, according to the channel type.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO50-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Inbound endpoints (in the TCP/UDP module) are all message-driven and so only need to be declared as simple <code class="literal">@Bean</code> instances.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO50-6"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>This class provides a number of POJO methods for use in this sample flow (a <code class="literal">@Transformer</code> and <code class="literal">@ServiceActivator</code>
+on the server side and a <code class="literal">@Transformer</code> on the client side).</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO50-7"><span><img src="images/callouts/7.png" alt="7" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The client-side connection factory.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO50-8"><span><img src="images/callouts/8.png" alt="8" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The server-side connection factory.</p>
+</td></tr></table></div>
+</div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="syslog.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="webflux.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">33.&nbsp;Syslog Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;35.&nbsp;WebFlux Support</td></tr></table></div></body></html>

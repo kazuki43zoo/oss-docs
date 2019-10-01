@@ -1,0 +1,1176 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>30.&nbsp;SFTP Adapters</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="rmi.html" title="29.&nbsp;RMI Support"><link rel="next" href="stomp.html" title="31.&nbsp;STOMP Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">30.&nbsp;SFTP Adapters</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="rmi.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="stomp.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="sftp" href="#sftp"></a>30.&nbsp;SFTP Adapters</h2></div></div></div>
+
+<p>Spring Integration provides support for file transfer operations over SFTP.</p>
+<p>The Secure File Transfer Protocol (SFTP) is a network protocol that lets you transfer files between two computers on the Internet over any reliable stream.</p>
+<p>The SFTP protocol requires a secure channel, such as SSH, and visibility to a client&#8217;s identity throughout the SFTP session.</p>
+<p>Spring Integration supports sending and receiving files over SFTP by providing three client side endpoints: inbound channel adapter, outbound channel adapter, and outbound gateway.
+It also provides convenient namespace configuration to define these client components.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-sftp<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-sftp:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<p>To include the SFTP namespace in your xml configuration, include the following attributes on the root element:</p>
+<div class="informalexample">
+<pre class="programlisting">xmlns:int-sftp="http://www.springframework.org/schema/integration/sftp"
+xsi:schemaLocation="http://www.springframework.org/schema/integration/sftp
+    http://www.springframework.org/schema/integration/sftp/spring-integration-sftp.xsd"</pre>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-session-factory" href="#sftp-session-factory"></a>30.1&nbsp;SFTP Session Factory</h2></div></div></div>
+
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>As of version 3.0, sessions are no longer cached by default.
+See <a class="xref" href="sftp.html#sftp-session-caching" title="30.4&nbsp;SFTP Session Caching">Section&nbsp;30.4, &#8220;SFTP Session Caching&#8221;</a>.</p>
+</td></tr></table></div>
+<p>Before configuring SFTP adapters, you must configure an SFTP session factory.
+You can configure the SFTP session factory with a regular bean definition, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;beans:bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sftpSessionFactory"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.sftp.session.DefaultSftpSessionFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;beans:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"host"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"localhost"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;beans:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"privateKey"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"classpath:META-INF/keys/sftpTest"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;beans:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"privateKeyPassphrase"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"springIntegration"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;beans:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"port"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"22"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;beans:property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"user"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"kermit"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/beans:bean&gt;</span></pre>
+</div>
+<p>Every time an adapter requests a session object from its <code class="literal">SessionFactory</code>, a new SFTP session is created.
+Under the covers, the SFTP Session Factory relies on the <a class="ulink" href="http://www.jcraft.com/jsch/" target="_top">JSch</a> library to provide the SFTP capabilities.</p>
+<p>However, Spring Integration also supports the caching of SFTP sessions.
+See <a class="xref" href="sftp.html#sftp-session-caching" title="30.4&nbsp;SFTP Session Caching">Section&nbsp;30.4, &#8220;SFTP Session Caching&#8221;</a> for more information.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>JSch supports multiple channels (operations) over a connection to the server.
+By default, the Spring Integration session factory uses a separate physical connection for each channel.
+Since Spring Integration 3.0, you can configure the session factory (using a boolean constructor arg - default <code class="literal">false</code>) to use a single connection to the server and create multiple <code class="literal">JSch</code> channels on that single connection.</p>
+<p>When using this feature, you must wrap the session factory in a caching session factory, as <a class="link" href="sftp.html#sftp-session-caching" title="30.4&nbsp;SFTP Session Caching">described later</a>, so that the connection is not physically closed when an operation completes.</p>
+<p>If the cache is reset, the session is disconnected only when the last channel is closed.</p>
+<p>The connection is refreshed if it is found to be disconnected when a new operation obtains a session.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If you experience connectivity problems and would like to trace session creation and see which sessions are polled, you may enable tracing by setting the logger to <code class="literal">TRACE</code> level (for example, <code class="literal">log4j.category.org.springframework.integration.sftp=TRACE</code>).
+See <a class="xref" href="sftp.html#sftp-jsch-logging" title="30.12&nbsp;SFTP/JSCH Logging">Section&nbsp;30.12, &#8220;SFTP/JSCH Logging&#8221;</a>.</p>
+</td></tr></table></div>
+<p>Now all you need to do is inject this SFTP session factory into your adapters.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>A more practical way to provide values for the SFTP session factory is to use Spring&#8217;s <a class="ulink" href="http://static.springsource.org/spring/docs/current/spring-framework-reference/html/beans.html#beans-factory-placeholderconfigurer" target="_top">property placeholder support</a>.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sftp-session-factory-properties" href="#sftp-session-factory-properties"></a>30.1.1&nbsp;Configuration Properties</h3></div></div></div>
+
+<p>The following list describes all the properties that are exposed by the <a class="ulink" href="http://static.springsource.org/spring-integration/api/org/springframework/integration/sftp/session/DefaultSftpSessionFactory.html" target="_top"><code class="literal">DefaultSftpSessionFactory</code></a>.</p>
+<p><code class="literal">isSharedSession</code> (constructor argument)::When <code class="literal">true</code>, a single connection is used, and <code class="literal">JSch Channels</code> are multiplexed.
+It defaults to <code class="literal">false</code>.</p>
+<p><code class="literal">clientVersion</code>::Lets you set the client version property.
+It&#8217;s default depends on the underlying JSch version but it will look like:_SSH-2.0-JSCH-0.1.45_</p>
+<p><code class="literal">enableDaemonThread</code>::If <code class="literal">true</code>, all threads are daemon threads.
+If set to <code class="literal">false</code>, normal non-daemon threads are used instead.
+This property is set on the underlying <a class="ulink" href="http://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/Session.html" target="_top">session</a>.
+There, this property defaults to <code class="literal">false</code>.</p>
+<p><code class="literal">host</code>::The URL of the host to which you want to connect.
+Required.</p>
+<p><code class="literal">hostKeyAlias</code>::Sets the host key alias, which is used when comparing the host key to the known hosts list.</p>
+<p><code class="literal">knownHosts</code>::Specifies the filename that used for a host key repository.
+The file has the same format as OpenSSH&#8217;s <code class="literal">known_hosts</code> file and is required and must be pre-populated if <code class="literal">allowUnknownKeys</code> is false.</p>
+<p><code class="literal">password</code>::The password to authenticate against the remote host.
+If a password is not provided, then the <code class="literal">privateKey</code> property is required.
+It is not allowed if you set <code class="literal">userInfo</code>.
+The password is obtained from that object.</p>
+<p><code class="literal">port</code>::The port over which the SFTP connection shall be established.
+If not specified, this value defaults to <code class="literal">22</code>.
+If specified, this properties must be a positive number.</p>
+<p><code class="literal">privateKey</code>::Lets you set a <a class="ulink" href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/core/io/Resource.html" target="_top">resource</a> that represents the location of the private key used for authenticating against the remote host.
+If the <code class="literal">privateKey</code> is not provided, then the <code class="literal">password</code> property is required.</p>
+<p><code class="literal">privateKeyPassphrase</code>::The password for the private key.
+If you set <code class="literal">userInfo</code>, <code class="literal">privateKeyPassphrase</code> is not allowed .
+The passphrase is obtained from that object.
+Optional.</p>
+<p><code class="literal">proxy</code>::Allows for specifying a JSch-based <a class="ulink" href="http://epaul.github.com/jsch-documentation/javadoc/com/jcraft/jsch/Proxy.html" target="_top">proxy</a>.
+If set, the proxy object is used to create the connection to the remote host through the proxy.
+See <a class="xref" href="sftp.html#sftp-proxy-factory-bean" title="30.2&nbsp;Proxy Factory Bean">Section&nbsp;30.2, &#8220;Proxy Factory Bean&#8221;</a> for a convenient way to configure the proxy.</p>
+<p><code class="literal">serverAliveCountMax</code>::Specifies the number of server-alive messages, which are sent without any reply from the server before disconnecting.
+If not set, this property defaults to <code class="literal">1</code>.</p>
+<p><code class="literal">serverAliveInterval</code>::Sets the timeout interval (in milliseconds) before a server-alive message is sent, in case no message is received from the server.</p>
+<p><code class="literal">sessionConfig</code>::By using <code class="literal">Properties</code>, you can set additional configuration setting on the underlying JSch Session.</p>
+<p><code class="literal">socketFactory</code>:Lets you pass in a <a class="ulink" href="http://epaul.github.com/jsch-documentation/javadoc/com/jcraft/jsch/SocketFactory.html" target="_top"><code class="literal">SocketFactory</code></a>.
+The socket factory is used to create a socket to the target host.
+When a proxy is used, the socket factory is passed to the proxy.
+By default, plain TCP sockets are used.</p>
+<p><code class="literal">timeout</code>::The timeout property is used as the socket timeout parameter, as well as the default connection timeout.
+Defaults to <code class="literal">0</code>, which means, that no timeout will occur.</p>
+<p><code class="literal">user</code>::The remote user to use.
+Required.</p>
+<p><a name="sftp-unk-keys" href="#sftp-unk-keys"></a><code class="literal">allowUnknownKeys</code>::Set to <code class="literal">true</code> to allow connections to hosts with unknown (or changed) keys.
+Its default is <span class="emphasis"><em>false</em></span>.
+It is applied only if no <code class="literal">userInfo</code> is provided.
+If <code class="literal">false</code>, a pre-populated <code class="literal">knownHosts</code> file is required.</p>
+<p><code class="literal">userInfo</code>::Set a custom <code class="literal">UserInfo</code> to be used during authentication.
+In particular, <code class="literal">promptYesNo()</code> is invoked when an unknown (or changed) host key is received.
+See also <a class="link" href="sftp.html#sftp-unk-keys"><code class="literal">allowUnknownKeys</code></a>.
+When you provide a <code class="literal">UserInfo</code>, the <code class="literal">password</code> and private key <code class="literal">passphrase</code> are obtained from it, and you cannot set discrete
+<code class="literal">password</code> and <code class="literal">privateKeyPassprase</code> properties.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-proxy-factory-bean" href="#sftp-proxy-factory-bean"></a>30.2&nbsp;Proxy Factory Bean</h2></div></div></div>
+
+<p><code class="literal">Jsch</code> provides a mechanism to connect to the server over an HTTP or SOCKS proxy.
+To use this feature, configure the <code class="literal">Proxy</code> and provide a reference to the <code class="literal">DefaultSftpSessionFactory</code>, as discussed
+earlier.
+Three implementations are provided by <code class="literal">Jsch</code>: <code class="literal">HTTP</code>, <code class="literal">SOCKS4</code>, and <code class="literal">SOCKS5</code>.
+Spring Integration 4.3 introduced a <code class="literal">FactoryBean</code>, easing configuration of these proxies by allowing property
+injection, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"proxySocks5"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.sftp.session.JschProxyFactoryBean"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"SOCKS5"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${sftp.proxy.address}"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${sftp.proxy.port}"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${sftp.proxy.user}"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"${sftp.proxy.pw}"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sessionFactory"</span>
+          <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.sftp.session.DefaultSftpSessionFactory"</span><span class="hl-tag"> &gt;</span>
+    ...
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"proxy"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"proxySocks5"</span><span class="hl-tag"> /&gt;</span>
+    ...
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-dsf" href="#sftp-dsf"></a>30.3&nbsp;Delegating Session Factory</h2></div></div></div>
+
+<p>Version 4.2 introduced the <code class="literal">DelegatingSessionFactory</code>, which allows the selection of the actual session factory at
+runtime.
+Prior to invoking the FTP endpoint, you can call <code class="literal">setThreadKey()</code> on the factory to associate a key with the current thread.
+That key is then used to look up the actual session factory to be used.
+You can clear the key by calling <code class="literal">clearThreadKey()</code> after use.</p>
+<p>We added convenience methods so that you can more easily do so from a message flow, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"dsf"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.file.remote.session.DelegatingSessionFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg&gt;</span>
+        <span class="hl-tag">&lt;bean</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.file.remote.session.DefaultSessionFactoryLocator"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-comment">&lt;!-- delegate factories here --&gt;</span>
+        <span class="hl-tag">&lt;/bean&gt;</span>
+    <span class="hl-tag">&lt;/constructor-arg&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;int:service-activator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"in"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"c1"</span>
+        <span class="hl-attribute">expression</span>=<span class="hl-value">"@dsf.setThreadKey(#root, headers['factoryToUse'])"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-sftp:outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">"c1"</span> <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"c2"</span> <span class="hl-attribute">...</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int:service-activator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"c2"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"out"</span>
+        <span class="hl-attribute">expression</span>=<span class="hl-value">"@dsf.clearThreadKey(#root)"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>When using session caching (see <a class="xref" href="sftp.html#sftp-session-caching" title="30.4&nbsp;SFTP Session Caching">Section&nbsp;30.4, &#8220;SFTP Session Caching&#8221;</a>), each of the delegates should be cached.
+You cannot cache the <code class="literal">DelegatingSessionFactory</code> itself.</p>
+</td></tr></table></div>
+<p>Starting with <span class="emphasis"><em>version 5.0.7</em></span>, the <code class="literal">DelegatingSessionFactory</code> can be used in conjunction with a <code class="literal">RotatingServerAdvice</code> to poll multiple servers; see <a class="xref" href="sftp.html#sftp-rotating-server-advice" title="30.8&nbsp;Inbound Channel Adapters: Polling Multiple Servers and Directories">Section&nbsp;30.8, &#8220;Inbound Channel Adapters: Polling Multiple Servers and Directories&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-session-caching" href="#sftp-session-caching"></a>30.4&nbsp;SFTP Session Caching</h2></div></div></div>
+
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Starting with Spring Integration version 3.0, sessions are no longer cached by default.
+The <code class="literal">cache-sessions</code> attribute is no longer supported on endpoints.
+If you wish to cache sessions, you must use a <code class="literal">CachingSessionFactory</code> (see the next example).</p>
+</td></tr></table></div>
+<p>In versions prior to 3.0, the sessions were automatically cached by default.
+A <code class="literal">cache-sessions</code> attribute was available for disabling the auto caching, but that solution did not provide a way to configure other session-caching attributes.
+For example, you could not limit on the number of sessions created.
+To support that requirement and other configuration options, we added a <code class="literal">CachingSessionFactory</code>.
+It provides <code class="literal">sessionCacheSize</code> and <code class="literal">sessionWaitTimeout</code> properties.
+As its name suggests, the <code class="literal">sessionCacheSize</code> property controls how many active sessions the factory maintains in its cache (the default is unbounded).
+If the <code class="literal">sessionCacheSize</code> threshold has been reached, any attempt to acquire another session blocks until either one of the cached sessions becomes available or until the wait time for a session expires (the default wait time is <code class="literal">Integer.MAX_VALUE</code>).
+The <code class="literal">sessionWaitTimeout</code> property enables configuration of the wait time.</p>
+<p>If you want your sessions to be cached, configure your default session factory (as <a class="link" href="sftp.html#sftp-session-factory" title="30.1&nbsp;SFTP Session Factory">described earlier</a>) and then wrap it in an instance of <code class="literal">CachingSessionFactory</code> where you may provide those additional properties.
+The following example shows how to do so:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sftpSessionFactory"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.sftp.session.DefaultSftpSessionFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"host"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"localhost"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"cachingSessionFactory"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.file.remote.session.CachingSessionFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"sftpSessionFactory"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"10"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"sessionWaitTimeout"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+<p>The preceding example creates a <code class="literal">CachingSessionFactory</code> with its <code class="literal">sessionCacheSize</code> set to <code class="literal">10</code> and its <code class="literal">sessionWaitTimeout</code> set to one second (1000 milliseconds).</p>
+<p>Starting with Spring Integration version 3.0, the <code class="literal">CachingConnectionFactory</code> provides a <code class="literal">resetCache()</code> method.
+When invoked, all idle sessions are immediately closed and in-use sessions are closed when they are returned to the cache.
+When using <code class="literal">isSharedSession=true</code>, the channel is closed and the shared session is closed only when the last channel is closed.
+New requests for sessions establish new sessions as necessary.</p>
+<p>Starting with version 5.1, the <code class="literal">CachingSessionFactory</code> has a new property <code class="literal">testSession</code>.
+When true, the session will be tested by performing a <code class="literal">stat(getHome())</code> command to ensure it is still active; if not, it will be removed from the cache; a new session is created if no active sessions are in the cache.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-rft" href="#sftp-rft"></a>30.5&nbsp;Using <code class="literal">RemoteFileTemplate</code></h2></div></div></div>
+
+<p>Spring Integration version 3.0 provides a new abstraction over the <code class="literal">SftpSession</code> object.
+The template provides methods to send, retrieve (as an <code class="literal">InputStream</code>), remove, and rename files.
+In addition, we provide an <code class="literal">execute</code> method to let the caller run multiple operations on the session.
+In all cases, the template takes care of reliably closing the session.
+For more information, see the <a class="ulink" href="http://docs.spring.io/spring-integration/api/org/springframework/integration/file/remote/RemoteFileTemplate.html" target="_top">Javadoc for <code class="literal">RemoteFileTemplate</code></a> There is a subclass for SFTP: <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/sftp/session/SftpRemoteFileTemplate.html" target="_top"><code class="literal">SftpRemoteFileTemplate</code></a>.</p>
+<p>We added additional methods in version 4.1, including <code class="literal">getClientInstance()</code>.
+It provides access to the underlying <code class="literal">ChannelSftp</code>, which enables access to low-level APIs.</p>
+<p>Version 5.0 introduced the <code class="literal">RemoteFileOperations.invoke(OperationsCallback&lt;F, T&gt; action)</code> method.
+This method lets several <code class="literal">RemoteFileOperations</code> calls be called in the scope of the same thread-bounded <code class="literal">Session</code>.
+This is useful when you need to perform several high-level operations of the <code class="literal">RemoteFileTemplate</code> as one unit of work.
+For example, <code class="literal">AbstractRemoteFileOutboundGateway</code> uses it with the <code class="literal">mput</code> command implementation, where we perform a <code class="literal">put</code> operation for each file in the provided directory and recursively for its sub-directories.
+See the <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/file/remote/RemoteFileTemplate.html#invoke-org.springframework.integration.file.remote.OperationsCallback-" target="_top">Javadoc</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-inbound" href="#sftp-inbound"></a>30.6&nbsp;SFTP Inbound Channel Adapter</h2></div></div></div>
+
+<p>The SFTP inbound channel adapter is a special listener that connects to the server and listens for the remote directory events (such as a new file being created), at which point it initiates a file transfer.
+The following example shows how to configure an SFTP inbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-sftp:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sftpAdapterAutoCreate"</span>
+              <span class="hl-attribute">session-factory</span>=<span class="hl-value">"sftpSessionFactory"</span>
+            <span class="hl-attribute">channel</span>=<span class="hl-value">"requestChannel"</span>
+            <span class="hl-attribute">filename-pattern</span>=<span class="hl-value">"*.txt"</span>
+            <span class="hl-attribute">remote-directory</span>=<span class="hl-value">"/foo/bar"</span>
+            <span class="hl-attribute">preserve-timestamp</span>=<span class="hl-value">"true"</span>
+            <span class="hl-attribute">local-directory</span>=<span class="hl-value">"file:target/foo"</span>
+            <span class="hl-attribute">auto-create-local-directory</span>=<span class="hl-value">"true"</span>
+            <span class="hl-attribute">local-filename-generator-expression</span>=<span class="hl-value">"#this.toUpperCase() + '.a'"</span>
+            <span class="hl-attribute">scanner</span>=<span class="hl-value">"myDirScanner"</span>
+            <span class="hl-attribute">local-filter</span>=<span class="hl-value">"myFilter"</span>
+            <span class="hl-attribute">temporary-file-suffix</span>=<span class="hl-value">".writing"</span>
+            <span class="hl-attribute">max-fetch-size</span>=<span class="hl-value">"-1"</span>
+            <span class="hl-attribute">delete-remote-files</span>=<span class="hl-value">"false"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-sftp:inbound-channel-adapter&gt;</span></pre>
+</div>
+<p>The preceding configuration example shows how to provide values for various attributes, including the following:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">local-directory</code>: The location to which files are going to be transferred
+</li><li class="listitem">
+<code class="literal">remote-directory</code>: The remote source directory from which files are going to be transferred
+</li><li class="listitem">
+<code class="literal">session-factory</code>: A reference to the bean we configured earlier
+</li></ul></div>
+<p>By default, the transferred file carries the same name as the original file.
+If you want to override this behavior, you can set the <code class="literal">local-filename-generator-expression</code> attribute, which lets you provide a SpEL expression to generate the name of the local file.
+Unlike outbound gateways and adapters, where the root object of the SpEL evaluation context is a <code class="literal">Message</code>, this inbound adapter does not yet have the message at the time of evaluation, since that is what it ultimately generates with the transferred file as its payload.
+Consequently, the root object of the SpEL evaluation context is the original name of the remote file (a <code class="literal">String</code>).</p>
+<p>The inbound channel adapter first retrieves the file to a local directory and then emits each file according to the poller configuration.
+Starting with version 5.0, you can limit the number of files fetched from the FTP server when new file retrievals are needed.
+This can be beneficial when the target files are large or when running in a clustered system with a persistent file list filter, discussed later in this section.
+Use <code class="literal">max-fetch-size</code> for this purpose.
+A negative value (the default) means no limit and all matching files are retrieved.
+See <a class="xref" href="sftp.html#sftp-max-fetch" title="30.9&nbsp;Inbound Channel Adapters: Controlling Remote File Fetching">Section&nbsp;30.9, &#8220;Inbound Channel Adapters: Controlling Remote File Fetching&#8221;</a> for more information.
+Since version 5.0, you can also provide a custom <code class="literal">DirectoryScanner</code> implementation to the <code class="literal">inbound-channel-adapter</code> by setting the <code class="literal">scanner</code> attribute.</p>
+<p>Starting with Spring Integration 3.0, you can specify the <code class="literal">preserve-timestamp</code> attribute (the default is <code class="literal">false</code>).
+When <code class="literal">true</code>, the local file&#8217;s modified timestamp is set to the value retrieved from the server.
+Otherwise, it is set to the current time.</p>
+<p>Starting with version 4.2, you can specify <code class="literal">remote-directory-expression</code> instead of <code class="literal">remote-directory</code>, which lets
+you dynamically determine the directory on each poll&#8201;&#8212;&#8201;for example, <code class="literal">remote-directory-expression="@myBean.determineRemoteDir()"</code>.</p>
+<p>Sometimes, file filtering based on the simple pattern specified via <code class="literal">filename-pattern</code> attribute might not suffice.
+If this is the case, you can use the <code class="literal">filename-regex</code> attribute to specify a regular expression (for example, <code class="literal">filename-regex=".*\.test$"</code>).
+If you need complete control, you can use the <code class="literal">filter</code> attribute to provide a reference to a custom implementation of the <code class="literal">org.springframework.integration.file.filters.FileListFilter</code>, which is a strategy interface for filtering a list of files.
+This filter determines which remote files are retrieved.
+You can also combine a pattern-based filter with other filters (such as an <code class="literal">AcceptOnceFileListFilter</code>, to avoid synchronizing files that have previously been fetched) by using a <code class="literal">CompositeFileListFilter</code>.</p>
+<p>The <code class="literal">AcceptOnceFileListFilter</code> stores its state in memory.
+If you wish the state to survive a system restart, consider using the <code class="literal">SftpPersistentAcceptOnceFileListFilter</code> instead.
+This filter stores the accepted file names in an instance of the <code class="literal">MetadataStore</code> strategy (see <a class="xref" href="system-management-chapter.html#metadata-store" title="12.5&nbsp;Metadata Store">Section&nbsp;12.5, &#8220;Metadata Store&#8221;</a>).
+This filter matches on the filename and the remote modified time.</p>
+<p>Since version 4.0, this filter requires a <code class="literal">ConcurrentMetadataStore</code>.
+When used with a shared data store (such as <code class="literal">Redis</code> with the <code class="literal">RedisMetadataStore</code>), this lets filter keys be shared across multiple application or server instances.</p>
+<p>Starting with version 5.0, the <code class="literal">SftpPersistentAcceptOnceFileListFilter</code> with an in-memory <code class="literal">SimpleMetadataStore</code> is applied by default for the <code class="literal">SftpInboundFileSynchronizer</code>.
+This filter is also applied, together with the <code class="literal">regex</code> or <code class="literal">pattern</code> option in the XML configuration, as well as through <code class="literal">FtpInboundChannelAdapterSpec</code> in Java DSL.
+You can handle any other use-cases by using <code class="literal">CompositeFileListFilter</code> (or <code class="literal">ChainFileListFilter</code>).</p>
+<p>The above discussion refers to filtering the files before retrieving them.
+Once the files have been retrieved, an additional filter is applied to the files on the file system.
+By default, this is an`AcceptOnceFileListFilter`, which, as discussed in this section, retains state in memory and does not consider the file&#8217;s modified time.
+Unless your application removes files after processing, the adapter re-processes the files on disk by default after an application restart.</p>
+<p>Also, if you configure the <code class="literal">filter</code> to use a <code class="literal">FtpPersistentAcceptOnceFileListFilter</code> and the remote file timestamp changes (causing it to be re-fetched), the default local filter does not allow this new file to be processed.</p>
+<p>You can use the <code class="literal">local-filter</code> attribute to configure the behavior of the local file system filter.
+Starting with version 4.3.8, a <code class="literal">FileSystemPersistentAcceptOnceFileListFilter</code> is configured by default.
+This filter stores the accepted file names and modified timestamp in an instance of the <code class="literal">MetadataStore</code> strategy (see <a class="xref" href="system-management-chapter.html#metadata-store" title="12.5&nbsp;Metadata Store">Section&nbsp;12.5, &#8220;Metadata Store&#8221;</a>) and detects changes to the local file modified time.
+The default <code class="literal">MetadataStore</code> is a <code class="literal">SimpleMetadataStore</code> that stores state in memory.</p>
+<p>Since version 4.1.5, these filters have a new property called <code class="literal">flushOnUpdate</code>, which causes them to flush the
+metadata store on every update (if the store implements <code class="literal">Flushable</code>).</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Further, if you use a distributed <code class="literal">MetadataStore</code> (such as <a class="xref" href="redis.html#redis-metadata-store" title="27.4&nbsp;Redis Metadata Store">Section&nbsp;27.4, &#8220;Redis Metadata Store&#8221;</a> or <a class="xref" href="gemfire.html#gemfire-metadata-store" title="19.6&nbsp;Gemfire Metadata Store">Section&nbsp;19.6, &#8220;Gemfire Metadata Store&#8221;</a>), you can have multiple instances of the same adapter or application and be sure that one and only one instance processes a file.</p>
+</td></tr></table></div>
+<p>The actual local filter is a <code class="literal">CompositeFileListFilter</code> that contains the supplied filter and a pattern filter that prevents processing files that are in the process of being downloaded (based on the <code class="literal">temporary-file-suffix</code>).
+Files are downloaded with this suffix (the default is <code class="literal">.writing</code>), and the files are renamed to their final names when the transfer is complete, making them <span class="emphasis"><em>visible</em></span> to the filter.</p>
+<p>See the <a class="ulink" href="https://github.com/spring-projects/spring-integration/tree/master/spring-integration-core/src/main/resources/org/springframework/integration/config" target="_top">schema</a> for more detail on these attributes.</p>
+<p>SFTP inbound channel adapter is a polling consumer.
+Therefore, you must configure a poller (either a global default or a local element).
+Once the file has been transferred to a local directory, a message with <code class="literal">java.io.File</code> as its payload type is generated and sent to the channel identified by the <code class="literal">channel</code> attribute.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_more_on_file_filtering_and_large_files" href="#_more_on_file_filtering_and_large_files"></a>30.6.1&nbsp;More on File Filtering and Large Files</h3></div></div></div>
+
+<p>Sometimes, a file that just appeared in the monitored (remote) directory is not complete.
+Typically such a file is written with some temporary extension (such as <code class="literal">.writing</code> on a file named <code class="literal">something.txt.writing</code>) and then renamed after the writing process completes.
+In most cases, developers are interested only in files that are complete and would like to filter only those files.
+To handle these scenarios, you can use the filtering support provided by the <code class="literal">filename-pattern</code>, <code class="literal">filename-regex</code>, and <code class="literal">filter</code> attributes.
+If you need a custom filter implementation, you can include a reference in your adapter by setting the <code class="literal">filter</code> attribute.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-sftp:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sftpInbondAdapter"</span>
+            <span class="hl-attribute">channel</span>=<span class="hl-value">"receiveChannel"</span>
+            <span class="hl-attribute">session-factory</span>=<span class="hl-value">"sftpSessionFactory"</span>
+            <span class="hl-attribute">filter</span>=<span class="hl-value">"customFilter"</span>
+            <span class="hl-attribute">local-directory</span>=<span class="hl-value">"file:/local-test-dir"</span>
+            <span class="hl-attribute">remote-directory</span>=<span class="hl-value">"/remote-test-dir"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span> <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"10"</span> <span class="hl-attribute">task-executor</span>=<span class="hl-value">"executor"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-sftp:inbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"customFilter"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"org.foo.CustomFilter"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_recovering_from_failures_2" href="#_recovering_from_failures_2"></a>30.6.2&nbsp;Recovering from Failures</h3></div></div></div>
+
+<p>You should understand the architecture of the adapter.
+A file synchronizer fetches the files, and a <code class="literal">FileReadingMessageSource</code> emits a message for each synchronized file.
+As <a class="link" href="sftp.html#sftp-inbound" title="30.6&nbsp;SFTP Inbound Channel Adapter">discussed earlier</a>, two filters are involved.
+The <code class="literal">filter</code> attribute (and patterns) refers to the remote (SFTP) file list, to avoid fetching files that have already
+been fetched.
+the <code class="literal">FileReadingMessageSource</code> uses the <code class="literal">local-filter</code> to determine which files are to be sent as messages.</p>
+<p>The synchronizer lists the remote files and consults its filter.
+The files are then transferred.
+If an IO error occurs during file transfer, any files that have already been added to the filter are removed so that they
+are eligible to be re-fetched on the next poll.
+This applies only if the filter implements <code class="literal">ReversibleFileListFilter</code> (such as the <code class="literal">AcceptOnceFileListFilter</code>).</p>
+<p>If, after synchronizing the files, an error occurs on the downstream flow processing a file, no automatic rollback of the filter occurs, so the failed file is not reprocessed by default.</p>
+<p>If you wish to reprocess such files after a failure, you can use a configuration similar to the following to facilitate
+the removal of the failed file from the filter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-sftp:inbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sftpAdapter"</span>
+        <span class="hl-attribute">session-factory</span>=<span class="hl-value">"sftpSessionFactory"</span>
+        <span class="hl-attribute">channel</span>=<span class="hl-value">"requestChannel"</span>
+        <span class="hl-attribute">remote-directory-expression</span>=<span class="hl-value">"'/sftpSource'"</span>
+        <span class="hl-attribute">local-directory</span>=<span class="hl-value">"file:myLocalDir"</span>
+        <span class="hl-attribute">auto-create-local-directory</span>=<span class="hl-value">"true"</span>
+        <span class="hl-attribute">filename-pattern</span>=<span class="hl-value">"*.txt"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int:transactional</span> <span class="hl-attribute">synchronization-factory</span>=<span class="hl-value">"syncFactory"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;/int:poller&gt;</span>
+<span class="hl-tag">&lt;/int-sftp:inbound-channel-adapter&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"acceptOnceFilter"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.file.filters.AcceptOnceFileListFilter"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int:transaction-synchronization-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"syncFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:after-rollback</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload.delete()"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int:transaction-synchronization-factory&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"transactionManager"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.transaction.PseudoTransactionManager"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<p>The preceding configuration works for any <code class="literal">ResettableFileListFilter</code>.</p>
+<p>Starting with version 5.0, the inbound channel adapter can build sub-directories locally, according to the generated local file name.
+That can be a remote sub-path as well.
+To be able to read a local directory recursively for modification according to the hierarchy support, you can now supply an internal <code class="literal">FileReadingMessageSource</code> with a new <code class="literal">RecursiveDirectoryScanner</code> based on the <code class="literal">Files.walk()</code> algorithm.
+See <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/file/remote/synchronizer/AbstractInboundFileSynchronizingMessageSource.html#setScanner-org.springframework.integration.file.DirectoryScanner" target="_top">https://docs.spring.io/spring-integration/api/org/springframework/integration/file/remote/synchronizer/AbstractInboundFileSynchronizingMessageSource.html#setScanner-org.springframework.integration.file.DirectoryScanner</a>[<code class="literal">AbstractInboundFileSynchronizingMessageSource.setScanner()]</code> for more information.
+Also, you can now switch the <code class="literal">AbstractInboundFileSynchronizingMessageSource</code> to the <code class="literal">WatchService</code>-based <code class="literal">DirectoryScanner</code> by using <code class="literal">setUseWatchService()</code> option.
+It is also configured for all the <code class="literal">WatchEventType</code> instances to react for any modifications in local directory.
+The reprocessing sample shown earlier is based on the built-in functionality of the <code class="literal">FileReadingMessageSource.WatchServiceDirectoryScanner</code>, which uses <code class="literal">ResettableFileListFilter.remove()</code> when the file is deleted (<code class="literal">StandardWatchEventKinds.ENTRY_DELETE</code>) from the local directory.
+See <a class="xref" href="files.html#watch-service-directory-scanner" title="17.1.4&nbsp;WatchServiceDirectoryScanner">Section&nbsp;17.1.4, &#8220;<code class="literal">WatchServiceDirectoryScanner</code>&#8221;</a> for more information.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_21" href="#_configuring_with_java_configuration_21"></a>30.6.3&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the inbound adapter with Java:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SftpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(SftpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> SessionFactory&lt;LsEntry&gt; sftpSessionFactory() {
+        DefaultSftpSessionFactory factory = <span class="hl-keyword">new</span> DefaultSftpSessionFactory(true);
+        factory.setHost(<span class="hl-string">"localhost"</span>);
+        factory.setPort(port);
+        factory.setUser(<span class="hl-string">"foo"</span>);
+        factory.setPassword(<span class="hl-string">"foo"</span>);
+        factory.setAllowUnknownKeys(true);
+        factory.setTestSession(true);
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> CachingSessionFactory&lt;LsEntry&gt;(factory);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> SftpInboundFileSynchronizer sftpInboundFileSynchronizer() {
+        SftpInboundFileSynchronizer fileSynchronizer = <span class="hl-keyword">new</span> SftpInboundFileSynchronizer(sftpSessionFactory());
+        fileSynchronizer.setDeleteRemoteFiles(false);
+        fileSynchronizer.setRemoteDirectory(<span class="hl-string">"foo"</span>);
+        fileSynchronizer.setFilter(<span class="hl-keyword">new</span> SftpSimplePatternFileListFilter(<span class="hl-string">"*.xml"</span>));
+        <span class="hl-keyword">return</span> fileSynchronizer;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter(channel = "sftpChannel", poller = @Poller(fixedDelay = "5000"))</span></em>
+    <span class="hl-keyword">public</span> MessageSource&lt;File&gt; sftpMessageSource() {
+        SftpInboundFileSynchronizingMessageSource source =
+                <span class="hl-keyword">new</span> SftpInboundFileSynchronizingMessageSource(sftpInboundFileSynchronizer());
+        source.setLocalDirectory(<span class="hl-keyword">new</span> File(<span class="hl-string">"sftp-inbound"</span>));
+        source.setAutoCreateLocalDirectory(true);
+        source.setLocalFilter(<span class="hl-keyword">new</span> AcceptOnceFileListFilter&lt;File&gt;());
+        source.setMaxFetchSize(<span class="hl-number">1</span>);
+        <span class="hl-keyword">return</span> source;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "sftpChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler handler() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> MessageHandler() {
+
+            <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+            <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> handleMessage(Message&lt;?&gt; message) <span class="hl-keyword">throws</span> MessagingException {
+                System.out.println(message.getPayload());
+            }
+
+        };
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_21" href="#_configuring_with_the_java_dsl_21"></a>30.6.4&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the inbound adapter with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SftpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(SftpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow sftpInboundFlow() {
+        <span class="hl-keyword">return</span> IntegrationFlows
+            .from(s -&gt; s.sftp(<span class="hl-keyword">this</span>.sftpSessionFactory)
+                    .preserveTimestamp(true)
+                    .remoteDirectory(<span class="hl-string">"foo"</span>)
+                    .regexFilter(<span class="hl-string">".*\\.txt$"</span>)
+                    .localFilenameExpression(<span class="hl-string">"#this.toUpperCase() + '.a'"</span>)
+                    .localDirectory(<span class="hl-keyword">new</span> File(<span class="hl-string">"sftp-inbound"</span>)),
+                 e -&gt; e.id(<span class="hl-string">"sftpInboundAdapter"</span>)
+                    .autoStartup(true)
+                    .poller(Pollers.fixedDelay(<span class="hl-number">5000</span>)))
+            .handle(m -&gt; System.out.println(m.getPayload()))
+            .get();
+    }
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sftp-incomplete" href="#sftp-incomplete"></a>30.6.5&nbsp;Dealing With Incomplete Data</h3></div></div></div>
+
+<p>See <a class="xref" href="files.html#file-incomplete" title="17.1.9&nbsp;Dealing With Incomplete Data">Section&nbsp;17.1.9, &#8220;Dealing With Incomplete Data&#8221;</a>.</p>
+<p>The <code class="literal">SftpSystemMarkerFilePresentFileListFilter</code> is provided to filter remote files that don&#8217;t have the corresponding marker file on the remote system.
+See the <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/sftp/filters/SftpSystemMarkerFilePresentFileListFilter.html" target="_top">Javadoc</a> for configuration information.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-streaming" href="#sftp-streaming"></a>30.7&nbsp;SFTP Streaming Inbound Channel Adapter</h2></div></div></div>
+
+<p>Version 4.3 introduced the streaming inbound channel adapter.
+This adapter produces message with payloads of type <code class="literal">InputStream</code>, letting you fetch files without writing to the local file system.
+Since the session remains open, the consuming application is responsible for closing the session when the file has been consumed.
+The session is provided in the <code class="literal">closeableResource</code> header (<code class="literal">IntegrationMessageHeaderAccessor.CLOSEABLE_RESOURCE</code>).
+Standard framework components, such as the <code class="literal">FileSplitter</code> and <code class="literal">StreamTransformer</code>, automatically close the session.
+See <a class="xref" href="files.html#file-splitter" title="17.4&nbsp;File Splitter">Section&nbsp;17.4, &#8220;File Splitter&#8221;</a> and <a class="xref" href="messaging-transformation-chapter.html#stream-transformer" title="Stream Transformer">the section called &#8220;Stream Transformer&#8221;</a> for more information about these components.
+The following example shows how to configure an SFTP streaming inbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-sftp:inbound-streaming-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"ftpInbound"</span>
+            <span class="hl-attribute">channel</span>=<span class="hl-value">"ftpChannel"</span>
+            <span class="hl-attribute">session-factory</span>=<span class="hl-value">"sessionFactory"</span>
+            <span class="hl-attribute">filename-pattern</span>=<span class="hl-value">"*.txt"</span>
+            <span class="hl-attribute">filename-regex</span>=<span class="hl-value">".*\.txt"</span>
+            <span class="hl-attribute">filter</span>=<span class="hl-value">"filter"</span>
+            <span class="hl-attribute">filter-expression</span>=<span class="hl-value">"@myFilterBean.check(#root)"</span>
+            <span class="hl-attribute">remote-file-separator</span>=<span class="hl-value">"/"</span>
+            <span class="hl-attribute">comparator</span>=<span class="hl-value">"comparator"</span>
+            <span class="hl-attribute">max-fetch-size</span>=<span class="hl-value">"1"</span>
+            <span class="hl-attribute">remote-directory-expression</span>=<span class="hl-value">"'foo/bar'"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int-sftp:inbound-streaming-channel-adapter&gt;</span></pre>
+</div>
+<p>You can use only one of <code class="literal">filename-pattern</code>, <code class="literal">filename-regex</code>, <code class="literal">filter</code>, or <code class="literal">filter-expression</code>.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Starting with version 5.0, by default, the <code class="literal">SftpStreamingMessageSource</code> adapter prevents duplicates for remote files by using <code class="literal">SftpPersistentAcceptOnceFileListFilter</code> based on the in-memory <code class="literal">SimpleMetadataStore</code>.
+By default, this filter is also applied together with the filename pattern (or regex) as well.
+If you need to allow duplicates, you can use the <code class="literal">AcceptAllFileListFilter</code>.
+You can handle any other use cases by using <code class="literal">CompositeFileListFilter</code> (or <code class="literal">ChainFileListFilter</code>).
+The Java configuration <a class="link" href="sftp.html#sftp-streaming-java-config" title="30.7.1&nbsp;Configuring with Java Configuration">shown later</a> shows one technique to remove the remote file after processing, avoiding duplicates.</p>
+</td></tr></table></div>
+<p>You can use the <code class="literal">max-fetch-size</code> attribute to limit the number of files fetched on each poll when a fetch is necessary.
+Set it to <code class="literal">1</code> and use a persistent filter when running in a clustered environment.
+See <a class="xref" href="sftp.html#sftp-max-fetch" title="30.9&nbsp;Inbound Channel Adapters: Controlling Remote File Fetching">Section&nbsp;30.9, &#8220;Inbound Channel Adapters: Controlling Remote File Fetching&#8221;</a> for more information.</p>
+<p>The adapter puts the remote directory and the file name in headers (<code class="literal">FileHeaders.REMOTE_DIRECTORY</code> and <code class="literal">FileHeaders.REMOTE_FILE</code>, respectively).
+Starting with version 5.0, the <code class="literal">FileHeaders.REMOTE_FILE_INFO</code> header provides additional remote file information (in JSON).
+If you set the <code class="literal">fileInfoJson</code> property on the <code class="literal">SftpStreamingMessageSource</code> to <code class="literal">false</code>, the header contains an <code class="literal">SftpFileInfo</code> object.
+You can access the <code class="literal">LsEntry</code> object provided by the underlying Jsch library by using the <code class="literal">SftpFileInfo.getFileInfo()</code> method.
+The <code class="literal">fileInfoJson</code> property is not available when you use XML configuration, but you can set it by injecting the <code class="literal">SftpStreamingMessageSource</code> into one of your configuration classes.</p>
+<p>Starting with version 5.1, the generic type of the <code class="literal">comparator</code> is <code class="literal">LsEntry</code>.
+Previously, it was <code class="literal">AbstractFileInfo&lt;LsEntry&gt;</code>.
+This is because the sort is now performed earlier in the processing, before filtering and applying <code class="literal">maxFetch</code>.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sftp-streaming-java-config" href="#sftp-streaming-java-config"></a>30.7.1&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the inbound adapter with Java:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SftpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(SftpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@InboundChannelAdapter(channel = "stream")</span></em>
+    <span class="hl-keyword">public</span> MessageSource&lt;InputStream&gt; ftpMessageSource() {
+        SftpStreamingMessageSource messageSource = <span class="hl-keyword">new</span> SftpStreamingMessageSource(template());
+        messageSource.setRemoteDirectory(<span class="hl-string">"sftpSource/"</span>);
+        messageSource.setFilter(<span class="hl-keyword">new</span> AcceptAllFileListFilter&lt;&gt;());
+        messageSource.setMaxFetchSize(<span class="hl-number">1</span>);
+        <span class="hl-keyword">return</span> messageSource;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@Transformer(inputChannel = "stream", outputChannel = "data")</span></em>
+    <span class="hl-keyword">public</span> org.springframework.integration.transformer.Transformer transformer() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> StreamTransformer(<span class="hl-string">"UTF-8"</span>);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> SftpRemoteFileTemplate template() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> SftpRemoteFileTemplate(sftpSessionFactory());
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "data", adviceChain = "after")</span></em>
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> MessageHandler handle() {
+        <span class="hl-keyword">return</span> System.out::println;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> ExpressionEvaluatingRequestHandlerAdvice after() {
+        ExpressionEvaluatingRequestHandlerAdvice advice = <span class="hl-keyword">new</span> ExpressionEvaluatingRequestHandlerAdvice();
+        advice.setOnSuccessExpression(
+                <span class="hl-string">"@template.remove(headers['file_remoteDirectory'] + headers['file_remoteFile'])"</span>);
+        advice.setPropagateEvaluationFailures(true);
+        <span class="hl-keyword">return</span> advice;
+    }
+
+}</pre>
+</div>
+<p>Notice that, in this example, the message handler downstream of the transformer has an advice that removes the remote file after processing.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-rotating-server-advice" href="#sftp-rotating-server-advice"></a>30.8&nbsp;Inbound Channel Adapters: Polling Multiple Servers and Directories</h2></div></div></div>
+
+<p>Starting with <span class="emphasis"><em>version 5.0.7</em></span>, the <code class="literal">RotatingServerAdvice</code> is available; when configured as a poller advice, the inbound adapters can poll multiple servers and directories.
+Configure the advice and add it to the poller&#8217;s advice chain as normal.
+A <code class="literal">DelegatingSessionFactory</code> is used to select the server see <a class="xref" href="ftp.html#ftp-dsf" title="18.3&nbsp;Delegating Session Factory">Section&nbsp;18.3, &#8220;Delegating Session Factory&#8221;</a> for more information.
+The advice configuration consists of a list of <code class="literal">RotatingServerAdvice.KeyDirectory</code> objects.</p>
+<p>
+<b>Example.&nbsp;</b>
+
+</p><pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> RotatingServerAdvice advice() {
+    List&lt;KeyDirectory&gt; keyDirectories = <span class="hl-keyword">new</span> ArrayList&lt;&gt;();
+    keyDirectories.add(<span class="hl-keyword">new</span> KeyDirectory(<span class="hl-string">"one"</span>, <span class="hl-string">"foo"</span>));
+    keyDirectories.add(<span class="hl-keyword">new</span> KeyDirectory(<span class="hl-string">"one"</span>, <span class="hl-string">"bar"</span>));
+    keyDirectories.add(<span class="hl-keyword">new</span> KeyDirectory(<span class="hl-string">"two"</span>, <span class="hl-string">"baz"</span>));
+    keyDirectories.add(<span class="hl-keyword">new</span> KeyDirectory(<span class="hl-string">"two"</span>, <span class="hl-string">"qux"</span>));
+    keyDirectories.add(<span class="hl-keyword">new</span> KeyDirectory(<span class="hl-string">"three"</span>, <span class="hl-string">"fiz"</span>));
+    keyDirectories.add(<span class="hl-keyword">new</span> KeyDirectory(<span class="hl-string">"three"</span>, <span class="hl-string">"buz"</span>));
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> RotatingServerAdvice(delegatingSf(), keyDirectories);
+}</pre><p>
+
+</p>
+<p>This advice will poll directory <code class="literal">foo</code> on server <code class="literal">one</code> until no new files exist then move to directory <code class="literal">bar</code> and then directory <code class="literal">baz</code> on server <code class="literal">two</code>, etc.</p>
+<p>This default behavior can be modified with the <code class="literal">fair</code> constructor arg:</p>
+<p>
+<b>fair.&nbsp;</b>
+
+</p><pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> RotatingServerAdvice advice() {
+    ...
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> RotatingServerAdvice(delegatingSf(), keyDirectories, true);
+}</pre><p>
+
+</p>
+<p>In this case, the advice will move to the next server/directory regardless of whether the previous poll returned a file.</p>
+<p>Alternatively, you can provide your own <code class="literal">RotatingServerAdvice.RotationPolicy</code> to reconfigure the message source as needed:</p>
+<p>
+<b>policy.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> RotationPolicy {
+
+    <span class="hl-keyword">void</span> beforeReceive(MessageSource&lt;?&gt; source);
+
+    <span class="hl-keyword">void</span> afterReceive(<span class="hl-keyword">boolean</span> messageReceived, MessageSource&lt;?&gt; source);
+
+}</pre><p>
+
+</p>
+<p>and</p>
+<p>
+<b>custom.&nbsp;</b>
+
+</p><pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> RotatingServerAdvice advice() {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> RotatingServerAdvice(myRotationPolicy());
+}</pre><p>
+
+</p>
+<p>The <code class="literal">local-filename-generator-expression</code> attribute (<code class="literal">localFilenameGeneratorExpression</code> on the synchronizer) can now contain the <code class="literal">#remoteDirectory</code> variable.
+This allows files retrieved from different directories to be downloaded to similar directories locally:</p>
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> IntegrationFlow flow() {
+    <span class="hl-keyword">return</span> IntegrationFlows.from(Ftp.inboundAdapter(sf())
+                    .filter(<span class="hl-keyword">new</span> FtpPersistentAcceptOnceFileListFilter(<span class="hl-keyword">new</span> SimpleMetadataStore(), <span class="hl-string">"rotate"</span>))
+                    .localDirectory(<span class="hl-keyword">new</span> File(tmpDir))
+                    .localFilenameExpression(<span class="hl-string">"#remoteDirectory + T(java.io.File).separator + #root"</span>)
+                    .remoteDirectory(<span class="hl-string">"."</span>),
+                e -&gt; e.poller(Pollers.fixedDelay(<span class="hl-number">1</span>).advice(advice())))
+            .channel(MessageChannels.queue(<span class="hl-string">"files"</span>))
+            .get();
+}</pre>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Do not configure a <code class="literal">TaskExecutor</code> on the poller when using this advice; see <a class="xref" href="messaging-channels-section.html#conditional-pollers" title="6.2.4&nbsp;Conditional Pollers for Message Sources">Section&nbsp;6.2.4, &#8220;Conditional Pollers for Message Sources&#8221;</a> for more information.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-max-fetch" href="#sftp-max-fetch"></a>30.9&nbsp;Inbound Channel Adapters: Controlling Remote File Fetching</h2></div></div></div>
+
+<p>You should consider two properties when configuring inbound channel adapters.
+<code class="literal">max-messages-per-poll</code>, as with all pollers, can be used to limit the number of messages emitted on each poll (if more than the configured value are ready).
+<code class="literal">max-fetch-size</code> (since version 5.0) can limit the number of files retrieved from the remote server at a time.</p>
+<p>The following scenarios assume the starting state is an empty local directory:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">max-messages-per-poll=2</code> and <code class="literal">max-fetch-size=1</code>: The adapter fetches one file, emits it, fetches the next file, and emit it.
+Then it sleeps until the next poll.
+</li><li class="listitem">
+<code class="literal">max-messages-per-poll=2</code> and <code class="literal">max-fetch-size=2</code>): The adapter fetch both files and then emits each one.
+</li><li class="listitem">
+<code class="literal">max-messages-per-poll=2</code> and <code class="literal">max-fetch-size=4</code>: The adapter fetches up to 4 files (if available) and emits the first two (if there are at least two).
+The next two files will be emitted on the next poll.
+</li><li class="listitem">
+<code class="literal">max-messages-per-poll=2</code> and <code class="literal">max-fetch-size</code> not specified: The adapter fetches all remote files and emits the first two (if there are at least two).
+The subsequent files are emitted on subsequent polls (two at a time).
+When all are consumed, the remote fetch is attempted again, to pick up any new files.
+</li></ul></div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>When you deploy multiple instances of an application, we recommend setting a small <code class="literal">max-fetch-size</code>, to avoid one instance "<code class="literal">grabbing</code>" all the files and starving other instances.</p>
+</td></tr></table></div>
+<p>Another use for <code class="literal">max-fetch-size</code> is when you want to stop fetching remote files but continue to process files that have already been fetched.
+Setting the <code class="literal">maxFetchSize</code> property on the <code class="literal">MessageSource</code> (programmatically, via JMX, or via a <a class="link" href="system-management-chapter.html#control-bus" title="12.6&nbsp;Control Bus">control bus</a>) effectively stops the adapter from fetching more files but lets the poller continue to emit messages for files that have previously been fetched.
+If the poller is active when the property is changed, the change takes effect on the next poll.</p>
+<p>Starting with version 5.1, the synchronizer can be provided with a <code class="literal">Comparator&lt;LsEntry&gt;</code>.
+This is useful when restricting the number of files fetched with <code class="literal">maxFetchSize</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-outbound" href="#sftp-outbound"></a>30.10&nbsp;SFTP Outbound Channel Adapter</h2></div></div></div>
+
+<p>The SFTP outbound channel adapter is a special <code class="literal">MessageHandler</code> that connects to the remote directory and initiates a file transfer for every file it receives as the payload of an incoming <code class="literal">Message</code>.
+It also supports several representations of the file so that you are not limited to the <code class="literal">File</code> object.
+Similar to the FTP outbound adapter, the SFTP outbound channel adapter supports the following payloads:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">java.io.File</code>: The actual file object
+</li><li class="listitem">
+<code class="literal">byte[]</code>: A byte array that represents the file contents
+</li><li class="listitem">
+<code class="literal">java.lang.String</code>: Text that represents the file contents
+</li></ul></div>
+<p>The following example shows how to configure an SFTP outbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-sftp:outbound-channel-adapter</span> <span class="hl-attribute">id</span>=<span class="hl-value">"sftpOutboundAdapter"</span>
+    <span class="hl-attribute">session-factory</span>=<span class="hl-value">"sftpSessionFactory"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"inputChannel"</span>
+    <span class="hl-attribute">charset</span>=<span class="hl-value">"UTF-8"</span>
+    <span class="hl-attribute">remote-file-separator</span>=<span class="hl-value">"/"</span>
+    <span class="hl-attribute">remote-directory</span>=<span class="hl-value">"foo/bar"</span>
+    <span class="hl-attribute">remote-filename-generator-expression</span>=<span class="hl-value">"payload.getName() + '-mysuffix'"</span>
+    <span class="hl-attribute">filename-generator</span>=<span class="hl-value">"fileNameGenerator"</span>
+    <span class="hl-attribute">use-temporary-filename</span>=<span class="hl-value">"true"</span>
+    <span class="hl-attribute">chmod</span>=<span class="hl-value">"600"</span>
+    <span class="hl-attribute">mode</span>=<span class="hl-value">"REPLACE"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>See the <a class="ulink" href="https://github.com/spring-projects/spring-integration/tree/master/spring-integration-core/src/main/resources/org/springframework/integration/config" target="_top">schema</a> for more detail on these attributes.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_spel_and_the_sftp_outbound_adapter" href="#_spel_and_the_sftp_outbound_adapter"></a>30.10.1&nbsp;SpEL and the SFTP Outbound Adapter</h3></div></div></div>
+
+<p>As with many other components in Spring Integration, you can use the Spring Expression Language (SpEL) when you configure an SFTP outbound channel adapter by specifying two attributes: <code class="literal">remote-directory-expression</code> and <code class="literal">remote-filename-generator-expression</code> (<a class="link" href="sftp.html#sftp-inbound" title="30.6&nbsp;SFTP Inbound Channel Adapter">described earlier</a>).
+The expression evaluation context has the message as its root object, which lets you use expressions that can dynamically compute the file name or the existing directory path based on the data in the message (from either the <span class="emphasis"><em>payload</em></span> or the <span class="emphasis"><em>headers</em></span>).
+In the preceding example, we define the <code class="literal">remote-filename-generator-expression</code> attribute with an expression value that computes the file name based on its original name while also appending a suffix: <span class="emphasis"><em>-mysuffix</em></span>.</p>
+<p>Starting with version 4.1, you can specify the <code class="literal">mode</code> when you transferring the file.
+By default, an existing file is overwritten.
+The modes are defined by the <code class="literal">FileExistsMode</code> enumeration, which has the following values: <code class="literal">REPLACE</code> (default), <code class="literal">APPEND</code>, <code class="literal">IGNORE</code>, and <code class="literal">FAIL</code>.
+With <code class="literal">IGNORE</code> and <code class="literal">FAIL</code>, the file is not transferred.
+<code class="literal">FAIL</code> causes an exception to be thrown, while <code class="literal">IGNORE</code> silently ignores the transfer (although a <code class="literal">DEBUG</code> log entry is produced).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_avoiding_partially_written_files_2" href="#_avoiding_partially_written_files_2"></a>30.10.2&nbsp;Avoiding Partially Written Files</h3></div></div></div>
+
+<p>One of the common problems when dealing with file transfers is the possibility of processing a partial file.
+A file might appear in the file system before its transfer is actually complete.</p>
+<p>To deal with this issue, Spring Integration SFTP adapters use a common algorithm in which files are transferred under a temporary name and than renamed once they are fully transferred.</p>
+<p>By default, every file that is in the process of being transferred appear in the file system with an additional suffix, which, by default, is <code class="literal">.writing</code>.
+You can change by setting the <code class="literal">temporary-file-suffix</code> attribute.</p>
+<p>However, there may be situations where you do not want to use this technique (for example, if the server does not permit renaming files).
+For situations like this, you can disable this feature by setting <code class="literal">use-temporary-file-name</code> to <code class="literal">false</code> (the default is <code class="literal">true</code>).
+When this attribute is <code class="literal">false</code>, the file is written with its final name, and the consuming application needs some other mechanism to detect that the file is completely uploaded before accessing it.</p>
+<p>Version 4.3 introduced the <code class="literal">chmod</code> attribute, which you can use to change the remote file permissions after upload.
+You can use the conventional Unix octal format (for example, <code class="literal">600</code> allows read-write for the file owner only).
+When configuring the adapter using java, you can use <code class="literal">setChmodOctal("600")</code> or <code class="literal">setChmodDecimal(384)</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_22" href="#_configuring_with_java_configuration_22"></a>30.10.3&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the outbound adapter with Java:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<em><span class="hl-annotation" style="color: gray">@IntegrationComponentScan</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SftpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        ConfigurableApplicationContext context =
+                    <span class="hl-keyword">new</span> SpringApplicationBuilder(SftpJavaApplication.<span class="hl-keyword">class</span>)
+                        .web(false)
+                        .run(args);
+        MyGateway gateway = context.getBean(MyGateway.<span class="hl-keyword">class</span>);
+        gateway.sendToSftp(<span class="hl-keyword">new</span> File(<span class="hl-string">"/foo/bar.txt"</span>));
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> SessionFactory&lt;LsEntry&gt; sftpSessionFactory() {
+        DefaultSftpSessionFactory factory = <span class="hl-keyword">new</span> DefaultSftpSessionFactory(true);
+        factory.setHost(<span class="hl-string">"localhost"</span>);
+        factory.setPort(port);
+        factory.setUser(<span class="hl-string">"foo"</span>);
+        factory.setPassword(<span class="hl-string">"foo"</span>);
+        factory.setAllowUnknownKeys(true);
+        factory.setTestSession(true);
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> CachingSessionFactory&lt;LsEntry&gt;(factory);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "toSftpChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler handler() {
+        SftpMessageHandler handler = <span class="hl-keyword">new</span> SftpMessageHandler(sftpSessionFactory());
+        handler.setRemoteDirectoryExpressionString(<span class="hl-string">"headers['remote-target-dir']"</span>);
+        handler.setFileNameGenerator(<span class="hl-keyword">new</span> FileNameGenerator() {
+
+            <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+            <span class="hl-keyword">public</span> String generateFileName(Message&lt;?&gt; message) {
+                 <span class="hl-keyword">return</span> <span class="hl-string">"handlerContent.test"</span>;
+            }
+
+        });
+        <span class="hl-keyword">return</span> handler;
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@MessagingGateway</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">interface</span> MyGateway {
+
+         <em><span class="hl-annotation" style="color: gray">@Gateway(requestChannel = "toSftpChannel")</span></em>
+         <span class="hl-keyword">void</span> sendToSftp(File file);
+
+    }
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_22" href="#_configuring_with_the_java_dsl_22"></a>30.10.4&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the outbound adapter with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SftpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(SftpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow sftpOutboundFlow() {
+        <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"toSftpChannel"</span>)
+            .handle(Sftp.outboundAdapter(<span class="hl-keyword">this</span>.sftpSessionFactory, FileExistsMode.FAIL)
+                         .useTemporaryFileName(false)
+                         .remoteDirectory(<span class="hl-string">"/foo"</span>)
+            ).get();
+    }
+
+}</pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-outbound-gateway" href="#sftp-outbound-gateway"></a>30.11&nbsp;SFTP Outbound Gateway</h2></div></div></div>
+
+<p>The SFTP outbound gateway provides a limited set of commands that let you interact with a remote SFTP server:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">ls</code> (list files)
+</li><li class="listitem">
+<code class="literal">nlst</code> (list file names)
+</li><li class="listitem">
+<code class="literal">get</code> (retrieve a file)
+</li><li class="listitem">
+<code class="literal">mget</code> (retrieve multiple files)
+</li><li class="listitem">
+<code class="literal">rm</code> (remove file(s))
+</li><li class="listitem">
+<code class="literal">mv</code> (move and rename file)
+</li><li class="listitem">
+<code class="literal">put</code> (send a file)
+</li><li class="listitem">
+<code class="literal">mput</code> (send multiple files)
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_the_literal_ls_literal_command" href="#_using_the_literal_ls_literal_command"></a>30.11.1&nbsp;Using the <code class="literal">ls</code> Command</h3></div></div></div>
+
+<p><code class="literal">ls</code> lists remote files and supports the following options:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">-1</code>: Retrieve a list of filenames.
+The default is to retrieve a list of <code class="literal">FileInfo</code> objects
+</li><li class="listitem">
+<code class="literal">-a</code>: Include all files (including those starting with <span class="emphasis"><em>.</em></span>)
+</li><li class="listitem">
+<code class="literal">-f</code>: Do not sort the list
+</li><li class="listitem">
+<code class="literal">-dirs</code>: Include directories (excluded by default)
+</li><li class="listitem">
+<code class="literal">-links</code>: Include symbolic links (excluded by default)
+</li><li class="listitem">
+<code class="literal">-R</code>: List the remote directory recursively
+</li></ul></div>
+<p>In addition, filename filtering is provided in the same manner as the <code class="literal">inbound-channel-adapter</code>.</p>
+<p>The message payload resulting from an <code class="literal">ls</code> operation is a list of file names or a list of <code class="literal">FileInfo</code> objects (depending on whether you usr the <code class="literal">-1</code> switch).
+These objects provide information such as modified time, permissions, and others.</p>
+<p>The remote directory that the <code class="literal">ls</code> command acted on is provided in the <code class="literal">file_remoteDirectory</code> header.</p>
+<p>When using the recursive option (<code class="literal">-R</code>), the <code class="literal">fileName</code> includes any subdirectory elements and represents the relative path to the file (relative to the remote directory).
+If you use the <code class="literal">-dirs</code> option, each recursive directory is also returned as an element in the list.
+In this case, we recommend that you not use the <code class="literal">-1</code> option, because you would not be able to distinguish files from directories, which you can do when you use <code class="literal">FileInfo</code> objects.</p>
+<p>Using <code class="literal">nlst</code> Command</p>
+<p>Version 5 introduced support for the <code class="literal">nlst</code> command.</p>
+<p><code class="literal">nlst</code> lists remote file names and supports only one option:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">-f</code>: Do not sort the list
+</li></ul></div>
+<p>The message payload resulting from an <code class="literal">nlst</code> operation is a list of file names.</p>
+<p>The <code class="literal">file_remoteDirectory</code> header holds the remote directory on which the <code class="literal">nlst</code> command acted.</p>
+<p>The SFTP protocol does not provide the ability to list names.
+This command is the equivalent of the <code class="literal">ls</code> command with the <code class="literal">-1</code> option and is added here for convenience.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_the_literal_get_literal_command_2" href="#_using_the_literal_get_literal_command_2"></a>30.11.2&nbsp;Using the <code class="literal">get</code> Command</h3></div></div></div>
+
+<p><code class="literal">get</code> retrieves a remote file and supports the following options:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">-P</code>: Preserve the timestamp of the remote file.
+</li><li class="listitem">
+<code class="literal">-stream</code>: Retrieve the remote file as a stream.
+</li><li class="listitem">
+<code class="literal">-D</code>: Delete the remote file after successful transfer.
+The remote file is not deleted if the transfer is ignored, because the <code class="literal">FileExistsMode</code> is <code class="literal">IGNORE</code> and the local file already exists.
+</li></ul></div>
+<p>The <code class="literal">file_remoteDirectory</code> header holds the remote directory, and the <code class="literal">file_remoteFile</code> header holds the filename.</p>
+<p>The message payload resulting from a <code class="literal">get</code> operation is a <code class="literal">File</code> object representing the retrieved file.
+If you use the <code class="literal">-stream</code> option, the payload is an <code class="literal">InputStream</code> rather than a <code class="literal">File</code>.
+For text files, a common use case is to combine this operation with a <a class="link" href="files.html#file-splitter" title="17.4&nbsp;File Splitter">file splitter</a> or a
+<a class="link" href="messaging-transformation-chapter.html#stream-transformer" title="Stream Transformer">stream transformer</a>.
+When consuming remote files as streams, you are responsible for closing the <code class="literal">Session</code> after the stream is consumed.
+For convenience, the <code class="literal">Session</code> is provided in the <code class="literal">closeableResource</code> header, and <code class="literal">IntegrationMessageHeaderAccessor</code> offers convenience method:</p>
+<div class="informalexample">
+<pre class="programlisting">Closeable closeable = <span class="hl-keyword">new</span> IntegrationMessageHeaderAccessor(message).getCloseableResource();
+<span class="hl-keyword">if</span> (closeable != null) {
+    closeable.close();
+}</pre>
+</div>
+<p>Framework components, such as the <a class="link" href="files.html#file-splitter" title="17.4&nbsp;File Splitter">File Splitter</a> and <a class="link" href="messaging-transformation-chapter.html#stream-transformer" title="Stream Transformer">Stream Transformer</a>,
+automatically close the session after the data is transferred.</p>
+<p>The following example shows how to consume a file as a stream:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-sftp:outbound-gateway</span> <span class="hl-attribute">session-factory</span>=<span class="hl-value">"ftpSessionFactory"</span>
+                            <span class="hl-attribute">request-channel</span>=<span class="hl-value">"inboundGetStream"</span>
+                            <span class="hl-attribute">command</span>=<span class="hl-value">"get"</span>
+                            <span class="hl-attribute">command-options</span>=<span class="hl-value">"-stream"</span>
+                            <span class="hl-attribute">expression</span>=<span class="hl-value">"payload"</span>
+                            <span class="hl-attribute">remote-directory</span>=<span class="hl-value">"ftpTarget"</span>
+                            <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"stream"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;int-file:splitter</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"stream"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"lines"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If you consume the input stream in a custom component, you must close the <code class="literal">Session</code>.
+You can either do that in your custom code or route a copy of the message to a <code class="literal">service-activator</code> and use SpEL, as the following example shows:</p>
+</td></tr></table></div>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int:service-activator</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"closeSession"</span>
+    <span class="hl-attribute">expression</span>=<span class="hl-value">"headers['closeableResource'].close()"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_the_literal_mget_literal_command_2" href="#_using_the_literal_mget_literal_command_2"></a>30.11.3&nbsp;Using the <code class="literal">mget</code> Command</h3></div></div></div>
+
+<p><code class="literal">mget</code> retrieves multiple remote files based on a pattern and supports the following options:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">-P</code>: Preserve the timestamps of the remote files.
+</li><li class="listitem">
+<code class="literal">-R</code>: Retrieve the entire directory tree recursively.
+</li><li class="listitem">
+<code class="literal">-x</code>: Throw an exception if no files match the pattern (otherwise, an empty list is returned).
+</li><li class="listitem">
+<code class="literal">-D</code>: Delete each remote file after successful transfer.
+If the transfer is ignored, the remote file is not deleted, because the <code class="literal">FileExistsMode</code> is <code class="literal">IGNORE</code> and the local file already exists.
+</li></ul></div>
+<p>The message payload resulting from an <code class="literal">mget</code> operation is a <code class="literal">List&lt;File&gt;</code> object (that is, a <code class="literal">List</code> of <code class="literal">File</code> objects, each representing a retrieved file).</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Starting with version 5.0, if the <code class="literal">FileExistsMode</code> is <code class="literal">IGNORE</code>, the payload of the output message no longer contain files that were not fetched due to the file already existing.
+Previously, the array contained all files, including those that already existed.</p>
+</td></tr></table></div>
+<p>The expression you use determine the remote path should produce a result that ends with <code class="literal">*</code> for example <code class="literal">myfiles/*</code> fetches the complete tree under <code class="literal">myfiles</code>.</p>
+<p>Starting with version 5.0, you can use a recursive <code class="literal">MGET</code>, combined with the <code class="literal">FileExistsMode.REPLACE_IF_MODIFIED</code> mode, to periodically synchronize an entire remote directory tree locally.
+This mode sets the local file&#8217;s last modified timestamp to the remote file&#8217;s timestamp, regardless of the <code class="literal">-P</code> (preserve timestamp) option.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important: Notes for when using recursion (-R)"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Notes for when using recursion (<code class="literal">-R</code>)</th></tr><tr><td align="left" valign="top">
+
+<p>The pattern is ignored and <code class="literal">*</code> is assumed.
+By default, the entire remote tree is retrieved.
+However, you can filter files in the tree by providing a <code class="literal">FileListFilter</code>.
+You can also filter directories in the tree this way.
+A <code class="literal">FileListFilter</code> can be provided by reference or by <code class="literal">filename-pattern</code> or <code class="literal">filename-regex</code> attributes.
+For example, <code class="literal">filename-regex="(subDir|.*1.txt)"</code> retrieves all files ending with <code class="literal">1.txt</code> in the remote directory and the subdirectory <code class="literal">subDir</code>.
+However, we describe an alternative available after this note.</p>
+<p>If you filter a subdirectory, no additional traversal of that subdirectory is performed.</p>
+<p>The <code class="literal">-dirs</code> option is not allowed (the recursive <code class="literal">mget</code> uses the recursive <code class="literal">ls</code> to obtain the directory tree and the directories themselves cannot be included in the list).</p>
+<p>Typically, you would use the <code class="literal">#remoteDirectory</code> variable in the <code class="literal">local-directory-expression</code> so that the remote directory structure is retained locally.</p>
+</td></tr></table></div>
+<p>Starting with version 5.0, you can configure the <code class="literal">SftpSimplePatternFileListFilter</code> and <code class="literal">SftpRegexPatternFileListFilter</code> to always pass directories by setting the <code class="literal">alwaysAcceptDirectorties</code> to <code class="literal">true</code>.
+Doing so allows recursion for a simple pattern, as the following examples show:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"starDotTxtFilter"</span>
+            <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.sftp.filters.SftpSimplePatternFileListFilter"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"*.txt"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"alwaysAcceptDirectories"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"dotStarDotTxtFilter"</span>
+            <span class="hl-attribute">class</span>=<span class="hl-value">"org.springframework.integration.sftp.filters.SftpRegexPatternFileListFilter"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">"^.*\.txt$"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"alwaysAcceptDirectories"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<p>You can provide one of these filters by using the <code class="literal">filter</code> property on the gateway.</p>
+<p>See also <a class="xref" href="sftp.html#sftp-partial" title="30.11.10&nbsp;Outbound Gateway Partial Success (mget and mput)">Section&nbsp;30.11.10, &#8220;Outbound Gateway Partial Success (<code class="literal">mget</code> and <code class="literal">mput</code>)&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sftp-put-command" href="#sftp-put-command"></a>30.11.4&nbsp;Using the <code class="literal">put</code> Command</h3></div></div></div>
+
+<p><code class="literal">put</code> sends a file to the remote server.
+The payload of the message can be a <code class="literal">java.io.File</code>, a <code class="literal">byte[]</code>, or a <code class="literal">String</code>.
+A <code class="literal">remote-filename-generator</code> (or expression) is used to name the remote file.
+Other available attributes include <code class="literal">remote-directory</code>, <code class="literal">temporary-remote-directory</code> and their <code class="literal">*-expression</code> equivalents: <code class="literal">use-temporary-file-name</code> and <code class="literal">auto-create-directory</code>.
+See the <a class="ulink" href="https://github.com/spring-projects/spring-integration/tree/master/spring-integration-core/src/main/resources/org/springframework/integration/config" target="_top">schema documentation</a> for more information.</p>
+<p>The message payload resulting from a <code class="literal">put</code> operation is a <code class="literal">String</code> that contains the full path of the file on the server after transfer.</p>
+<p>Version 4.3 introduced the <code class="literal">chmod</code> attribute, which changes the remote file permissions after upload.
+You can use the conventional Unix octal format (for example, <code class="literal">600</code> allows read-write for the file owner only).
+When configuring the adapter using java, you can use <code class="literal">setChmod(0600)</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_the_literal_mput_literal_command" href="#_using_the_literal_mput_literal_command"></a>30.11.5&nbsp;Using the <code class="literal">mput</code> Command</h3></div></div></div>
+
+<p><code class="literal">mput</code> sends multiple files to the server and supports the following option:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">-R</code>: Recursive&#8201;&#8212;&#8201;send all files (possibly filtered) in the directory and subdirectories
+</li></ul></div>
+<p>The message payload must be a <code class="literal">java.io.File</code> (or <code class="literal">String</code>) that represents a local directory.
+Since version 5.1, a collection of <code class="literal">File</code> or <code class="literal">String</code> is also supported.</p>
+<p>The same attributes as the <a class="link" href="sftp.html#sftp-put-command" title="30.11.4&nbsp;Using the put Command"><code class="literal">put</code> command</a> are supported.
+In addition, you can filter files in the local directory with one of <code class="literal">mput-pattern</code>, <code class="literal">mput-regex</code>, <code class="literal">mput-filter</code>, or <code class="literal">mput-filter-expression</code>.
+The filter works with recursion, as long as the subdirectories themselves pass the filter.
+Subdirectories that do not pass the filter are not recursed.</p>
+<p>The message payload resulting from an <code class="literal">mget</code> operation is a <code class="literal">List&lt;String&gt;</code> object (that is, a <code class="literal">List</code> of remote file paths resulting from the transfer).</p>
+<p>See also <a class="xref" href="sftp.html#sftp-partial" title="30.11.10&nbsp;Outbound Gateway Partial Success (mget and mput)">Section&nbsp;30.11.10, &#8220;Outbound Gateway Partial Success (<code class="literal">mget</code> and <code class="literal">mput</code>)&#8221;</a>.</p>
+<p>Version 4.3 introduced the <code class="literal">chmod</code> attribute, which lets you change the remote file permissions after upload.
+You can use the conventional Unix octal format (for example, <code class="literal">600</code> allows read-write for the file owner only).
+When configuring the adapter with Java, you can use <code class="literal">setChmodOctal("600")</code> or <code class="literal">setChmodDecimal(384)</code>.</p>
+<p>Using the <code class="literal">rm</code> Command</p>
+<p>The <code class="literal">rm</code> command has no options.</p>
+<p>If the remove operation was successful, the resulting message payload is <code class="literal">Boolean.TRUE</code>. Otherwise, the message payload is <code class="literal">Boolean.FALSE</code>.
+The <code class="literal">file_remoteDirectory</code> header holds the remote directory, and the <code class="literal">file_remoteFile</code> header holds the file name.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_the_literal_mv_literal_command_2" href="#_using_the_literal_mv_literal_command_2"></a>30.11.6&nbsp;Using the <code class="literal">mv</code> Command</h3></div></div></div>
+
+<p>The <code class="literal">mv</code> command has no options.</p>
+<p>The <code class="literal">expression</code> attribute defines the "<code class="literal">from</code>" path, and the <code class="literal">rename-expression</code> attribute defines the "<code class="literal">to</code>" path.
+By default, the <code class="literal">rename-expression</code> is <code class="literal">headers['file_renameTo']</code>.
+This expression must not evaluate to null or an empty <code class="literal">String</code>.
+If necessary, any remote directories needed are created.
+The payload of the result message is <code class="literal">Boolean.TRUE</code>.
+The the <code class="literal">file_remoteDirectory</code> header holds the original remote directory, and the <code class="literal">file_remoteFile</code> header holds the filename.
+The <code class="literal">file_renameTo</code> header holds the new path.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_additional_command_information" href="#_additional_command_information"></a>30.11.7&nbsp;Additional Command Information</h3></div></div></div>
+
+<p>The <code class="literal">get</code> and <code class="literal">mget</code> commands support the <code class="literal">local-filename-generator-expression</code> attribute.
+It defines a SpEL expression to generate the names of local files during the transfer.
+The root object of the evaluation context is the request message.
+The <code class="literal">remoteFileName</code> variable is also available.
+It is particularly useful for <code class="literal">mget</code> (for example: <code class="literal">local-filename-generator-expression="#remoteFileName.toUpperCase() + headers.foo"</code>).</p>
+<p>The <code class="literal">get</code> and <code class="literal">mget</code> commands support the <code class="literal">local-directory-expression</code> attribute.
+It defines a SpEL expression to generate the names of local directories during the transfer.
+The root object of the evaluation context is the request message.
+The <code class="literal">remoteDirectory</code> variable is also available.
+It is particularly useful for mget (for example: <code class="literal">local-directory-expression="'/tmp/local/' + #remoteDirectory.toUpperCase() + headers.myheader"</code>).
+This attribute is mutually exclusive with the <code class="literal">local-directory</code> attribute.</p>
+<p>For all commands, the <span class="emphasis"><em>expression</em></span> property of the gateway holds the path on which the command acts.
+For the <code class="literal">mget</code> command, the expression might evaluate to <span class="emphasis"><em><span class="strong"><strong></strong></span>, meaning to retrieve all files, <span class="emphasis"><em>somedirectory/</em></span></em></span>, and other values that end with <code class="literal">*</code>.</p>
+<p>The following example shows a gateway configured for an <code class="literal">ls</code> command:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-ftp:outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"gateway1"</span>
+        <span class="hl-attribute">session-factory</span>=<span class="hl-value">"ftpSessionFactory"</span>
+        <span class="hl-attribute">request-channel</span>=<span class="hl-value">"inbound1"</span>
+        <span class="hl-attribute">command</span>=<span class="hl-value">"ls"</span>
+        <span class="hl-attribute">command-options</span>=<span class="hl-value">"-1"</span>
+        <span class="hl-attribute">expression</span>=<span class="hl-value">"payload"</span>
+        <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"toSplitter"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>The payload of the message sent to the <code class="literal">toSplitter</code> channel is a list of <code class="literal">String</code> objects, each of which contains the name of a file.
+If you omitted <code class="literal">command-options="-1"</code>, the payload would be a list of <code class="literal">FileInfo</code> objects.
+You can provide options as a space-delimited list (for example, <code class="literal">command-options="-1 -dirs -links"</code>).</p>
+<p>Starting with version 4.2, the <code class="literal">GET</code>, <code class="literal">MGET</code>, <code class="literal">PUT</code>, and <code class="literal">MPUT</code> commands support a <code class="literal">FileExistsMode</code> property (<code class="literal">mode</code>
+when using the namespace support). This affects the behavior when the local file exists (<code class="literal">GET</code> and <code class="literal">MGET</code>) or the remote
+file exists (<code class="literal">PUT</code> and <code class="literal">MPUT</code>). The supported modes are <code class="literal">REPLACE</code>, <code class="literal">APPEND</code>, <code class="literal">FAIL</code>, and <code class="literal">IGNORE</code>.
+For backwards compatibility, the default mode for <code class="literal">PUT</code> and <code class="literal">MPUT</code> operations is <code class="literal">REPLACE</code>. For <code class="literal">GET</code> and <code class="literal">MGET</code>
+operations, the default is <code class="literal">FAIL</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_java_configuration_23" href="#_configuring_with_java_configuration_23"></a>30.11.8&nbsp;Configuring with Java Configuration</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the outbound gateway with Java:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SftpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(SftpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "sftpChannel")</span></em>
+    <span class="hl-keyword">public</span> MessageHandler handler() {
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> SftpOutboundGateway(ftpSessionFactory(), <span class="hl-string">"ls"</span>, <span class="hl-string">"'my_remote_dir/'"</span>);
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_configuring_with_the_java_dsl_23" href="#_configuring_with_the_java_dsl_23"></a>30.11.9&nbsp;Configuring with the Java DSL</h3></div></div></div>
+
+<p>The following Spring Boot application shows an example of how to configure the outbound gateway with the Java DSL:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@SpringBootApplication</span></em>
+<span class="hl-keyword">public</span> <span class="hl-keyword">class</span> SftpJavaApplication {
+
+    <span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> main(String[] args) {
+        <span class="hl-keyword">new</span> SpringApplicationBuilder(SftpJavaApplication.<span class="hl-keyword">class</span>)
+            .web(false)
+            .run(args);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> SessionFactory&lt;LsEntry&gt; sftpSessionFactory() {
+        DefaultFtpSessionFactory sf = <span class="hl-keyword">new</span> DefaultFtpSessionFactory();
+        sf.setHost(<span class="hl-string">"localhost"</span>);
+        sf.setPort(port);
+        sf.setUsername(<span class="hl-string">"foo"</span>);
+        sf.setPassword(<span class="hl-string">"foo"</span>);
+        factory.setTestSession(true);
+        <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> CachingSessionFactory&lt;LsEntry&gt;(sf);
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> QueueChannelSpec remoteFileOutputChannel() {
+        <span class="hl-keyword">return</span> MessageChannels.queue();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+    <span class="hl-keyword">public</span> IntegrationFlow sftpMGetFlow() {
+        <span class="hl-keyword">return</span> IntegrationFlows.from(<span class="hl-string">"sftpMgetInputChannel"</span>)
+            .handleWithAdapter(h -&gt;
+                h.sftpGateway(sftpSessionFactory(), AbstractRemoteFileOutboundGateway.Command.MGET,
+                    <span class="hl-string">"payload"</span>)
+                    .options(AbstractRemoteFileOutboundGateway.Option.RECURSIVE)
+                    .regexFileNameFilter(<span class="hl-string">"(subSftpSource|.*1.txt)"</span>)
+                    .localDirectoryExpression(<span class="hl-string">"'myDir/' + #remoteDirectory"</span>)
+                    .localFilenameExpression(<span class="hl-string">"#remoteFileName.replaceFirst('sftpSource', 'localTarget')"</span>))
+            .channel(<span class="hl-string">"remoteFileOutputChannel"</span>)
+            .get();
+    }
+
+}</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sftp-partial" href="#sftp-partial"></a>30.11.10&nbsp;Outbound Gateway Partial Success (<code class="literal">mget</code> and <code class="literal">mput</code>)</h3></div></div></div>
+
+<p>When performing operations on multiple files (by using <code class="literal">mget</code> and <code class="literal">mput</code>) an exception can occur some time after one or more files have been transferred.
+In this case (starting with version 4.2), a <code class="literal">PartialSuccessException</code> is thrown.
+As well as the usual <code class="literal">MessagingException</code> properties (<code class="literal">failedMessage</code> and <code class="literal">cause</code>), this exception has two additional
+properties:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">partialResults</code>: The successful transfer results.
+</li><li class="listitem">
+<code class="literal">derivedInput</code>: The list of files generated from the request message (such as local files to transfer for an <code class="literal">mput</code>).
+</li></ul></div>
+<p>These attributes let you determine which files were successfully transferred and which were not.</p>
+<p>In the case of a recursive <code class="literal">mput</code>, the <code class="literal">PartialSuccessException</code> may have nested <code class="literal">PartialSuccessException</code> instances.</p>
+<p>Consider the following directory structure:</p>
+<div class="informalexample">
+<pre class="screen">root/
+|- file1.txt
+|- subdir/
+   | - file2.txt
+   | - file3.txt
+|- zoo.txt</pre>
+</div>
+<p>If the exception occurs on <code class="literal">file3.txt</code>, the <code class="literal">PartialSuccessException</code> thrown by the gateway has <code class="literal">derivedInput</code> of <code class="literal">file1.txt</code>, <code class="literal">subdir</code>, and <code class="literal">zoo.txt</code> and <code class="literal">partialResults</code> of <code class="literal">file1.txt</code>.
+Its <code class="literal">cause</code> is another <code class="literal">PartialSuccessException</code> with <code class="literal">derivedInput</code> of <code class="literal">file2.txt</code> and <code class="literal">file3.txt</code> and <code class="literal">partialResults</code> of <code class="literal">file2.txt</code>.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-jsch-logging" href="#sftp-jsch-logging"></a>30.12&nbsp;SFTP/JSCH Logging</h2></div></div></div>
+
+<p>Since we use JSch libraries (<a class="ulink" href="http://www.jcraft.com/jsch/" target="_top">http://www.jcraft.com/jsch/</a>) to provide SFTP support, you may at times require more information from the JSch API itself, especially if something is not working properly (such as authentication exceptions).
+Unfortunately JSch does not use <code class="literal">commons-logging</code> but instead relies on custom implementations of their <code class="literal">com.jcraft.jsch.Logger</code> interface.
+As of Spring Integration 2.0.1, we have implemented this interface.
+So now, to enable JSch logging, you can configure your logger the way you usually do.
+For example, the following example is valid configuration of a logger that uses Log4J:</p>
+<div class="informalexample">
+<pre class="programlisting">log4j.category.com.jcraft.jsch=DEBUG</pre>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sftp-session-callback" href="#sftp-session-callback"></a>30.13&nbsp;MessageSessionCallback</h2></div></div></div>
+
+<p>Starting with Spring Integration version 4.2, you can use a <code class="literal">MessageSessionCallback&lt;F, T&gt;</code> implementation with the <code class="literal">&lt;int-sftp:outbound-gateway/&gt;</code> (<code class="literal">SftpOutboundGateway</code>) to perform any operation on the <code class="literal">Session&lt;LsEntry&gt;</code> with the <code class="literal">requestMessage</code> context.
+You can use it for any non-standard or low-level FTP operation (or several), such as allowing access from an integration flow definition, or functional interface (lambda) implementation injection.
+The following example uses a lambda:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "sftpChannel")</span></em>
+<span class="hl-keyword">public</span> MessageHandler sftpOutboundGateway(SessionFactory&lt;ChannelSftp.LsEntry&gt; sessionFactory) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> SftpOutboundGateway(sessionFactory,
+         (session, requestMessage) -&gt; session.list(requestMessage.getPayload()));
+}</pre>
+</div>
+<p>Another example might be to pre- or post-process the file data being sent or retrieved.</p>
+<p>When using XML configuration, the <code class="literal">&lt;int-sftp:outbound-gateway/&gt;</code> provides a <code class="literal">session-callback</code> attribute that lets you specify the <code class="literal">MessageSessionCallback</code> bean name.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The <code class="literal">session-callback</code> is mutually exclusive with the <code class="literal">command</code> and <code class="literal">expression</code> attributes.
+When configuring with Java, the <code class="literal">SftpOutboundGateway</code> class offers different constructors.</p>
+</td></tr></table></div>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="rmi.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="stomp.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">29.&nbsp;RMI Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;31.&nbsp;STOMP Support</td></tr></table></div></body></html>

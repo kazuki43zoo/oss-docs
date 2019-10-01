@@ -1,0 +1,988 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>21.&nbsp;JDBC Support</title><link rel="stylesheet" type="text/css" href="css/manual-multipage.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Spring Integration Reference Manual"><link rel="up" href="spring-integration-endpoints.html" title="Part&nbsp;V.&nbsp;Integration Endpoints"><link rel="prev" href="http.html" title="20.&nbsp;HTTP Support"><link rel="next" href="jpa.html" title="22.&nbsp;JPA Support"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">21.&nbsp;JDBC Support</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="http.html">Prev</a>&nbsp;</td><th width="60%" align="center">Part&nbsp;V.&nbsp;Integration Endpoints</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="jpa.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a name="jdbc" href="#jdbc"></a>21.&nbsp;JDBC Support</h2></div></div></div>
+
+<p>Spring Integration provides channel adapters for receiving and sending messages by using database queries.
+Through those adapters, Spring Integration supports not only plain JDBC SQL queries but also stored procedure and stored function calls.</p>
+<p>You need to include this dependency into your project:</p>
+<div class="informalexample">
+<p>
+<b>Maven.&nbsp;</b>
+
+</p><pre class="programlisting"><span class="hl-tag">&lt;dependency&gt;</span>
+    <span class="hl-tag">&lt;groupId&gt;</span>org.springframework.integration<span class="hl-tag">&lt;/groupId&gt;</span>
+    <span class="hl-tag">&lt;artifactId&gt;</span>spring-integration-jdbc<span class="hl-tag">&lt;/artifactId&gt;</span>
+    <span class="hl-tag">&lt;version&gt;</span>5.1.2.RELEASE<span class="hl-tag">&lt;/version&gt;</span>
+<span class="hl-tag">&lt;/dependency&gt;</span></pre><p>
+
+</p>
+<p>
+<b>Gradle.&nbsp;</b>
+
+</p><pre class="programlisting">compile <span class="hl-string">"org.springframework.integration:spring-integration-jdbc:5.1.2.RELEASE"</span></pre><p>
+
+</p>
+</div>
+<p>By default, the following JDBC components are available:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="jdbc.html#jdbc-inbound-channel-adapter" title="21.1&nbsp;Inbound Channel Adapter">Inbound Channel Adapter</a>
+</li><li class="listitem">
+<a class="link" href="jdbc.html#jdbc-outbound-channel-adapter" title="21.2&nbsp;Outbound Channel Adapter">Outbound Channel Adapter</a>
+</li><li class="listitem">
+<a class="link" href="jdbc.html#jdbc-outbound-gateway" title="21.3&nbsp;Outbound Gateway">Outbound Gateway</a>
+</li><li class="listitem">
+<a class="link" href="jdbc.html#stored-procedure-inbound-channel-adapter" title="21.5.6&nbsp;Stored Procedure Inbound Channel Adapter">Stored Procedure Inbound Channel Adapter</a>
+</li><li class="listitem">
+<a class="link" href="jdbc.html#stored-procedure-outbound-channel-adapter" title="21.5.7&nbsp;Stored Procedure Outbound Channel Adapter">Stored Procedure Outbound Channel Adapter</a>
+</li><li class="listitem">
+<a class="link" href="jdbc.html#stored-procedure-outbound-gateway" title="21.5.8&nbsp;Stored Procedure Outbound Gateway">Stored Procedure Outbound Gateway</a>
+</li></ul></div>
+<p>The Spring Integration JDBC Module also provides a <a class="link" href="jdbc.html#jdbc-message-store" title="21.4&nbsp;JDBC Message Store">JDBC Message Store</a>.</p>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jdbc-inbound-channel-adapter" href="#jdbc-inbound-channel-adapter"></a>21.1&nbsp;Inbound Channel Adapter</h2></div></div></div>
+
+<p>The main function of an inbound channel adapter is to execute a SQL <code class="literal">SELECT</code> query and turn the result set into a message.
+The message payload is the whole result set (expressed as a <code class="literal">List</code>), and the types of the items in the list depend on the row-mapping strategy.
+The default strategy is a generic mapper that returns a <code class="literal">Map</code> for each row in the query result.
+Optionally, you can change this by adding a reference to a <code class="literal">RowMapper</code> instance (see the <a class="ulink" href="https://docs.spring.io/spring/docs/current/spring-framework-reference/html/jdbc.html" target="_top">Spring JDBC</a> documentation for more detailed information about row mapping).</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If you want to convert rows in the <code class="literal">SELECT</code> query result to individual messages, you can use a downstream splitter.</p>
+</td></tr></table></div>
+<p>The inbound adapter also requires a reference to either a <code class="literal">JdbcTemplate</code> instance or a <code class="literal">DataSource</code>.</p>
+<p>As well as the <code class="literal">SELECT</code> statement to generate the messages, the adapter also has an <code class="literal">UPDATE</code> statement that marks the records as processed so that they do not show up in the next poll.
+The update can be parameterized by the list of IDs from the original select.
+By default, this is done through a naming convention (a column in the input result set called <code class="literal">id</code> is translated into a list in the parameter map for the update called <code class="literal">id</code>).
+The following example defines an inbound channel adapter with an update query and a <code class="literal">DataSource</code> reference.</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:inbound-channel-adapter</span> <span class="hl-attribute">query</span>=<span class="hl-value">"select * from item where status=2"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"target"</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span>
+    <span class="hl-attribute">update</span>=<span class="hl-value">"update item set status=10 where id in (:id)"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The parameters in the update query are specified with a colon (<code class="literal">:</code>) prefix to the name of a parameter (which, in the preceding example, is an expression to be applied to each of the rows in the polled result set).
+This is a standard feature of the named parameter JDBC support in Spring JDBC, combined with a convention (projection onto the polled result list) adopted in Spring Integration.
+The underlying Spring JDBC features limit the available expressions (for example, most special characters other than a period are disallowed), but since the target is usually a list of objects (possibly a list of one) that are addressable by bean paths this is not unduly restrictive.</p>
+</td></tr></table></div>
+<p>To change the parameter generation strategy, you can inject a <code class="literal">SqlParameterSourceFactory</code> into the adapter to override the default behavior (the adapter has a <code class="literal">sql-parameter-source-factory</code> attribute).
+Spring Integration provides <code class="literal">ExpressionEvaluatingSqlParameterSourceFactory</code>, which creates a SpEL-based parameter source, with the results of the query as the <code class="literal">#root</code> object.
+(If <code class="literal">update-per-row</code> is true, the root object is the row).
+If the same parameter name appears multiple times in the update query, it is evaluated only once, and its result is cached.</p>
+<p>You can also use a parameter source for the select query.
+In this case, since there is no "<code class="literal">result</code>" object to evaluate against, a single parameter source is used each time (rather than using a parameter source factory).
+Starting with version 4.0, you can use Spring to create a SpEL based parameter source, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:inbound-channel-adapter</span> <span class="hl-attribute">query</span>=<span class="hl-value">"select * from item where status=:status"</span>
+	<span class="hl-attribute">channel</span>=<span class="hl-value">"target"</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span>
+	<span class="hl-attribute">select-sql-parameter-source</span>=<span class="hl-value">"parameterSource"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"parameterSource"</span> <span class="hl-attribute">factory-bean</span>=<span class="hl-value">"parameterSourceFactory"</span>
+			<span class="hl-attribute">factory-method</span>=<span class="hl-value">"createParameterSourceNoCache"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"parameterSourceFactory"</span>
+		<span class="hl-attribute">class</span>=<span class="hl-value">"o.s.integration.jdbc.ExpressionEvaluatingSqlParameterSourceFactory"</span><span class="hl-tag">&gt;</span>
+	<span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"parameterExpressions"</span><span class="hl-tag">&gt;</span>
+		<span class="hl-tag">&lt;map&gt;</span>
+			<span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"status"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"@statusBean.which()"</span><span class="hl-tag"> /&gt;</span>
+		<span class="hl-tag">&lt;/map&gt;</span>
+	<span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"statusBean"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"foo.StatusDetermination"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<p>The <code class="literal">value</code> in each parameter expression can be any valid SpEL expression.
+The <code class="literal">#root</code> object for the expression evaluation is the constructor argument defined on the <code class="literal">parameterSource</code> bean.
+It is static for all evaluations (in the preceding example, an empty <code class="literal">String</code>).</p>
+<p>Starting with version 5.0, you ca supply <code class="literal">ExpressionEvaluatingSqlParameterSourceFactory</code> with <code class="literal">sqlParameterTypes</code> to specify the target SQL type for the particular parameter.</p>
+<p>The following example provides SQL types for the parameters being used in the query:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:inbound-channel-adapter</span> <span class="hl-attribute">query</span>=<span class="hl-value">"select * from item where status=:status"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"target"</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span>
+    <span class="hl-attribute">select-sql-parameter-source</span>=<span class="hl-value">"parameterSource"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"parameterSource"</span> <span class="hl-attribute">factory-bean</span>=<span class="hl-value">"parameterSourceFactory"</span>
+            <span class="hl-attribute">factory-method</span>=<span class="hl-value">"createParameterSourceNoCache"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;constructor-arg</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"parameterSourceFactory"</span>
+        <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.integration.jdbc.ExpressionEvaluatingSqlParameterSourceFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"sqlParameterTypes"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;map&gt;</span>
+            <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"status"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"#{ T(java.sql.Types).BINARY}"</span><span class="hl-tag"> /&gt;</span>
+        <span class="hl-tag">&lt;/map&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Use the <code class="literal">createParameterSourceNoCache</code> factory method.
+Otherwise, the parameter source caches the result of the evaluation.
+Also note that, because caching is disabled, if the same parameter name appears in the select query multiple times, it is re-evaluated for each occurrence.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jdbc-polling-transactions" href="#jdbc-polling-transactions"></a>21.1.1&nbsp;Polling and Transactions</h3></div></div></div>
+
+<p>The inbound adapter accepts a regular Spring Integration poller as a child element.
+Consequently, the frequency of the polling can be controlled (among other uses).
+An important feature of the poller for JDBC usage is the option to wrap the poll operation in a transaction, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:inbound-channel-adapter</span> <span class="hl-attribute">query</span>=<span class="hl-value">"..."</span>
+        <span class="hl-attribute">channel</span>=<span class="hl-value">"target"</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span> <span class="hl-attribute">update</span>=<span class="hl-value">"..."</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">"1000"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int:transactional/&gt;</span>
+    <span class="hl-tag">&lt;/int:poller&gt;</span>
+<span class="hl-tag">&lt;/int-jdbc:inbound-channel-adapter&gt;</span></pre>
+</div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>If you do not explicitly specify a poller, a default value is used.
+As is normal with Spring Integration, it can be defined as a top-level bean).</p>
+</td></tr></table></div>
+<p>In the preceding example, the database is polled every 1000 milliseconds (or once a second), and the update and select queries are both executed in the same transaction.
+The transaction manager configuration is not shown.
+However, as long as it is aware of the data source,  the poll is transactional.
+A common use case is for the downstream channels to be direct channels (the default), so that the endpoints are invoked in the same thread and, hence, the same transaction.
+That way, if any of them fail, the transaction rolls back and the input data is reverted to its original state.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jdbc-max-rows-versus-max-messages-per-poll" href="#jdbc-max-rows-versus-max-messages-per-poll"></a>21.1.2&nbsp;<code class="literal">max-rows</code> Versus <code class="literal">max-messages-per-poll</code></h3></div></div></div>
+
+<p>The JDBC inbound channel adapter defines an attribute called <code class="literal">max-rows</code>.
+When you specify the adapter&#8217;s poller, you can also define a property called <code class="literal">max-messages-per-poll</code>.
+While these two attributes look similar, their meaning is quite different.</p>
+<p><code class="literal">max-messages-per-poll</code> specifies the number of times the query is executed per polling interval, whereas <code class="literal">max-rows</code> specifies the number of rows returned for each execution.</p>
+<p>Under normal circumstances, you would likely not want to set the poller&#8217;s <code class="literal">max-messages-per-poll</code> property when you use the JDBC inbound channel adapter.
+Its default value is <code class="literal">1</code>, which means that the JDBC inbound channel adapter&#8217;s <a class="ulink" href="https://docs.spring.io/spring-integration/api/org/springframework/integration/jdbc/JdbcPollingChannelAdapter.html#receive()" target="_top"><code class="literal">receive()</code></a> method is executed exactly once for each poll interval.</p>
+<p>Setting the <code class="literal">max-messages-per-poll</code> attribute to a larger value means that the query is executed that many times back to back.
+For more information regarding the <code class="literal">max-messages-per-poll</code> attribute, see <a class="xref" href="messaging-channels-section.html#channel-adapter-namespace-inbound" title="6.3.1&nbsp;Configuring An Inbound Channel Adapter">Section&nbsp;6.3.1, &#8220;Configuring An Inbound Channel Adapter&#8221;</a>.</p>
+<p>In contrast, the <code class="literal">max-rows</code> attribute, if greater than <code class="literal">0</code>, specifies the maximum number of rows to be used from the query result set created by the <code class="literal">receive()</code> method.
+If the attribute is set to <code class="literal">0</code>, all rows are included in the resulting message.
+The attribute defaults to <code class="literal">0</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>It is recommended to use result set limiting via vendor-specific query options, for example MySQL <code class="literal">LIMIT</code> or SQL Server <code class="literal">TOP</code> or Oracle&#8217;s <code class="literal">ROWNUM</code>.
+See the particular vendor documentation for more information.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jdbc-outbound-channel-adapter" href="#jdbc-outbound-channel-adapter"></a>21.2&nbsp;Outbound Channel Adapter</h2></div></div></div>
+
+<p>The outbound channel adapter is the inverse of the inbound: its role is to handle a message and use it to execute a SQL query.
+By default, the message payload and headers are available as input parameters to the query, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:outbound-channel-adapter</span>
+    <span class="hl-attribute">query</span>=<span class="hl-value">"insert into foos (id, status, name) values (:headers[id], 0, :payload[something])"</span>
+    <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"input"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>In the preceding example, messages arriving on the channel labelled <code class="literal">input</code> have a payload of a map with a key of <code class="literal">something</code>, so the <code class="literal">[]</code> operator dereferences that value from the map.
+The headers are also accessed as a map.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>The parameters in the preceding query are bean property expressions on the incoming message (not SpEL expressions).
+This behavior is part of the <code class="literal">SqlParameterSource</code>, which is the default source created by the outbound adapter.
+You can inject a different <code class="literal">SqlParameterSourceFactory</code> to get different behavior.</p>
+</td></tr></table></div>
+<p>The outbound adapter requires a reference to either a <code class="literal">DataSource</code> or a <code class="literal">JdbcTemplate</code>.
+You can also inject a <code class="literal">SqlParameterSourceFactory</code> to control the binding of each incoming message to a query.</p>
+<p>If the input channel is a direct channel, the outbound adapter runs its query in the same thread and, therefore, the same transaction (if there is one) as the sender of the message.</p>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_passing_parameters_by_using_spel_expressions" href="#_passing_parameters_by_using_spel_expressions"></a>21.2.1&nbsp;Passing Parameters by Using SpEL Expressions</h3></div></div></div>
+
+<p>A common requirement for most JDBC channel adapters is to pass parameters as part of SQL queries or stored procedures or functions.
+As mentioned earlier, these parameters are by default bean property expressions, not SpEL expressions.
+However, if you need to pass SpEL expression as parameters, you must explicitly inject a <code class="literal">SqlParameterSourceFactory</code>.</p>
+<p>The following example uses a <code class="literal">ExpressionEvaluatingSqlParameterSourceFactory</code> to achieve that requirement:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;jdbc:outbound-channel-adapter</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span> <span class="hl-attribute">channel</span>=<span class="hl-value">"input"</span>
+    <span class="hl-attribute">query</span>=<span class="hl-value">"insert into MESSAGES (MESSAGE_ID,PAYLOAD,CREATED_DATE)     \
+    values (:id, :payload, :createdDate)"</span>
+    <span class="hl-attribute">sql-parameter-source-factory</span>=<span class="hl-value">"spelSource"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"spelSource"</span>
+      <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.integration.jdbc.ExpressionEvaluatingSqlParameterSourceFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"parameterExpressions"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;map&gt;</span>
+            <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"id"</span>          <span class="hl-attribute">value</span>=<span class="hl-value">"headers['id'].toString()"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"createdDate"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"new java.util.Date()"</span><span class="hl-tag">/&gt;</span>
+            <span class="hl-tag">&lt;entry</span> <span class="hl-attribute">key</span>=<span class="hl-value">"payload"</span>     <span class="hl-attribute">value</span>=<span class="hl-value">"payload"</span><span class="hl-tag">/&gt;</span>
+        <span class="hl-tag">&lt;/map&gt;</span>
+    <span class="hl-tag">&lt;/property&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span></pre>
+</div>
+<p>For further information, see <a class="xref" href="jdbc.html#sp-defining-parameter-sources" title="21.5.5&nbsp;Defining Parameter Sources">Section&nbsp;21.5.5, &#8220;Defining Parameter Sources&#8221;</a>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_using_the_literal_preparedstatement_literal_callback" href="#_using_the_literal_preparedstatement_literal_callback"></a>21.2.2&nbsp;Using the <code class="literal">PreparedStatement</code> Callback</h3></div></div></div>
+
+<p>Sometimes, the flexibility and loose-coupling of <code class="literal">SqlParameterSourceFactory</code> does not do what we need for the target <code class="literal">PreparedStatement</code> or we need to do some low-level JDBC work.
+The Spring JDBC module provides APIs to configure the execution environment (such as <code class="literal">ConnectionCallback</code> or <code class="literal">PreparedStatementCreator</code>) and manipulate parameter values (such as <code class="literal">SqlParameterSource</code>).
+It can even access APIs for low-level operations, such as <code class="literal">StatementCallback</code>.</p>
+<p>Starting with Spring Integration 4.2, <code class="literal">MessagePreparedStatementSetter</code> allows the specification of parameters on the <code class="literal">PreparedStatement</code> manually, in the <code class="literal">requestMessage</code> context.
+This class plays exactly the same role as <code class="literal">PreparedStatementSetter</code> in the standard Spring JDBC API.
+Actually, it is invoked directly from an inline <code class="literal">PreparedStatementSetter</code> implementation when the <code class="literal">JdbcMessageHandler</code> invokes <code class="literal">execute</code> on the <code class="literal">JdbcTemplate</code>.</p>
+<p>This functional interface option is mutually exclusive with <code class="literal">sqlParameterSourceFactory</code> and can be used as a more powerful alternative to populate parameters of the <code class="literal">PreparedStatement</code> from the <code class="literal">requestMessage</code>.
+For example, it is useful when we need to store <code class="literal">File</code> data to the DataBase <code class="literal">BLOB</code> column in a streaming manner.
+The following example shows how to do so:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<em><span class="hl-annotation" style="color: gray">@ServiceActivator(inputChannel = "storeFileChannel")</span></em>
+<span class="hl-keyword">public</span> MessageHandler jdbcMessageHandler(DataSource dataSource) {
+    JdbcMessageHandler jdbcMessageHandler = <span class="hl-keyword">new</span> JdbcMessageHandler(dataSource,
+            <span class="hl-string">"INSERT INTO imagedb (image_name, content, description) VALUES (?, ?, ?)"</span>);
+    jdbcMessageHandler.setPreparedStatementSetter((ps, m) -&gt; {
+        ps.setString(<span class="hl-number">1</span>, m.getHeaders().get(FileHeaders.FILENAME));
+        <span class="hl-keyword">try</span> (FileInputStream inputStream = <span class="hl-keyword">new</span> FileInputStream((File) m.getPayload()); ) {
+            ps.setBlob(<span class="hl-number">2</span>, inputStream);
+        }
+        <span class="hl-keyword">catch</span> (Exception e) {
+            <span class="hl-keyword">throw</span> <span class="hl-keyword">new</span> MessageHandlingException(m, e);
+        }
+        ps.setClob(<span class="hl-number">3</span>, <span class="hl-keyword">new</span> StringReader(m.getHeaders().get(<span class="hl-string">"description"</span>, String.<span class="hl-keyword">class</span>)));
+    });
+    <span class="hl-keyword">return</span> jdbcMessageHandler;
+}</pre>
+</div>
+<p>From the XML configuration perspective, the <code class="literal">prepared-statement-setter</code> attribute is available on the <code class="literal">&lt;int-jdbc:outbound-channel-adapter&gt;</code> component.
+It lets you specify a <code class="literal">MessagePreparedStatementSetter</code> bean reference.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_batch_update" href="#_batch_update"></a>21.2.3&nbsp;Batch Update</h3></div></div></div>
+
+<p>Starting with version 5.1, the <code class="literal">JdbcMessageHandler</code> performs a <code class="literal">JdbcOperations.batchUpdate()</code> if the payload of the request message is an <code class="literal">Iterable</code> instance.
+Each element of the <code class="literal">Iterable</code> is wrapped to a <code class="literal">Message</code> with the headers from the request message.
+In the case of regular <code class="literal">SqlParameterSourceFactory</code>-based configuration these messages are used to build an <code class="literal">SqlParameterSource[]</code> for an argument used in the mentioned <code class="literal">JdbcOperations.batchUpdate()</code> function.
+When a <code class="literal">MessagePreparedStatementSetter</code> configuration is applied, a <code class="literal">BatchPreparedStatementSetter</code> variant is used to iterate over those messages for each item and the provided <code class="literal">MessagePreparedStatementSetter</code> is called against them.
+The batch update is not supported when <code class="literal">keysGenerated</code> mode is selected.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jdbc-outbound-gateway" href="#jdbc-outbound-gateway"></a>21.3&nbsp;Outbound Gateway</h2></div></div></div>
+
+<p>The outbound gateway is like a combination of the outbound and inbound adapters: Its role is to handle a message and use it to execute a SQL query and then respond with the result by sending it to a reply channel.
+By default, the message payload and headers are available as input parameters to the query, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:outbound-gateway</span>
+    <span class="hl-attribute">update</span>=<span class="hl-value">"insert into mythings (id, status, name) values (:headers[id], 0, :payload[thing])"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"input"</span> <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"output"</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+<p>The result of the preceding example is to insert a record into the <code class="literal">mythings</code> table and return a message that indicates the number of rows affected (the payload is a map: <code class="literal">{UPDATED=1}</code>) to the output channel .</p>
+<p>If the update query is an insert with auto-generated keys, you can populate the reply message with the generated keys by adding <code class="literal">keys-generated="true"</code> to the preceding example (this is not the default because it is not supported by some database platforms).
+The following example shows the changed configuration:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:outbound-gateway</span>
+    <span class="hl-attribute">update</span>=<span class="hl-value">"insert into mythings (status, name) values (0, :payload[thing])"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"input"</span> <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"output"</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span>
+    <span class="hl-attribute">keys-generated</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Instead of the update count or the generated keys, you can also provide a select query to execute and generate a reply message from the result (such as the inbound adapter), as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:outbound-gateway</span>
+    <span class="hl-attribute">update</span>=<span class="hl-value">"insert into foos (id, status, name) values (:headers[id], 0, :payload[foo])"</span>
+    <span class="hl-attribute">query</span>=<span class="hl-value">"select * from foos where id=:headers[$id]"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"input"</span> <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"output"</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>Since Spring Integration 2.2, the update SQL query is no longer mandatory.
+You can now provide only a select query, by using either the <code class="literal">query</code> attribute or the <code class="literal">query</code> element.
+This is extremely useful if you need to actively retrieve data by using, for example, a generic gateway or a payload enricher.
+The reply message is then generated from the result (similar to how the inbound adapter works) and passed to the reply channel.
+The following example show to use the <code class="literal">query</code> attribute:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:outbound-gateway</span>
+    <span class="hl-attribute">query</span>=<span class="hl-value">"select * from foos where id=:headers[id]"</span>
+    <span class="hl-attribute">request-channel</span>=<span class="hl-value">"input"</span>
+    <span class="hl-attribute">reply-channel</span>=<span class="hl-value">"output"</span>
+    <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>By default, the component for the <code class="literal">SELECT</code> query returns only one (the first) row from the cursor.
+You can adjust this behavior with the <code class="literal">max-rows</code> option.
+If you need to return all the rows from the SELECT, consider specifying <code class="literal">max-rows="0"</code>.</p>
+</td></tr></table></div>
+<p>As with the channel adapters, you can also provide <code class="literal">SqlParameterSourceFactory</code> instances for request and reply.
+The default is the same as for the outbound adapter, so the request message is available as the root of an expression.
+If <code class="literal">keys-generated="true"</code>, the root of the expression is the generated keys (a map if there is only one or a list of maps if multi-valued).</p>
+<p>The outbound gateway requires a reference to either a <code class="literal">DataSource</code> or a <code class="literal">JdbcTemplate</code>.
+It can also have a <code class="literal">SqlParameterSourceFactory</code> injected to control the binding of the incoming message to the query.</p>
+<p>Starting with the version 4.2, the <code class="literal">request-prepared-statement-setter</code> attribute is available on the <code class="literal">&lt;int-jdbc:outbound-gateway&gt;</code> as an alternative to <code class="literal">request-sql-parameter-source-factory</code>.
+It lets you specify a <code class="literal">MessagePreparedStatementSetter</code> bean reference, which implements more sophisticated <code class="literal">PreparedStatement</code> preparation before its execution.</p>
+<p>See <a class="xref" href="jdbc.html#jdbc-outbound-channel-adapter" title="21.2&nbsp;Outbound Channel Adapter">Section&nbsp;21.2, &#8220;Outbound Channel Adapter&#8221;</a> for more information about <code class="literal">MessagePreparedStatementSetter</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jdbc-message-store" href="#jdbc-message-store"></a>21.4&nbsp;JDBC Message Store</h2></div></div></div>
+
+<p>Spring Integration provides two JDBC specific message store implementations.
+The <code class="literal">JdbcMessageStore</code> is suitable for use with aggregators and the claim check pattern.
+The <code class="literal">JdbcChannelMessageStore</code> implementation provides a more targeted and scalable implementation specifically for message channel.</p>
+<p>Note that you can use a <code class="literal">JdbcMessageStore</code> to back a message channel, <code class="literal">JdbcChannelMessageStore</code> is optimized for that purpose.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Starting with versions 5.0.11, 5.1.2, the indexes for the <code class="literal">JdbcChannelMessageStore</code> have been optimized.
+If you have large message groups in such a store, you may wish to alter the indexes.
+Furthermore, the index for <code class="literal">PriorityChannel</code> is commented out because it is not needed unless you are using such channels backed by JDBC.</p>
+</td></tr></table></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>When using the <code class="literal">OracleChannelMessageStoreQueryProvider</code>, the priority channel index <span class="strong"><strong>must</strong></span> be added because it is included in a hint in the query.</p>
+</td></tr></table></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_initializing_the_database" href="#_initializing_the_database"></a>21.4.1&nbsp;Initializing the Database</h3></div></div></div>
+
+<p>Before starting to use JDBC message store components, you should provision a target database with the appropriate objects.</p>
+<p>Spring Integration ships with some sample scripts that can be used to initialize a database.
+In the <code class="literal">spring-integration-jdbc</code> JAR file, you can find scripts in the <code class="literal">org.springframework.integration.jdbc</code> package.
+It provides an example create and an example drop script for a range of common database platforms.
+A common way to use these scripts is to reference them in a <a class="ulink" href="https://docs.spring.io/spring/docs/current/spring-framework-reference/html/jdbc.html#jdbc-intializing-datasource" target="_top">Spring JDBC data source initializer</a>.
+Note that the scripts are provided as samples and as specifications of the the required table and column names.
+You may find that you need to enhance them for production use (for, example, by adding index declarations).</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jdbc-message-store-generic" href="#jdbc-message-store-generic"></a>21.4.2&nbsp;The Generic JDBC Message Store</h3></div></div></div>
+
+<p>The JDBC module provides an implementation of the Spring Integration <code class="literal">MessageStore</code> (important in the claim check pattern) and <code class="literal">MessageGroupStore</code> (important in stateful patterns such as an aggregator) backed by a database.
+Both interfaces are implemented by the <code class="literal">JdbcMessageStore</code>, and there is support for configuring store instances in XML, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:message-store</span> <span class="hl-attribute">id</span>=<span class="hl-value">"messageStore"</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>You can specify a <code class="literal">JdbcTemplate</code> instead of a <code class="literal">DataSource</code>.</p>
+<p>The following example shows some other optional attributes:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:message-store</span> <span class="hl-attribute">id</span>=<span class="hl-value">"messageStore"</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span>
+    <span class="hl-attribute">lob-handler</span>=<span class="hl-value">"lobHandler"</span> <span class="hl-attribute">table-prefix</span>=<span class="hl-value">"MY_INT_"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>In the preceding example, we have specified a <code class="literal">LobHandler</code> for dealing with messages as large objects (which is often necessary for Oracle) and a prefix for the table names in the queries generated by the store.
+The table name prefix defaults to <code class="literal">INT_</code>.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="jdbc-message-store-channels" href="#jdbc-message-store-channels"></a>21.4.3&nbsp;Backing Message Channels</h3></div></div></div>
+
+<p>If you intend to backing message channels with JDBC, we recommend using the <code class="literal">JdbcChannelMessageStore</code> implementation.
+It works only in conjunction with Message Channels.</p>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_supported_databases" href="#_supported_databases"></a>Supported Databases</h4></div></div></div>
+
+<p>The <code class="literal">JdbcChannelMessageStore</code> uses database-specific SQL queries to retrieve messages from the database.
+Therefore, you must set the <code class="literal">ChannelMessageStoreQueryProvider</code> property on the <code class="literal">JdbcChannelMessageStore</code>.
+This <code class="literal">channelMessageStoreQueryProvider</code> provides the SQL queries for the particular database you specify.
+Spring Integration provides support for the following relational databases:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+PostgreSQL
+</li><li class="listitem">
+HSQLDB
+</li><li class="listitem">
+MySQL
+</li><li class="listitem">
+Oracle
+</li><li class="listitem">
+Derby
+</li><li class="listitem">
+H2
+</li><li class="listitem">
+SqlServer
+</li><li class="listitem">
+Sybase
+</li><li class="listitem">
+DB2
+</li></ul></div>
+<p>If your database is not listed, you can extend the <code class="literal">AbstractChannelMessageStoreQueryProvider</code> class and provide your own custom queries.</p>
+<p>Version 4.0 added the <code class="literal">MESSAGE_SEQUENCE</code> column to the table to ensure first-in-first-out (FIFO) queueing even when messages are stored in the same millisecond.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_custom_message_insertion" href="#_custom_message_insertion"></a>Custom Message Insertion</h4></div></div></div>
+
+<p>Since version 5.0, by overloading the <code class="literal">ChannelMessageStorePreparedStatementSetter</code> class, you can provide a custom implementation for message insertion in the <code class="literal">JdbcChannelMessageStore</code>.
+You can use it to set different columns or change the table structure or serialization strategy.
+For example, instead of default serialization to <code class="literal">byte[]</code>, you can store its structure as a JSON string.</p>
+<p>The following example uses the default implementation of <code class="literal">setValues</code> to store common columns and overrides the behavior to store the message payload as a <code class="literal">varchar</code>:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">class</span> JsonPreparedStatementSetter <span class="hl-keyword">extends</span> ChannelMessageStorePreparedStatementSetter {
+
+    <span class="hl-keyword">public</span> JsonPreparedStatementSetter() {
+        <span class="hl-keyword">super</span>();
+    }
+
+    <em><span class="hl-annotation" style="color: gray">@Override</span></em>
+    <span class="hl-keyword">public</span> <span class="hl-keyword">void</span> setValues(PreparedStatement preparedStatement, Message&lt;?&gt; requestMessage,
+        Object groupId, String region, 	<span class="hl-keyword">boolean</span> priorityEnabled) <span class="hl-keyword">throws</span> SQLException {
+        <span class="hl-comment">// Populate common columns</span>
+        <span class="hl-keyword">super</span>.setValues(preparedStatement, requestMessage, groupId, region, priorityEnabled);
+        <span class="hl-comment">// Store message payload as varchar</span>
+        preparedStatement.setString(<span class="hl-number">6</span>, requestMessage.getPayload().toString());
+    }
+}</pre>
+</div>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Generally, we do not recommend using a relational database for queuing.
+Instead, if possible, consider using either JMS- or AMQP-backed channels instead.
+For further reference, see the following resources:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="ulink" href="https://www.engineyard.com/blog/2011/5-subtle-ways-youre-using-mysql-as-a-queue-and-why-itll-bite-you/" target="_top">5 subtle ways you&#8217;re using MySQL as a queue, and why it&#8217;ll bite you</a>.
+</li><li class="listitem">
+<a class="ulink" href="https://mikehadlow.blogspot.com/2012/04/database-as-queue-anti-pattern.html" target="_top">The Database As Queue Anti-Pattern</a>.
+</li></ul></div>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_concurrent_polling" href="#_concurrent_polling"></a>Concurrent Polling</h4></div></div></div>
+
+<p>When polling a message channel, you have the option to configure the associated <code class="literal">Poller</code> with a <code class="literal">TaskExecutor</code> reference.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>Keep in mind, though, that if you use a JDBC backed message channel and you plan to poll the channel and consequently the message store transactionally with multiple threads, you should ensure that you use a relational database that supports <a class="ulink" href="https://en.wikipedia.org/wiki/Multiversion_concurrency_control" target="_top">Multiversion Concurrency Control</a> (MVCC).
+Otherwise, locking may be an issue and the performance, when using multiple threads, may not materialize as expected.
+For example, Apache Derby is problematic in that regard.</p>
+<p>To achieve better JDBC queue throughput and avoid issues when different threads may poll the same <code class="literal">Message</code> from the queue, it is <span class="strong"><strong>important</strong></span> to set the <code class="literal">usingIdCache</code> property of <code class="literal">JdbcChannelMessageStore</code> to <code class="literal">true</code> when using databases that do not support MVCC.
+The following example shows how to do so:</p>
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"queryProvider"</span>
+    <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.jdbc.store.channel.PostgresChannelMessageStoreQueryProvider"</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;int:transaction-synchronization-factory</span> <span class="hl-attribute">id</span>=<span class="hl-value">"syncFactory"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:after-commit</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"@store.removeFromIdCache(headers.id.toString())"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;int:after-rollback</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"@store.removeFromIdCache(headers.id.toString())"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:transaction-synchronization-factory&gt;</span>
+
+<span class="hl-tag">&lt;task:executor</span> <span class="hl-attribute">id</span>=<span class="hl-value">"pool"</span> <span class="hl-attribute">pool-size</span>=<span class="hl-value">"10"</span>
+    <span class="hl-attribute">queue-capacity</span>=<span class="hl-value">"10"</span> <span class="hl-attribute">rejection-policy</span>=<span class="hl-value">"CALLER_RUNS"</span><span class="hl-tag"> /&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"store"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.jdbc.store.JdbcChannelMessageStore"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"dataSource"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"dataSource"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"channelMessageStoreQueryProvider"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"queryProvider"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"region"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"TX_TIMEOUT"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"usingIdCache"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"inputChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:queue</span> <span class="hl-attribute">message-store</span>=<span class="hl-value">"store"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span>
+
+<span class="hl-tag">&lt;int:bridge</span> <span class="hl-attribute">input-channel</span>=<span class="hl-value">"inputChannel"</span> <span class="hl-attribute">output-channel</span>=<span class="hl-value">"outputChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-delay</span>=<span class="hl-value">"500"</span> <span class="hl-attribute">receive-timeout</span>=<span class="hl-value">"500"</span>
+        <span class="hl-attribute">max-messages-per-poll</span>=<span class="hl-value">"1"</span> <span class="hl-attribute">task-executor</span>=<span class="hl-value">"pool"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;int:transactional</span> <span class="hl-attribute">propagation</span>=<span class="hl-value">"REQUIRED"</span> <span class="hl-attribute">synchronization-factory</span>=<span class="hl-value">"syncFactory"</span>
+        <span class="hl-attribute">isolation</span>=<span class="hl-value">"READ_COMMITTED"</span> <span class="hl-attribute">transaction-manager</span>=<span class="hl-value">"transactionManager"</span><span class="hl-tag"> /&gt;</span>
+    <span class="hl-tag">&lt;/int:poller&gt;</span>
+<span class="hl-tag">&lt;/int:bridge&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outputChannel"</span><span class="hl-tag"> /&gt;</span></pre>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h4 class="title"><a name="_priority_channel" href="#_priority_channel"></a>Priority Channel</h4></div></div></div>
+
+<p>Starting with version 4.0, <code class="literal">JdbcChannelMessageStore</code> implements <code class="literal">PriorityCapableChannelMessageStore</code> and provides the <code class="literal">priorityEnabled</code> option, letting it be used as a <code class="literal">message-store</code> reference for <code class="literal">priority-queue</code> instances.
+For this purpose, the <code class="literal">INT_CHANNEL_MESSAGE</code> table has a <code class="literal">MESSAGE_PRIORITY</code> column to store the value of <code class="literal">PRIORITY</code> message headers.
+In addition, a new <code class="literal">MESSAGE_SEQUENCE</code> column lets us achieve a robust first-in-first-out (FIFO) polling mechanism, even when multiple messages are stored with the same priority in the same millisecond.
+Messages are polled (selected) from the database with <code class="literal">order by MESSAGE_PRIORITY DESC NULLS LAST, CREATED_DATE, MESSAGE_SEQUENCE</code>.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>We do not recommend using the same <code class="literal">JdbcChannelMessageStore</code> bean for priority and non-priority queue channels, because the <code class="literal">priorityEnabled</code> option applies to the entire store and proper FIFO queue semantics are not retained for the queue channel.
+However, the same <code class="literal">INT_CHANNEL_MESSAGE</code> table (and even <code class="literal">region</code>) can be used for both <code class="literal">JdbcChannelMessageStore</code> types.
+To configure that scenario, you can extend one message store bean from the other, as the following example shows:</p>
+</td></tr></table></div>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"channelStore"</span> <span class="hl-attribute">class</span>=<span class="hl-value">"o.s.i.jdbc.store.JdbcChannelMessageStore"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"dataSource"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"dataSource"</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"channelMessageStoreQueryProvider"</span> <span class="hl-attribute">ref</span>=<span class="hl-value">"queryProvider"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"queueChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:queue</span> <span class="hl-attribute">message-store</span>=<span class="hl-value">"channelStore"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span>
+
+<span class="hl-tag">&lt;bean</span> <span class="hl-attribute">id</span>=<span class="hl-value">"priorityStore"</span> <span class="hl-attribute">parent</span>=<span class="hl-value">"channelStore"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;property</span> <span class="hl-attribute">name</span>=<span class="hl-value">"priorityEnabled"</span> <span class="hl-attribute">value</span>=<span class="hl-value">"true"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/bean&gt;</span>
+
+<span class="hl-tag">&lt;int:channel</span> <span class="hl-attribute">id</span>=<span class="hl-value">"priorityChannel"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int:priority-queue</span> <span class="hl-attribute">message-store</span>=<span class="hl-value">"priorityStore"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int:channel&gt;</span></pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="_partitioning_a_message_store" href="#_partitioning_a_message_store"></a>21.4.4&nbsp;Partitioning a Message Store</h3></div></div></div>
+
+<p>It is common to use a <code class="literal">JdbcMessageStore</code> as a global store for a group of applications or nodes in the same application.
+To provide some protection against name clashes and to give control over the database meta-data configuration, the message store lets the tables be partitioned in two ways.
+One way is to use separate table names, by changing the prefix (as <a class="link" href="jdbc.html#jdbc-message-store-generic" title="21.4.2&nbsp;The Generic JDBC Message Store">described earlier</a>).
+The other way is to specify a <code class="literal">region</code> name for partitioning data within a single table.
+An important use case for the second approach is when the <code class="literal">MessageStore</code> is managing persistent queues that back a Spring Integration Message Channel.
+The message data for a persistent channel is keyed in the store on the channel name.
+Consequently, if the channel names are not globally unique, the channels can pick up data that is not intended for them.
+To avoid this danger, you can use the message store <code class="literal">region</code> to keep data separate for different physical channels that have the same logical name.</p>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="stored-procedures" href="#stored-procedures"></a>21.5&nbsp;Stored Procedures</h2></div></div></div>
+
+<p>In certain situations, plain JDBC support is not sufficient.
+Maybe you deal with legacy relational database schemas or you have complex data processing needs, but, ultimately, you have to use <a class="ulink" href="https://en.wikipedia.org/wiki/Stored_procedure" target="_top">stored procedures</a> or stored functions.
+Since Spring Integration 2.1, we provide three components to execute stored procedures or stored functions:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Stored Procedures Inbound Channel Adapter
+</li><li class="listitem">
+Stored Procedures Outbound Channel Adapter
+</li><li class="listitem">
+Stored Procedures Outbound Gateway
+</li></ul></div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sp-supported-databases" href="#sp-supported-databases"></a>21.5.1&nbsp;Supported Databases</h3></div></div></div>
+
+<p>In order to enable calls to stored procedures and stored functions, the stored procedure components use the <a class="ulink" href="https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/jdbc/core/simple/SimpleJdbcCall.html" target="_top"><code class="literal">org.springframework.jdbc.core.simple.SimpleJdbcCall</code></a> class.
+Consequently, the following databases are fully supported for executing stored procedures:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+Apache Derby
+</li><li class="listitem">
+DB2
+</li><li class="listitem">
+MySQL
+</li><li class="listitem">
+Microsoft SQL Server
+</li><li class="listitem">
+Oracle
+</li><li class="listitem">
+PostgreSQL
+</li><li class="listitem">
+Sybase
+</li></ul></div>
+<p>If you want to execute stored functions instead, the following databases are fully supported:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+MySQL
+</li><li class="listitem">
+Microsoft SQL Server
+</li><li class="listitem">
+Oracle
+</li><li class="listitem">
+PostgreSQL
+</li></ul></div>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Even though your particular database may not be fully supported, chances are that you can use the stored procedure Spring Integration components quite successfully anyway, provided your RDBMS supports stored procedures or stored functions.</p>
+<p>As a matter of fact, some of the provided integration tests use the <a class="ulink" href="http://www.h2database.com/" target="_top">H2 database</a>.
+Nevertheless, it is very important to thoroughly test those usage scenarios.</p>
+</td></tr></table></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sp-configuration" href="#sp-configuration"></a>21.5.2&nbsp;Configuration</h3></div></div></div>
+
+<p>The stored procedure components provide full XML Namespace support, and configuring the components is similar as for the general purpose JDBC components discussed earlier.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sp-common-config-params" href="#sp-common-config-params"></a>21.5.3&nbsp;Common Configuration Attributes</h3></div></div></div>
+
+<p>All stored procedure components share certain configuration parameters:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">auto-startup</code>: Lifecycle attribute signaling whether this component should be started during application context startup.
+It defaults to <code class="literal">true</code>.
+Optional.
+</li><li class="listitem">
+<code class="literal">data-source</code>: Reference to a <code class="literal">javax.sql.DataSource</code>, which is used to access the database.
+Required.
+</li><li class="listitem">
+<code class="literal">id</code>:  Identifies the underlying Spring bean definition, which is an instance of either <code class="literal">EventDrivenConsumer</code> or <code class="literal">PollingConsumer</code>, depending on whether the outbound channel adapter&#8217;s <code class="literal">channel</code> attribute references a <code class="literal">SubscribableChannel</code> or a <code class="literal">PollableChannel</code>.
+Optional.
+</li><li class="listitem">
+<p class="simpara"><code class="literal">ignore-column-meta-data</code>:  For fully supported databases, the underlying <a class="ulink" href="https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/jdbc/core/simple/SimpleJdbcCall.html" target="_top"><code class="literal">SimpleJdbcCall</code></a> class can automatically retrieve the parameter information for the stored procedure or stored function from the JDBC metadata.</p>
+<p class="simpara">However, if the database does not support metadata lookups or if you need to provide customized parameter definitions, this flag can be set to <code class="literal">true</code>.
+It defaults to <code class="literal">false</code>.
+Optional.</p>
+</li><li class="listitem">
+<code class="literal">is-function</code>:  If <code class="literal">true</code>, a SQL Function is called.
+In that case, the <code class="literal">stored-procedure-name</code> or <code class="literal">stored-procedure-name-expression</code> attributes define the name of the called function.
+It defaults to <code class="literal">false</code>.
+Optional.
+</li><li class="listitem">
+<code class="literal">stored-procedure-name</code>: This attribute specifies the name of the stored procedure.
+If the <code class="literal">is-function</code> attribute is set to <code class="literal">true</code>, this attribute specifies the function name instead.
+Either this property or <code class="literal">stored-procedure-name-expression</code> must be specified.
+</li><li class="listitem">
+<p class="simpara"><code class="literal">stored-procedure-name-expression</code>: This attribute specifies the name of the stored procedure by using a SpEL expression.
+By using SpEL, you have access to the full message (if available), including its headers and payload.
+You can use this attribute to invoke different stored procedures at runtime.
+For example, you can provide stored procedure names that you would like to execute as a message header.
+The expression must resolve to a <code class="literal">String</code>.</p>
+<p class="simpara">If the <code class="literal">is-function</code> attribute is set to <code class="literal">true</code>, this attribute specifies a stored function.
+Either this property or <code class="literal">stored-procedure-name</code> must be specified.</p>
+</li><li class="listitem">
+<p class="simpara"><code class="literal">jdbc-call-operations-cache-size</code>: Defines the maximum number of cached <code class="literal">SimpleJdbcCallOperations</code> instances.
+Basically, for each stored procedure name, a new <a class="ulink" href="https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/jdbc/core/simple/SimpleJdbcCallOperations.html" target="_top"><code class="literal">SimpleJdbcCallOperations</code></a> instance is created that, in return, is cached.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Spring Integration 2.2 added the <code class="literal">stored-procedure-name-expression</code> attribute and the <code class="literal">jdbc-call-operations-cache-size</code> attribute.</p>
+</td></tr></table></div>
+<p class="simpara">The default cache size is <code class="literal">10</code>.
+A value of <code class="literal">0</code> disables caching.
+Negative values are not permitted.</p>
+<p class="simpara">If you enable JMX, statistical information about the <code class="literal">jdbc-call-operations-cache</code> is exposed as an MBean.
+See <a class="xref" href="system-management-chapter.html#jmx-mbean-exporter" title="12.2.7&nbsp;MBean Exporter">Section&nbsp;12.2.7, &#8220;MBean Exporter&#8221;</a> for more information.</p>
+</li><li class="listitem">
+<p class="simpara"><code class="literal">sql-parameter-source-factory</code>: (Not available for the stored procedure inbound channel adapter.)
+Reference to a <code class="literal">SqlParameterSourceFactory</code>.
+By default, bean properties of the passed in <code class="literal">Message</code> payload are used as a source for the stored procedure&#8217;s input parameters by using a <code class="literal">BeanPropertySqlParameterSourceFactory</code>.</p>
+<p class="simpara">This may suffice for basic use cases.
+For more sophisticated options, consider passing in one or more <code class="literal">ProcedureParameter</code> values.
+See <a class="xref" href="jdbc.html#sp-defining-parameter-sources" title="21.5.5&nbsp;Defining Parameter Sources">Section&nbsp;21.5.5, &#8220;Defining Parameter Sources&#8221;</a>.
+Optional.</p>
+</li><li class="listitem">
+<p class="simpara"><code class="literal">use-payload-as-parameter-source</code>: (Not available for the stored procedure inbound channel adapter.)
+If set to <code class="literal">true</code>, the payload of the <code class="literal">Message</code> is used as a source for providing parameters.
+If set to <code class="literal">false</code>, however, the entire <code class="literal">Message</code> is available as a source for parameters.</p>
+<p class="simpara">If no procedure parameters are passed in, this property defaults to <code class="literal">true</code>.
+This means that, by using a default <code class="literal">BeanPropertySqlParameterSourceFactory</code>, the bean properties of the payload are used as a source for parameter values for the stored procedure or stored function.</p>
+<p class="simpara">However, if procedure parameters are passed in, this property (by default) evaluates to <code class="literal">false</code>.
+<code class="literal">ProcedureParameter</code> lets SpEL Expressions be provided.
+Therefore, it is highly beneficial to have access to the entire <code class="literal">Message</code>.
+The property is set on the underlying <code class="literal">StoredProcExecutor</code>.
+Optional.</p>
+</li></ul></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sp-common-config-subelements" href="#sp-common-config-subelements"></a>21.5.4&nbsp;Common Configuration Sub-Elements</h3></div></div></div>
+
+<p>The stored procedure components share a common set of child elements that you can use to define and pass parameters to stored procedures or stored functions.
+The following elements are available:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<code class="literal">parameter</code>
+</li><li class="listitem">
+<code class="literal">returning-resultset</code>
+</li><li class="listitem">
+<code class="literal">sql-parameter-definition</code>
+</li><li class="listitem">
+<code class="literal">poller</code>
+</li><li class="listitem">
+<p class="simpara"><code class="literal">parameter</code>: Provides a mechanism to provide stored procedure parameters.
+Parameters can be either static or provided by using a SpEL Expressions.</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span>         <a name="CO25-1" href="#CO25-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                    type=""         <a name="CO25-2" href="#CO25-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                    value=""/&gt;      <a name="CO25-3" href="#CO25-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+
+<span class="hl-tag">&lt;int-jdbc:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span>
+                    <span class="hl-attribute">expression</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span> <a name="CO25-4" href="#CO25-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span></pre>
+<p>+
+&lt;1&gt; The name of the parameter to be passed into the Stored Procedure or Stored Function.
+Required.
+&lt;2&gt; This attribute specifies the type of the value.
+If nothing is provided, this attribute defaults to <code class="literal">java.lang.String</code>.
+This attribute is used only when the <code class="literal">value</code> attribute is used.
+Optional.
+&lt;3&gt; The value of the parameter.
+You must provide either this attribute or the <code class="literal">expression</code> attribute.
+Optional.
+&lt;4&gt; Instead of the <code class="literal">value</code> attribute, you can specify a SpEL expression for passing the value of the parameter.
+If you specify the <code class="literal">expression</code>, the <code class="literal">value</code> attribute is not allowed.
+Optional.</p>
+</div>
+<p class="simpara">Optional.</p>
+</li><li class="listitem">
+<p class="simpara"><code class="literal">returning-resultset</code>: Stored procedures may return multiple result sets.
+By setting one or more <code class="literal">returning-resultset</code> elements, you can specify <code class="literal">RowMappers</code> to convert each returned <code class="literal">ResultSet</code> to meaningful objects.
+Optional.</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:returning-resultset</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">row-mapper</span>=<span class="hl-value">""</span><span class="hl-tag"> /&gt;</span></pre>
+</div>
+</li><li class="listitem">
+<p class="simpara"><code class="literal">sql-parameter-definition</code>: If you use a database that is fully supported, you typically do not have to specify the stored procedure parameter definitions.
+Instead, those parameters can be automatically derived from the JDBC metadata.
+However, if you use databases that are not fully supported, you must set those parameters explicitly by using the <code class="literal">sql-parameter-definition</code> element.</p>
+<p class="simpara">You can also choose to turn off any processing of parameter metadata information obtained through JDBC by using the <code class="literal">ignore-column-meta-data</code> attribute.</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:sql-parameter-definition</span>
+                                   <span class="hl-attribute">name</span>=<span class="hl-value">""</span>                           <a name="CO25-5" href="#CO25-5"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                                   direction="IN"                    <a name="CO25-6" href="#CO25-6"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                                   type="STRING"                     <a name="CO25-7" href="#CO25-7"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                                   scale="5"                         <a name="CO25-8" href="#CO25-8"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                                   type-name="FOO_STRUCT"            <a name="CO25-9" href="#CO25-9"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                                   return-type="fooSqlReturnType"/&gt;  <a name="CO25-10" href="#CO25-10"></a><span><img src="images/callouts/6.png" alt="6" border="0"></span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO25-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> <a href="#CO25-5"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specifies the name of the SQL parameter.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO25-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> <a href="#CO25-6"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specifies the direction of the SQL parameter definition.
+Defaults to <code class="literal">IN</code>.
+Valid values are: <code class="literal">IN</code>, <code class="literal">OUT</code>, and <code class="literal">INOUT</code>.
+If your procedure is returning result sets, use the <code class="literal">returning-resultset</code> element.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO25-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> <a href="#CO25-7"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The SQL type used for this SQL parameter definition.
+Translates into an integer value, as defined by <code class="literal">java.sql.Types</code>.
+Alternatively, you can provide the integer value as well.
+If this attribute is not explicitly set, it defaults to <span class="emphasis"><em>VARCHAR</em></span>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO25-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> <a href="#CO25-8"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The scale of the SQL parameter.
+Only used for numeric and decimal parameters.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO25-9"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The <code class="literal">typeName</code> for types that are user-named, such as: <code class="literal">STRUCT</code>, <code class="literal">DISTINCT</code>, <code class="literal">JAVA_OBJECT</code>, and named array types.
+This attribute is mutually exclusive with the <code class="literal">scale</code> attribute.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO25-10"><span><img src="images/callouts/6.png" alt="6" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The reference to a custom value handler for complex types.
+An implementation of <a class="ulink" href="https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/jdbc/core/SqlReturnType.html" target="_top"><code class="literal">SqlReturnType</code></a>.
+This attribute is mutually exclusive with the <code class="literal">scale</code> attribute and is only applicable for OUT and INOUT parameters.
+Optional.</p>
+</td></tr></table></div>
+</div>
+</li><li class="listitem">
+<code class="literal">poller</code>: Lets you configure a message poller if this endpoint is a <code class="literal">PollingConsumer</code>.
+Optional.
+</li></ul></div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sp-defining-parameter-sources" href="#sp-defining-parameter-sources"></a>21.5.5&nbsp;Defining Parameter Sources</h3></div></div></div>
+
+<p>Parameter sources govern the techniques of retrieving and mapping the Spring Integration message properties to the relevant stored procedure input parameters.</p>
+<p>The stored procedure components follow certain rules.
+By default, the bean properties of the <code class="literal">Message</code> payload are used as a source for the stored procedure&#8217;s input parameters.
+In that case, a <code class="literal">BeanPropertySqlParameterSourceFactory</code> is used.
+This may suffice for basic use cases.
+The next example illustrates that default behavior.</p>
+<div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Important"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="images/important.png"></td><th align="left">Important</th></tr><tr><td align="left" valign="top">
+<p>For the "<code class="literal">automatic</code>" lookup of bean properties by using the <code class="literal">BeanPropertySqlParameterSourceFactory</code> to work, your bean properties must be defined in lower case.
+This is due to the fact that in <code class="literal">org.springframework.jdbc.core.metadata.CallMetaDataContext</code> (the Java method is <code class="literal">matchInParameterValuesWithCallParameters()</code>), the retrieved stored procedure parameter declarations are converted to lower case.
+As a result, if you have camel-case bean properties (such as <code class="literal">lastName</code>), the lookup fails.
+In that case, provide an explicit <code class="literal">ProcedureParameter</code>.</p>
+</td></tr></table></div>
+<p>Suppose we have a payload that consists of a simple bean with the following three properties: <code class="literal">id</code>, <code class="literal">name</code>, and <code class="literal">description</code>.
+Furthermore, we have a simplistic Stored Procedure called <code class="literal">INSERT_COFFEE</code> that accepts three input parameters: <code class="literal">id</code>, <code class="literal">name</code>, and <code class="literal">description</code>.
+We also use a fully supported database.
+In that case, the following configuration for a stored procedure outbound adapter suffices:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:stored-proc-outbound-channel-adapter</span> <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span>
+    <span class="hl-attribute">channel</span>=<span class="hl-value">"insertCoffeeProcedureRequestChannel"</span>
+    <span class="hl-attribute">stored-procedure-name</span>=<span class="hl-value">"INSERT_COFFEE"</span><span class="hl-tag">/&gt;</span></pre>
+</div>
+<p>For more sophisticated options, consider passing in one or more <code class="literal">ProcedureParameter</code> values.</p>
+<p>If you do provide <code class="literal">ProcedureParameter</code> values explicitly, by default, an <code class="literal">ExpressionEvaluatingSqlParameterSourceFactory</code> is used for parameter processing, to enable the full power of SpEL expressions.</p>
+<p>If you need even more control over how parameters are retrieved, consider passing in a custom implementation of <code class="literal">SqlParameterSourceFactory</code> by using the <code class="literal">sql-parameter-source-factory</code> attribute.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="stored-procedure-inbound-channel-adapter" href="#stored-procedure-inbound-channel-adapter"></a>21.5.6&nbsp;Stored Procedure Inbound Channel Adapter</h3></div></div></div>
+
+<p>The following listing calls out the attributes that matter for a stored procedure inbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:stored-proc-inbound-channel-adapter</span>
+                                   <span class="hl-attribute">channel</span>=<span class="hl-value">""</span>                                    <a name="CO26-1" href="#CO26-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                                   stored-procedure-name=""
+                                   data-source=""
+                                   auto-startup="true"
+                                   id=""
+                                   ignore-column-meta-data="false"
+                                   is-function="false"
+                                   skip-undeclared-results=""                    <a name="CO26-2" href="#CO26-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                                   return-value-required="false"                 <a name="CO26-3" href="#CO26-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+    <span class="hl-tag">&lt;int:poller/&gt;</span>
+    <span class="hl-tag">&lt;int-jdbc:sql-parameter-definition</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">direction</span>=<span class="hl-value">"IN"</span>
+                                               <span class="hl-attribute">type</span>=<span class="hl-value">"STRING"</span>
+                                               <span class="hl-attribute">scale</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jdbc:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">type</span>=<span class="hl-value">""</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jdbc:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">expression</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jdbc:returning-resultset</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">row-mapper</span>=<span class="hl-value">""</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int-jdbc:stored-proc-inbound-channel-adapter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO26-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Channel to which polled messages are sent.
+If the stored procedure or function does not return any data, the payload of the <code class="literal">Message</code> is null.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO26-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>If this attribute is set to <code class="literal">true</code>, all results from a stored procedure call that do not have a corresponding <code class="literal">SqlOutParameter</code> declaration are bypassed.
+For example, stored procedures can return an update count value, even though your stored procedure declared only a single result parameter.
+The exact behavior depends on the database implementation.
+The value is set on the underlying <code class="literal">JdbcTemplate</code>.
+The value defaults to <code class="literal">true</code>.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO26-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Indicates whether this procedure&#8217;s return value should be included.
+Since Spring Integration 3.0.
+Optional.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="stored-procedure-outbound-channel-adapter" href="#stored-procedure-outbound-channel-adapter"></a>21.5.7&nbsp;Stored Procedure Outbound Channel Adapter</h3></div></div></div>
+
+<p>The following listing calls out the attributes that matter for a stored procedure outbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:stored-proc-outbound-channel-adapter</span> <span class="hl-attribute">channel</span>=<span class="hl-value">""</span>                        <a name="CO27-1" href="#CO27-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                                               stored-procedure-name=""
+                                               data-source=""
+                                               auto-startup="true"
+                                               id=""
+                                               ignore-column-meta-data="false"
+                                               order=""                          <a name="CO27-2" href="#CO27-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                                               sql-parameter-source-factory=""
+                                               use-payload-as-parameter-source=""&gt;
+    <span class="hl-tag">&lt;int:poller</span> <span class="hl-attribute">fixed-rate</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jdbc:sql-parameter-definition</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+    <span class="hl-tag">&lt;int-jdbc:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+
+<span class="hl-tag">&lt;/int-jdbc:stored-proc-outbound-channel-adapter&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO27-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The receiving message channel of this endpoint.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO27-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Specifies the order for invocation when this endpoint is connected as a subscriber to a channel.
+This is particularly relevant when that channel is using a <code class="literal">failover</code> dispatching strategy.
+It has no effect when this endpoint is itself a polling consumer for a channel with a queue.
+Optional.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="stored-procedure-outbound-gateway" href="#stored-procedure-outbound-gateway"></a>21.5.8&nbsp;Stored Procedure Outbound Gateway</h3></div></div></div>
+
+<p>The following listing calls out the attributes that matter for a stored procedure outbound channel adapter:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:stored-proc-outbound-gateway</span> <span class="hl-attribute">request-channel</span>=<span class="hl-value">""</span>                        <a name="CO28-1" href="#CO28-1"></a><span><img src="images/callouts/1.png" alt="1" border="0"></span>
+                                       stored-procedure-name=""
+                                       data-source=""
+                                   auto-startup="true"
+                                   id=""
+                                   ignore-column-meta-data="false"
+                                   is-function="false"
+                                   order=""
+                                   reply-channel=""                              <a name="CO28-2" href="#CO28-2"></a><span><img src="images/callouts/2.png" alt="2" border="0"></span>
+                                   reply-timeout=""                              <a name="CO28-3" href="#CO28-3"></a><span><img src="images/callouts/3.png" alt="3" border="0"></span>
+                                   return-value-required="false"                 <a name="CO28-4" href="#CO28-4"></a><span><img src="images/callouts/4.png" alt="4" border="0"></span>
+                                   skip-undeclared-results=""                    <a name="CO28-5" href="#CO28-5"></a><span><img src="images/callouts/5.png" alt="5" border="0"></span>
+                                   sql-parameter-source-factory=""
+                                   use-payload-as-parameter-source=""&gt;
+<span class="hl-tag">&lt;int-jdbc:sql-parameter-definition</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">direction</span>=<span class="hl-value">"IN"</span>
+                                   <span class="hl-attribute">type</span>=<span class="hl-value">""</span>
+                                   <span class="hl-attribute">scale</span>=<span class="hl-value">"10"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int-jdbc:sql-parameter-definition</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int-jdbc:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">type</span>=<span class="hl-value">""</span> <span class="hl-attribute">value</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int-jdbc:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">expression</span>=<span class="hl-value">""</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;int-jdbc:returning-resultset</span> <span class="hl-attribute">name</span>=<span class="hl-value">""</span> <span class="hl-attribute">row-mapper</span>=<span class="hl-value">""</span><span class="hl-tag"> /&gt;</span></pre>
+<div class="calloutlist"><table border="0" summary="Callout list"><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-1"><span><img src="images/callouts/1.png" alt="1" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>The receiving message channel of this endpoint.
+Required.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-2"><span><img src="images/callouts/2.png" alt="2" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Message channel to which replies should be sent after receiving the database response.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-3"><span><img src="images/callouts/3.png" alt="3" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Lets you specify how long this gateway waits for the reply message to be sent successfully before throwing an exception.
+Keep in mind that, when sending to a <code class="literal">DirectChannel</code>, the invocation occurs in the sender&#8217;s thread.
+Consequently, the failing of the send operation may be caused by other components further downstream.
+By default, the gateway waits indefinitely.
+The value is specified in milliseconds.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-4"><span><img src="images/callouts/4.png" alt="4" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>Indicates whether this procedure&#8217;s return value should be included.
+Optional.</p>
+</td></tr><tr><td width="5%" valign="top" align="left"><p><a href="#CO28-5"><span><img src="images/callouts/5.png" alt="5" border="0"></span></a> </p></td><td valign="top" align="left">
+<p>If the <code class="literal">skip-undeclared-results</code> attribute is set to <code class="literal">true</code>, all results from a stored procedure call that do not have a corresponding <code class="literal">SqlOutParameter</code> declaration are bypassed.
+For example, stored procedures may return an update count value, even though your stored procedure only declared a single result parameter.
+The exact behavior depends on the database.
+The value is set on the underlying <code class="literal">JdbcTemplate</code>.
+The value defaults to <code class="literal">true</code>.
+Optional.</p>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="sp-examples" href="#sp-examples"></a>21.5.9&nbsp;Examples</h3></div></div></div>
+
+<p>This section contains two examples that call <a class="ulink" href="https://db.apache.org/derby/" target="_top">Apache Derby</a> stored procedures.
+The first procedure calls a stored procedure that returns a <code class="literal">ResultSet</code>.
+By using a <code class="literal">RowMapper</code>, the data is converted into a domain object, which then becomes the Spring Integration message payload.</p>
+<p>In the second sample, we call a stored procedure that uses output parameters to return data instead.</p>
+<div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><table border="0" summary="Note"><tr><td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td><th align="left">Note</th></tr><tr><td align="left" valign="top">
+<p>Have a look at the <a class="ulink" href="https://github.com/spring-projects/spring-integration-samples" target="_top">Spring Integration Samples project</a>.</p>
+<p>The project contains the Apache Derby example referenced here, as well as instructions on how to run it.
+The Spring Integration Samples project also provides an <a class="ulink" href="https://github.com/spring-projects/spring-integration-samples/tree/master/intermediate/stored-procedures-oracle" target="_top">example</a> of using Oracle stored procedures.</p>
+</td></tr></table></div>
+<p>In the first example, we call a stored procedure named <code class="literal">FIND_ALL_COFFEE_BEVERAGES</code> that does not define any input parameters but that returns a <code class="literal">ResultSet</code>.</p>
+<p>In Apache Derby, stored procedures are implemented in Java.
+The following listing shows the method signature:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> findAllCoffeeBeverages(ResultSet[] coffeeBeverages)
+            <span class="hl-keyword">throws</span> SQLException {
+    ...
+}</pre>
+</div>
+<p>The following listing shows the corresponding SQL:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">CREATE</span> <span class="hl-keyword">PROCEDURE</span> FIND_ALL_COFFEE_BEVERAGES() \
+<span class="hl-keyword">PARAMETER</span> <span class="hl-keyword">STYLE</span> JAVA <span class="hl-keyword">LANGUAGE</span> JAVA <span class="hl-keyword">MODIFIES</span> <span class="hl-keyword">SQL</span> <span class="hl-keyword">DATA</span> <span class="hl-keyword">DYNAMIC</span> <span class="hl-keyword">RESULT</span> <span class="hl-keyword">SETS</span> <span class="hl-number">1</span> \
+<span class="hl-keyword">EXTERNAL</span> <span class="hl-keyword">NAME</span> <span class="hl-string">'o.s.i.jdbc.storedproc.derby.DerbyStoredProcedures.findAllCoffeeBeverages'</span>;</pre>
+</div>
+<p>In Spring Integration, you can now call this stored procedure by using, for example, a <code class="literal">stored-proc-outbound-gateway</code>, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:stored-proc-outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outbound-gateway-storedproc-find-all"</span>
+                                       <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span>
+                                       <span class="hl-attribute">request-channel</span>=<span class="hl-value">"findAllProcedureRequestChannel"</span>
+                                       <span class="hl-attribute">expect-single-result</span>=<span class="hl-value">"true"</span>
+                                       <span class="hl-attribute">stored-procedure-name</span>=<span class="hl-value">"FIND_ALL_COFFEE_BEVERAGES"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;int-jdbc:returning-resultset</span> <span class="hl-attribute">name</span>=<span class="hl-value">"coffeeBeverages"</span>
+    <span class="hl-attribute">row-mapper</span>=<span class="hl-value">"org.springframework.integration.support.CoffeBeverageMapper"</span><span class="hl-tag">/&gt;</span>
+<span class="hl-tag">&lt;/int-jdbc:stored-proc-outbound-gateway&gt;</span></pre>
+</div>
+<p>In the second example, we call a stored procedure named <code class="literal">FIND_COFFEE</code> that has one input parameter.
+Instead of returning a <code class="literal">ResultSet</code>, it uses an output parameter.
+The following example shows the method signature:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">public</span> <span class="hl-keyword">static</span> <span class="hl-keyword">void</span> findCoffee(<span class="hl-keyword">int</span> coffeeId, String[] coffeeDescription)
+            <span class="hl-keyword">throws</span> SQLException {
+    ...
+}</pre>
+</div>
+<p>The following listing shows the corresponding SQL:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">CREATE</span> <span class="hl-keyword">PROCEDURE</span> FIND_COFFEE(<span class="hl-keyword">IN</span> ID <span class="hl-keyword">INTEGER</span>, <span class="hl-keyword">OUT</span> COFFEE_DESCRIPTION <span class="hl-keyword">VARCHAR</span>(<span class="hl-number">200</span>)) \
+<span class="hl-keyword">PARAMETER</span> <span class="hl-keyword">STYLE</span> JAVA <span class="hl-keyword">LANGUAGE</span> JAVA <span class="hl-keyword">EXTERNAL</span> <span class="hl-keyword">NAME</span> \
+<span class="hl-string">'org.springframework.integration.jdbc.storedproc.derby.DerbyStoredProcedures.findCoffee'</span>;</pre>
+</div>
+<p>In Spring Integration, you can now call this Stored Procedure by using, for example, a <code class="literal">stored-proc-outbound-gateway</code>, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-tag">&lt;int-jdbc:stored-proc-outbound-gateway</span> <span class="hl-attribute">id</span>=<span class="hl-value">"outbound-gateway-storedproc-find-coffee"</span>
+                                       <span class="hl-attribute">data-source</span>=<span class="hl-value">"dataSource"</span>
+                                       <span class="hl-attribute">request-channel</span>=<span class="hl-value">"findCoffeeProcedureRequestChannel"</span>
+                                       <span class="hl-attribute">skip-undeclared-results</span>=<span class="hl-value">"true"</span>
+                                       <span class="hl-attribute">stored-procedure-name</span>=<span class="hl-value">"FIND_COFFEE"</span>
+                                       <span class="hl-attribute">expect-single-result</span>=<span class="hl-value">"true"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;int-jdbc:parameter</span> <span class="hl-attribute">name</span>=<span class="hl-value">"ID"</span> <span class="hl-attribute">expression</span>=<span class="hl-value">"payload"</span><span class="hl-tag"> /&gt;</span>
+<span class="hl-tag">&lt;/int-jdbc:stored-proc-outbound-gateway&gt;</span></pre>
+</div>
+</div>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jdbc-lock-registry" href="#jdbc-lock-registry"></a>21.6&nbsp;JDBC Lock Registry</h2></div></div></div>
+
+<p>Version 4.3 introduced the <code class="literal">JdbcLockRegistry</code>.
+Certain components (for example, aggregator and resequencer) use a lock obtained from a <code class="literal">LockRegistry</code> instance to ensure that only one thread manipulates a group at a time.
+The <code class="literal">DefaultLockRegistry</code> performs this function within a single component.
+You can now configure an external lock registry on these components.
+When used with a shared <code class="literal">MessageGroupStore</code>, you can use the <code class="literal">JdbcLockRegistry</code> to provide this functionality across multiple application instances, such that only one instance can manipulate the group at a time.</p>
+<p>When a lock is released by a local thread, another local thread can generally acquire the lock immediately.
+If a lock is released by a thread that uses a different registry instance, it can take up to 100ms to acquire the lock.</p>
+<p>The <code class="literal">JdbcLockRegistry</code> is based on the <code class="literal">LockRepository</code> abstraction, which has a <code class="literal">DefaultLockRepository</code> implementation.
+The database schema scripts are located in the <code class="literal">org.springframework.integration.jdbc</code> package, which is divided for the particular RDBMS vendors.
+For example, the following listing shows the H2 DDL for the lock table:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">CREATE</span> <span class="hl-keyword">TABLE</span> INT_LOCK  (
+    LOCK_KEY <span class="hl-keyword">CHAR</span>(<span class="hl-number">36</span>),
+    REGION <span class="hl-keyword">VARCHAR</span>(<span class="hl-number">100</span>),
+    CLIENT_ID <span class="hl-keyword">CHAR</span>(<span class="hl-number">36</span>),
+    CREATED_DATE <span class="hl-keyword">TIMESTAMP</span> <span class="hl-keyword">NOT</span> <span class="hl-keyword">NULL</span>,
+    <span class="hl-keyword">constraint</span> LOCK_PK <span class="hl-keyword">primary</span> <span class="hl-keyword">key</span> (LOCK_KEY, REGION)
+);</pre>
+</div>
+<p>The <code class="literal">INT_</code> can be changed according to the target database design requirements.
+Therefore, you must use <code class="literal">prefix</code> property on the <code class="literal">DefaultLockRepository</code> bean definition.</p>
+<p>Sometimes, one application has moved to such a state that it cannot release the distributed lock and remove the particular record in the database.
+For this purpose, such dead locks can be expired by the other application on the next locking invocation.
+The <code class="literal">timeToLive</code> (TTL) option on the <code class="literal">DefaultLockRepository</code> is provided for this purpose.
+You may also want to specify <code class="literal">CLIENT_ID</code> for the locks stored for a given <code class="literal">DefaultLockRepository</code> instance.
+If so, you can specify the <code class="literal">id</code> to be associated with the <code class="literal">DefaultLockRepository</code> as a constructor parameter.</p>
+</div>
+<div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jdbc-metadata-store" href="#jdbc-metadata-store"></a>21.7&nbsp;JDBC Metadata Store</h2></div></div></div>
+
+<p>Version 5.0 introduced the JDBC <code class="literal">MetadataStore</code> (see <a class="xref" href="system-management-chapter.html#metadata-store" title="12.5&nbsp;Metadata Store">Section&nbsp;12.5, &#8220;Metadata Store&#8221;</a>) implementation.
+You can use the <code class="literal">JdbcMetadataStore</code> to maintain the metadata state across application restarts.
+This <code class="literal">MetadataStore</code> implementation can be used with adapters such as the following:</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+<a class="link" href="feed.html#feed-inbound-channel-adapter" title="16.1&nbsp;Feed Inbound Channel Adapter">Feed inbound channel adapters</a>
+</li><li class="listitem">
+<a class="link" href="files.html#file-reading" title="17.1&nbsp;Reading Files">files</a>
+</li><li class="listitem">
+<a class="link" href="ftp.html#ftp-inbound" title="18.4&nbsp;FTP Inbound Channel Adapter">FTP inbound channel adapters</a>
+</li><li class="listitem">
+<a class="link" href="sftp.html#sftp-inbound" title="30.6&nbsp;SFTP Inbound Channel Adapter">SFTP inbound channel adapters</a>
+</li></ul></div>
+<p>To configure these adapters to use the <code class="literal">JdbcMetadataStore</code>, declare a Spring bean by using a bean name of <code class="literal">metadataStore</code>.
+The Feed inbound channel adapter and the feed inbound channel adapter both automatically pick up and use the declared <code class="literal">JdbcMetadataStore</code>, as the following example shows:</p>
+<div class="informalexample">
+<pre class="programlisting"><em><span class="hl-annotation" style="color: gray">@Bean</span></em>
+<span class="hl-keyword">public</span> MetadataStore metadataStore(DataSource dataSource) {
+    <span class="hl-keyword">return</span> <span class="hl-keyword">new</span> JdbcMetadataStore(dataSource);
+}</pre>
+</div>
+<p>The <code class="literal">org.springframework.integration.jdbc</code> package has Database schema scripts for several RDMBS vendors.
+For example, the following listing shows the H2 DDL for the metadata table:</p>
+<div class="informalexample">
+<pre class="programlisting"><span class="hl-keyword">CREATE</span> <span class="hl-keyword">TABLE</span> INT_METADATA_STORE  (
+	METADATA_KEY <span class="hl-keyword">VARCHAR</span>(<span class="hl-number">255</span>) <span class="hl-keyword">NOT</span> <span class="hl-keyword">NULL</span>,
+	METADATA_VALUE <span class="hl-keyword">VARCHAR</span>(<span class="hl-number">4000</span>),
+	REGION <span class="hl-keyword">VARCHAR</span>(<span class="hl-number">100</span>) <span class="hl-keyword">NOT</span> <span class="hl-keyword">NULL</span>,
+	<span class="hl-keyword">constraint</span> METADATA_STORE <span class="hl-keyword">primary</span> <span class="hl-keyword">key</span> (METADATA_KEY, REGION)
+);</pre>
+</div>
+<p>You can change the <code class="literal">INT_</code> prefix to match the target database design requirements.
+You can also configure <code class="literal">JdbcMetadataStore</code> to use the custom prefix.</p>
+<p>The <code class="literal">JdbcMetadataStore</code> implements <code class="literal">ConcurrentMetadataStore</code>, letting it be reliably shared across multiple application instances, where only one instance can store or modify a key&#8217;s value.
+All of these operations are atomic, thanks to transaction guarantees.</p>
+<p>Transaction management must use <code class="literal">JdbcMetadataStore</code>.
+Inbound channel adapters can be supplied with a reference to the <code class="literal">TransactionManager</code> in the poller configuration.
+Unlike non-transactional <code class="literal">MetadataStore</code> implementations, with <code class="literal">JdbcMetadataStore</code>, the entry appears in the target table only after the transaction commits.
+When a rollback occurs, no entries are added to the <code class="literal">INT_METADATA_STORE</code> table.</p>
+<p>Since version 5.0.7, you can configure the <code class="literal">JdbcMetadataStore</code> with the RDBMS vendor-specific <code class="literal">lockHint</code> option for lock-based queries on metadata store entries.
+By default, it is <code class="literal">FOR UPDATE</code> and can be configured with an empty string if the target database does not support row locking functionality.
+Consult with your vendor for particular and possible hints in the <code class="literal">SELECT</code> expression for locking rows before updates.</p>
+</div>
+</div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="http.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="spring-integration-endpoints.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="jpa.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">20.&nbsp;HTTP Support&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;22.&nbsp;JPA Support</td></tr></table></div></body></html>
