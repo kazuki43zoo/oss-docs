@@ -446,6 +446,12 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 	cursor: pointer;
 }
 
+.switch--item:not(:first-child) {
+	border-width: 0 0 0 1px;
+	border-style: solid;
+	border-color: #7a2518;
+}
+
 .switch--item.selected {
 	background-color: #7a2519;
 	color: #ffffff;
@@ -506,7 +512,7 @@ $(addBlockSwitches);
 <h1>Spring REST Docs</h1>
 <div class="details">
 <span id="author" class="author">Andy Wilkinson</span><br>
-<span id="revnumber">version 1.2.5.RELEASE</span>
+<span id="revnumber">version 2.0.3.RELEASE</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -589,10 +595,17 @@ $(addBlockSwitches);
 </li>
 <li><a href="#configuration">Configuration</a>
 <ul class="sectlevel2">
-<li><a href="#configuration-uris">Documented URIs</a></li>
+<li><a href="#configuration-uris">Documented URIs</a>
+<ul class="sectlevel3">
+<li><a href="#configuration-uris-mockmvc">MockMvc URI customization</a></li>
+<li><a href="#configuration-uris-rest-assured">REST Assured URI customization</a></li>
+<li><a href="#configuration-uris-webtestclient">WebTestClient URI customization</a></li>
+</ul>
+</li>
 <li><a href="#configuration-snippet-encoding">Snippet encoding</a></li>
 <li><a href="#configuration-snippet-template-format">Snippet template format</a></li>
 <li><a href="#configuration-default-snippets">Default snippets</a></li>
+<li><a href="#configuration-default-preprocessors">Default operation preprocessors</a></li>
 </ul>
 </li>
 <li><a href="#working-with-asciidoctor">Working with Asciidoctor</a>
@@ -654,11 +667,12 @@ produces HTML, styled and layed out to suit your needs. If you prefer, Spring RE
 can also be configured to use Markdown.</p>
 </div>
 <div class="paragraph">
-<p>Spring REST Docs makes use of snippets produced by tests written with
-<a href="http://docs.spring.io/spring/docs/current/spring-framework-reference/htmlsingle/#spring-mvc-test-framework">Spring MVC Test</a> or
-<a href="http://www.rest-assured.io">REST Assured</a> 2 and 3. This test-driven approach helps to
-guarantee the accuracy of your service&#8217;s documentation. If a snippet is incorrect the
-test that produces it will fail.</p>
+<p>Spring REST Docs makes use of snippets produced by tests written with Spring MVC&#8217;s
+<a href="https://docs.spring.io/spring-framework/docs/5.0.x/spring-framework-reference/testing.html#spring-mvc-test-framework">test framework</a>, Spring
+WebFlux&#8217;s <a href="https://docs.spring.io/spring-framework/docs/5.0.x/spring-framework-reference/testing.html#webtestclient"><code>WebTestClient</code></a> or
+<a href="http://www.rest-assured.io">REST Assured 3</a>. This test-driven approach helps to guarantee
+the accuracy of your service&#8217;s documentation. If a snippet is incorrect the test that
+produces it will fail.</p>
 </div>
 <div class="paragraph">
 <p>Documenting a RESTful service is largely about describing its resources. Two key parts
@@ -698,13 +712,13 @@ the implementation without having to rework the documentation.</p>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-notes-spring-data-rest">Spring Data REST</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-notes-spring-data-rest">Spring Data REST</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Maven</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Demonstrates the creation of a getting started guide and an API guide for a service
   implemented using <a href="http://projects.spring.io/spring-data-rest/">Spring Data REST</a>.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-notes-spring-hateoas">Spring HATEOAS</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-notes-spring-hateoas">Spring HATEOAS</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Gradle</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Demonstrates the creation of a getting started guide and an API guide for a service
   implemented using <a href="http://projects.spring.io/spring-hateoas/">Spring HATEOAS</a>.</p></td>
@@ -712,7 +726,7 @@ the implementation without having to rework the documentation.</p>
 </tbody>
 </table>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 2. REST Assured</caption>
+<caption class="title">Table 2. WebTestClient</caption>
 <colgroup>
 <col style="width: 20%;">
 <col style="width: 13.3333%;">
@@ -727,20 +741,42 @@ the implementation without having to rework the documentation.</p>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-notes-grails">Grails</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/web-test-client">WebTestClient</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gradle</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Demonstrates the use of Spring REST docs with Spring WebFlux&#8217;s WebTestClient.</p></td>
+</tr>
+</tbody>
+</table>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 3. REST Assured</caption>
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 13.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Sample</th>
+<th class="tableblock halign-left valign-top">Build system</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-notes-grails">Grails</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Gradle</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Demonstrates the use of Spring REST docs with <a href="https://grails.org">Grails</a> and
   <a href="https://github.com/spockframework/spock">Spock</a>.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-assured">REST Assured</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-assured">REST Assured</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Gradle</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Demonstrates the use of Spring REST Docs with <a href="http://rest-assured.io">REST Assured</a>.</p></td>
 </tr>
 </tbody>
 </table>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 3. Advanced</caption>
+<caption class="title">Table 4. Advanced</caption>
 <colgroup>
 <col style="width: 20%;">
 <col style="width: 13.3333%;">
@@ -755,15 +791,20 @@ the implementation without having to rework the documentation.</p>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-notes-slate">Slate</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-notes-slate">Slate</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Gradle</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Demonstrates the use of Spring REST Docs with Markdown and
   <a href="http://github.com/tripit/slate">Slate</a>.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/testng">TestNG</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/testng">TestNG</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Gradle</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Demonstrates the use of Spring REST Docs with <a href="http://testng.org">TestNG</a>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/junit5">JUnit 5</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gradle</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Demonstrates the use of Spring REST Docs with <a href="http://junit.org/junit5/">JUnit 5</a>.</p></td>
 </tr>
 </tbody>
 </table>
@@ -776,10 +817,10 @@ the implementation without having to rework the documentation.</p>
 <div class="ulist">
 <ul>
 <li>
-<p>Java 7</p>
+<p>Java 8</p>
 </li>
 <li>
-<p>Spring Framework 4.3</p>
+<p>Spring Framework 5 (5.0.2 or later)</p>
 </li>
 </ul>
 </div>
@@ -790,8 +831,7 @@ requirements:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>REST Assured 2.8 (<code>com.jayway.restassured:restassured</code>) or REST Assured 3.0
-(<code>io.rest-assured:rest-assured</code>)</p>
+<p>REST Assured 3.0</p>
 </li>
 </ul>
 </div>
@@ -800,8 +840,8 @@ requirements:</p>
 <h3 id="getting-started-build-configuration"><a class="link" href="#getting-started-build-configuration">Build configuration</a></h3>
 <div class="paragraph">
 <p>The first step in using Spring REST Docs is to configure your project&#8217;s build. The
-<a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-notes-spring-hateoas">Spring HATEOAS</a> and
-<a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-notes-spring-data-rest">Spring Data REST</a> samples contain a <code>build.gradle</code>
+<a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-notes-spring-hateoas">Spring HATEOAS</a> and
+<a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-notes-spring-data-rest">Spring Data REST</a> samples contain a <code>build.gradle</code>
 and <code>pom.xml</code> respectively that you may wish to use as a reference. The key parts of
 the configuration are described below.</p>
 </div>
@@ -811,7 +851,7 @@ the configuration are described below.</p>
 <pre class="highlightjs highlight"><code class="language-xml hljs" data-lang="xml">&lt;dependency&gt; <i class="conum" data-value="1"></i><b>(1)</b>
 	&lt;groupId&gt;org.springframework.restdocs&lt;/groupId&gt;
 	&lt;artifactId&gt;spring-restdocs-mockmvc&lt;/artifactId&gt;
-	&lt;version&gt;1.2.5.RELEASE&lt;/version&gt;
+	&lt;version&gt;2.0.3.RELEASE&lt;/version&gt;
 	&lt;scope&gt;test&lt;/scope&gt;
 &lt;/dependency&gt;
 
@@ -838,7 +878,7 @@ the configuration are described below.</p>
 				&lt;dependency&gt; <i class="conum" data-value="4"></i><b>(4)</b>
 					&lt;groupId&gt;org.springframework.restdocs&lt;/groupId&gt;
 					&lt;artifactId&gt;spring-restdocs-asciidoctor&lt;/artifactId&gt;
-					&lt;version&gt;1.2.5.RELEASE&lt;/version&gt;
+					&lt;version&gt;2.0.3.RELEASE&lt;/version&gt;
 				&lt;/dependency&gt;
 			&lt;/dependencies&gt;
 		&lt;/plugin&gt;
@@ -851,9 +891,8 @@ the configuration are described below.</p>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
 <td>Add a dependency on <code>spring-restdocs-mockmvc</code> in the <code>test</code> scope. If you want to use
-REST Assured rather than MockMvc, add a dependency on <code>spring-restdocs-restassured</code>
-and <code>com.jayway.restassured:restassured</code> (REST Assured 2) or
-<code>io.rest-assured:rest-assured</code> (REST Assured 3) instead.</td>
+<code>WebTestClient</code> or REST Assured rather than MockMvc, add a dependency on
+<code>spring-restdocs-webtestclient</code> or <code>spring-restdocs-restassured</code> respectively instead.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
@@ -881,8 +920,8 @@ block macro.</td>
 }
 
 dependencies {
-	asciidoctor 'org.springframework.restdocs:spring-restdocs-asciidoctor:1.2.5.RELEASE' <i class="conum" data-value="2"></i><b>(2)</b>
-	testCompile 'org.springframework.restdocs:spring-restdocs-mockmvc:1.2.5.RELEASE' <i class="conum" data-value="3"></i><b>(3)</b>
+	asciidoctor 'org.springframework.restdocs:spring-restdocs-asciidoctor:2.0.3.RELEASE' <i class="conum" data-value="2"></i><b>(2)</b>
+	testCompile 'org.springframework.restdocs:spring-restdocs-mockmvc:2.0.3.RELEASE' <i class="conum" data-value="3"></i><b>(3)</b>
 }
 
 ext { <i class="conum" data-value="4"></i><b>(4)</b>
@@ -916,8 +955,7 @@ files to point to <code>build/generated-snippets</code>. It will also allow you 
 <td><i class="conum" data-value="3"></i><b>3</b></td>
 <td>Add a dependency on <code>spring-restdocs-mockmvc</code> in the <code>testCompile</code> configuration. If
 you want to use REST Assured rather than MockMvc, add a dependency on
-<code>spring-restdocs-restassured</code> and <code>com.jayway.restassured:restassured</code> (REST Assured
-2) or <code>io.rest-assured:rest-assured</code> (REST Assured 3) instead.</td>
+<code>spring-restdocs-restassured</code> instead.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="4"></i><b>4</b></td>
@@ -1016,7 +1054,7 @@ from where it will be included in the jar file.</td>
 <div class="listingblock secondary">
 <div class="title">Gradle</div>
 <div class="content">
-<pre class="highlightjs highlight"><code>jar {
+<pre class="highlightjs highlight"><code>bootJar {
 	dependsOn asciidoctor <i class="conum" data-value="1"></i><b>(1)</b>
 	from ("${asciidoctor.outputDir}/html5") { <i class="conum" data-value="2"></i><b>(2)</b>
 		into 'static/docs'
@@ -1041,8 +1079,9 @@ from where it will be included in the jar file.</td>
 <div class="sect2">
 <h3 id="getting-started-documentation-snippets"><a class="link" href="#getting-started-documentation-snippets">Generating documentation snippets</a></h3>
 <div class="paragraph">
-<p>Spring REST Docs uses
-<a href="http://docs.spring.io/spring/docs/current/spring-framework-reference/htmlsingle/#spring-mvc-test-framework">Spring&#8217;s MVC Test framework</a> or
+<p>Spring REST Docs uses Spring MVC&#8217;s
+<a href="https://docs.spring.io/spring-framework/docs/5.0.x/spring-framework-reference/testing.html#spring-mvc-test-framework">test framework</a>,
+Spring WebFlux&#8217;s <a href="https://docs.spring.io/spring-framework/docs/5.0.x/spring-framework-reference/testing.html#webtestclient"><code>WebTestClient</code></a> or
 <a href="http://www.rest-assured.io">REST Assured</a> to make requests to the service that you are
 documenting. It then produces documentation snippets for the request and the resulting
 response.</p>
@@ -1051,13 +1090,13 @@ response.</p>
 <h4 id="getting-started-documentation-snippets-setup"><a class="link" href="#getting-started-documentation-snippets-setup">Setting up your tests</a></h4>
 <div class="paragraph">
 <p>Exactly how you setup your tests depends on the test framework that you&#8217;re using.
-Spring REST Docs provides first-class support for JUnit. Other frameworks, such as TestNG,
-are also supported although slightly more setup is required.</p>
+Spring REST Docs provides first-class support for JUnit 4 and JUnit 5. Other frameworks,
+such as TestNG, are also supported although slightly more setup is required.</p>
 </div>
 <div class="sect4">
-<h5 id="getting-started-documentation-snippets-setup-junit"><a class="link" href="#getting-started-documentation-snippets-setup-junit">Setting up your JUnit tests</a></h5>
+<h5 id="getting-started-documentation-snippets-setup-junit"><a class="link" href="#getting-started-documentation-snippets-setup-junit">Setting up your JUnit 4 tests</a></h5>
 <div class="paragraph">
-<p>When using JUnit, the first step in generating documentation snippets is to declare a
+<p>When using JUnit 4, the first step in generating documentation snippets is to declare a
 <code>public</code> <code>JUnitRestDocumentation</code> field that&#8217;s annotated as a JUnit <code>@Rule</code>.</p>
 </div>
 <div class="listingblock">
@@ -1103,7 +1142,7 @@ public JUnitRestDocumentation restDocumentation = new JUnitRestDocumentation("cu
 </div>
 </div>
 <div class="paragraph">
-<p>Next, provide an <code>@Before</code> method to configure MockMvc or REST Assured:</p>
+<p>Next, provide an <code>@Before</code> method to configure MockMvc, WebTestClient or REST Assured:</p>
 </div>
 <div class="listingblock primary">
 <div class="title">MockMvc</div>
@@ -1132,6 +1171,34 @@ method on <code>org.springframework.restdocs.mockmvc.MockMvcRestDocumentation</c
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">private WebTestClient webTestClient;
+
+@Autowired
+private WebApplicationContext context;
+
+@Before
+public void setUp() {
+	this.webTestClient = WebTestClient.bindToApplicationContext(this.context)
+			.configureClient()
+			.filter(documentationConfiguration(this.restDocumentation)) <i class="conum" data-value="1"></i><b>(1)</b>
+			.build();
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>The <code>WebTestClient</code> instance is configured by adding a
+<code>WebTestclientRestDocumentationConfigurer</code> as an <code>ExchangeFilterFunction</code>.  An instance of
+this class can be obtained from the static <code>documentationConfiguration()</code> method on
+<code>org.springframework.restdocs.webtestclient.WebTestClientRestDocumentation</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">private RequestSpecification spec;
@@ -1151,8 +1218,136 @@ public void setUp() {
 <td>REST Assured is configured by adding a <code>RestAssuredRestDocumentationConfigurer</code> as a
 <code>Filter</code>. An instance of this class can be obtained from the static
 <code>documentationConfiguration()</code> method on <code>RestAssuredRestDocumentation</code> in the
-<code>org.springframework.restdocs.restassured</code> or <code>org.springframework.restdocs.restassured3</code>
-package depending on the version of REST Assured that you are using.</td>
+<code>org.springframework.restdocs.restassured3</code> package.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>The configurer applies sensible defaults and also provides an API for customizing the
+configuration. Refer to the <a href="#configuration">configuration section</a> for more information.</p>
+</div>
+</div>
+<div class="sect4">
+<h5 id="getting-started-documentation-snippets-setup-junit-5"><a class="link" href="#getting-started-documentation-snippets-setup-junit-5">Setting up your JUnit 5 tests</a></h5>
+<div class="paragraph">
+<p>When using JUnit 5, the first step in generating documentation snippets is to apply
+the <code>RestDocumentationExtension</code> to your test class:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">@ExtendWith(RestDocumentationExtension.class)
+public class JUnit5ExampleTests {</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>For testing a typical Spring application the <code>SpringExtension</code> should also be applied:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">@ExtendWith({RestDocumentationExtension.class, SpringExtension.class})
+public class JUnit5ExampleTests {</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>RestDocumentationExtension</code> is automatically configured with an output directory
+based on your project&#8217;s build tool:</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 28.5714%;">
+<col style="width: 71.4286%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Build tool</th>
+<th class="tableblock halign-left valign-top">Output directory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maven</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>target/generated-snippets</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gradle</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build/generated-snippets</code></p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Next, provide a <code>@BeforeEach</code> method to configure MockMvc, WebTestClient, or REST Assured:</p>
+</div>
+<div class="listingblock primary">
+<div class="title">MockMvc</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">private MockMvc mockMvc;
+
+@BeforeEach
+public void setUp(WebApplicationContext webApplicationContext,
+		RestDocumentationContextProvider restDocumentation) {
+	this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+			.apply(documentationConfiguration(restDocumentation)) <i class="conum" data-value="1"></i><b>(1)</b>
+			.build();
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>The <code>MockMvc</code> instance is configured using a <code>MockMvcRestDocumentationConfigurer</code>. An
+instance of this class can be obtained from the static <code>documentationConfiguration()</code>
+method on <code>org.springframework.restdocs.mockmvc.MockMvcRestDocumentation</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">private WebTestClient webTestClient;
+
+@BeforeEach
+public void setUp(WebApplicationContext webApplicationContext,
+		RestDocumentationContextProvider restDocumentation) {
+	this.webTestClient = WebTestClient.bindToApplicationContext(webApplicationContext)
+			.configureClient()
+			.filter(documentationConfiguration(restDocumentation)) <i class="conum" data-value="1"></i><b>(1)</b>
+			.build();
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>The <code>WebTestClient</code> instance is configured by adding a
+<code>WebTestClientRestDocumentationConfigurer</code> as an <code>ExchangeFilterFunction</code>.  An instance of
+this class can be obtained from the static <code>documentationConfiguration()</code> method on
+<code>org.springframework.restdocs.webtestclient.WebTestClientRestDocumentation</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">REST Assured</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">private RequestSpecification spec;
+
+@Before
+public void setUp(RestDocumentationContextProvider restDocumentation) {
+	this.spec = new RequestSpecBuilder()
+			.addFilter(documentationConfiguration(restDocumentation)) <i class="conum" data-value="1"></i><b>(1)</b>
+			.build();
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>REST Assured is configured by adding a <code>RestAssuredRestDocumentationConfigurer</code> as a
+<code>Filter</code>. An instance of this class can be obtained from the static
+<code>documentationConfiguration()</code> method on <code>RestAssuredRestDocumentation</code> in the
+<code>org.springframework.restdocs.restassured3</code> package.</td>
 </tr>
 </table>
 </div>
@@ -1165,7 +1360,7 @@ configuration. Refer to the <a href="#configuration">configuration section</a> f
 <h5 id="_setting_up_your_tests_without_junit"><a class="link" href="#_setting_up_your_tests_without_junit">Setting up your tests without JUnit</a></h5>
 <div id="getting-started-documentation-snippets-setup-manual" class="paragraph">
 <p>The configuration when JUnit is not being used is largely similar to when it is being
-used. This section describes the key differences. The <a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/testng">TestNG sample</a> also
+used. This section describes the key differences. The <a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/testng">TestNG sample</a> also
 illustrates the approach.</p>
 </div>
 <div class="paragraph">
@@ -1180,7 +1375,7 @@ illustrates the approach.</p>
 <div class="paragraph">
 <p>Secondly, <code>ManualRestDocumentation.beforeTest(Class, String)</code>
 must be called before each test. This can be done as part of the method that is
-configuring MockMVC or REST Assured:</p>
+configuring MockMvc, WebTestClient, or REST Assured:</p>
 </div>
 <div class="listingblock primary">
 <div class="title">MockMvc</div>
@@ -1194,6 +1389,24 @@ private WebApplicationContext context;
 public void setUp(Method method) {
 	this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
 			.apply(documentationConfiguration(this.restDocumentation))
+			.build();
+	this.restDocumentation.beforeTest(getClass(), method.getName());
+}</code></pre>
+</div>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">private WebTestClient webTestClient;
+
+@Autowired
+private WebApplicationContext context;
+
+@BeforeMethod
+public void setUp(Method method) {
+	this.webTestClient = WebTestClient.bindToApplicationContext(this.context)
+			.configureClient()
+			.filter(documentationConfiguration(this.restDocumentation)) <i class="conum" data-value="1"></i><b>(1)</b>
 			.build();
 	this.restDocumentation.beforeTest(getClass(), method.getName());
 }</code></pre>
@@ -1263,6 +1476,34 @@ static <code>document</code> method on
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/").accept(MediaType.APPLICATION_JSON) <i class="conum" data-value="1"></i><b>(1)</b>
+		.exchange().expectStatus().isOk() <i class="conum" data-value="2"></i><b>(2)</b>
+		.expectBody().consumeWith(document("index")); <i class="conum" data-value="3"></i><b>(3)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Invoke the root (<code>/</code>) of the service and indicate that an <code>application/json</code> response
+is required.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Assert that the service produced the expected response.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Document the call to the service, writing the snippets into a directory named <code>index</code>
+that will be located beneath the configured output directory. The snippets are written by
+a <code>Consumer</code> of the <code>ExchangeResult</code>. Such a consumer can be obtained from the static
+<code>document</code> method on <code>org.springframework.restdocs.webtestclient.WebTestClientRestDocumentation</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec) <i class="conum" data-value="1"></i><b>(1)</b>
@@ -1288,8 +1529,7 @@ static <code>document</code> method on
 that will be located beneath the configured output directory. The snippets are written by
 a <code>RestDocumentationFilter</code>. An instance of this class can be obtained from the
 static <code>document</code> method on <code>RestAssuredRestDocumentation</code>  in the
-<code>org.springframework.restdocs.restassured</code> or <code>org.springframework.restdocs.restassured3</code>
-package depending on the version of REST Assured that you are using.</td>
+<code>org.springframework.restdocs.restassured3</code> package.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="4"></i><b>4</b></td>
@@ -1424,6 +1664,35 @@ Uses the static <code>links</code> method on
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/").accept(MediaType.APPLICATION_JSON).exchange()
+	.expectStatus().isOk().expectBody()
+	.consumeWith(document("index",links( <i class="conum" data-value="1"></i><b>(1)</b>
+			linkWithRel("alpha").description("Link to the alpha resource"), <i class="conum" data-value="2"></i><b>(2)</b>
+			linkWithRel("bravo").description("Link to the bravo resource")))); <i class="conum" data-value="3"></i><b>(3)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Configure Spring REST docs to produce a snippet describing the response&#8217;s links.
+Uses the static <code>links</code> method on
+<code>org.springframework.restdocs.hypermedia.HypermediaDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Expect a link whose rel is <code>alpha</code>. Uses the static <code>linkWithRel</code> method on
+<code>org.springframework.restdocs.hypermedia.HypermediaDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Expect a link whose rel is <code>bravo</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec)
@@ -1511,6 +1780,23 @@ provide one of the built-in <code>LinkExtractor</code> implementations to <code>
 <div class="title">MockMvc</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">.andDo(document("index", links(halLinks(), <i class="conum" data-value="1"></i><b>(1)</b>
+		linkWithRel("alpha").description("Link to the alpha resource"),
+		linkWithRel("bravo").description("Link to the bravo resource"))));</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Indicate that the links are in HAL format. Uses the static <code>halLinks</code> method on
+<code>org.springframework.restdocs.hypermedia.HypermediaDocumentation</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">.consumeWith(document("index",links(halLinks(), <i class="conum" data-value="1"></i><b>(1)</b>
 		linkWithRel("alpha").description("Link to the alpha resource"),
 		linkWithRel("bravo").description("Link to the bravo resource"))));</code></pre>
 </div>
@@ -1632,6 +1918,36 @@ on <code>org.springframework.restdocs.payload.PayloadDocumentation</code>.</td>
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("user/5").accept(MediaType.APPLICATION_JSON)
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("user",
+		responseFields( <i class="conum" data-value="1"></i><b>(1)</b>
+			fieldWithPath("contact.email").description("The user's email address"), <i class="conum" data-value="2"></i><b>(2)</b>
+			fieldWithPath("contact.name").description("The user's name")))); <i class="conum" data-value="3"></i><b>(3)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Configure Spring REST docs to produce a snippet describing the fields in the response
+payload. To document a request <code>requestFields</code> can be used. Both are static methods on
+<code>org.springframework.restdocs.payload.PayloadDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Expect a field with the path <code>contact.email</code>. Uses the static <code>fieldWithPath</code> method
+on <code>org.springframework.restdocs.payload.PayloadDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Expect a field with the path <code>contact.name</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec).accept("application/json")
@@ -1691,7 +2007,27 @@ subsection of a payload can be documented. For example:</p>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
 <td>Document the subsection with the path <code>contact</code>. <code>contact.email</code> and <code>contact.name</code>
-are now seen has having also been documented. Uses the static <code>subsectionWithPath</code>
+are now seen as having also been documented. Uses the static <code>subsectionWithPath</code>
+method on <code>org.springframework.restdocs.payload.PayloadDocumentation</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("user/5").accept(MediaType.APPLICATION_JSON)
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("user",
+		responseFields(
+			subsectionWithPath("contact").description("The user's contact details")))); <i class="conum" data-value="1"></i><b>(1)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Document the subsection with the path <code>contact</code>. <code>contact.email</code> and <code>contact.name</code>
+are now seen as having also been documented. Uses the static <code>subsectionWithPath</code>
 method on <code>org.springframework.restdocs.payload.PayloadDocumentation</code>.</td>
 </tr>
 </table>
@@ -1711,7 +2047,7 @@ method on <code>org.springframework.restdocs.payload.PayloadDocumentation</code>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
 <td>Document the subsection with the path <code>contact</code>. <code>contact.email</code> and <code>contact.name</code>
-are now seen has having also been documented. Uses the static <code>subsectionWithPath</code>
+are now seen as having also been documented. Uses the static <code>subsectionWithPath</code>
 method on <code>org.springframework.restdocs.payload.PayloadDocumentation</code>.</td>
 </tr>
 </table>
@@ -1943,7 +2279,25 @@ used:</p>
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>Set the field&#8217;s type to <code>string</code>.</td>
+<td>Set the field&#8217;s type to <code>String</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">.consumeWith(document("user",
+	responseFields(
+		fieldWithPath("contact.email")
+			.type(JsonFieldType.STRING) <i class="conum" data-value="1"></i><b>(1)</b>
+			.description("The user's email address"))));</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Set the field&#8217;s type to <code>String</code>.</td>
 </tr>
 </table>
 </div>
@@ -1960,7 +2314,7 @@ used:</p>
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>Set the field&#8217;s type to <code>string</code>.</td>
+<td>Set the field&#8217;s type to <code>String</code>.</td>
 </tr>
 </table>
 </div>
@@ -2054,6 +2408,23 @@ have a <code>[].</code> prefix.</p>
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/books/1").accept(MediaType.APPLICATION_JSON)
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("book",
+		responseFields(book))); <i class="conum" data-value="1"></i><b>(1)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Document <code>title</code> and <code>author</code> using existing descriptors</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec).accept("application/json")
@@ -2082,6 +2453,30 @@ have a <code>[].</code> prefix.</p>
 				responseFields(
 						fieldWithPath("[]").description("An array of books")) <i class="conum" data-value="1"></i><b>(1)</b>
 								.andWithPrefix("[].", book))); <i class="conum" data-value="2"></i><b>(2)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Document the array</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Document <code>[].title</code> and <code>[].author</code> using the existing descriptors prefixed with <code>[].</code></td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/books").accept(MediaType.APPLICATION_JSON)
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("books",
+		responseFields(
+			fieldWithPath("[]")
+				.description("An array of books")) <i class="conum" data-value="1"></i><b>(1)</b>
+				.andWithPrefix("[].", book))); <i class="conum" data-value="2"></i><b>(2)</b></code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -2172,6 +2567,26 @@ for the request body, <code>requestBody</code> can be used in place of <code>res
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/locations/1").accept(MediaType.APPLICATION_JSON)
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("temperature",
+		responseBody(beneathPath("weather.temperature")))); <i class="conum" data-value="1"></i><b>(1)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Produce a snippet containing a subsection of the response body. Uses the static
+<code>responseBody</code> and <code>beneathPath</code> methods on
+<code>org.springframework.restdocs.payload.PayloadDocumentation</code>. To produce a snippet
+for the request body, <code>requestBody</code> can be used in place of <code>responseBody</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec).accept("application/json")
@@ -2223,7 +2638,8 @@ be customized using the <code>withSubsectionId(String)</code> method:</p>
 <h5 id="documenting-your-api-request-response-payloads-subsections-fields"><a class="link" href="#documenting-your-api-request-response-payloads-subsections-fields">Documenting the fields of a subsection of a request or response</a></h5>
 <div class="paragraph">
 <p>As well as documenting a subsection of a request or response body, it&#8217;s also possible to
-document the fields in a particular subsection. A snippet that documents the fields of the <code>temperature</code> object (<code>high</code> and <code>low</code>) can be produced as follows:</p>
+document the fields in a particular subsection. A snippet that documents the fields of
+the <code>temperature</code> object (<code>high</code> and <code>low</code>) can be produced as follows:</p>
 </div>
 <div class="listingblock primary">
 <div class="title">MockMvc</div>
@@ -2236,6 +2652,31 @@ document the fields in a particular subsection. A snippet that documents the fie
 								"The forecast high in degrees celcius"), <i class="conum" data-value="2"></i><b>(2)</b>
 				fieldWithPath("low")
 						.description("The forecast low in degrees celcius"))));</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Produce a snippet describing the fields in the subsection of the response payload
+beneath the path <code>weather.temperature</code>. Uses the static <code>beneathPath</code> method on
+<code>org.springframework.restdocs.payload.PayloadDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Document the <code>high</code> and <code>low</code> fields.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/locations/1").accept(MediaType.APPLICATION_JSON)
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("temperature",
+		responseFields(beneathPath("weather.temperature"), <i class="conum" data-value="1"></i><b>(1)</b>
+			fieldWithPath("high").description("The forecast high in degrees celcius"), <i class="conum" data-value="2"></i><b>(2)</b>
+			fieldWithPath("low").description("The forecast low in degrees celcius"))));</code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -2329,6 +2770,41 @@ Uses the static <code>requestParameters</code> method on
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/users?page=2&amp;per_page=100") <i class="conum" data-value="1"></i><b>(1)</b>
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("users", requestParameters( <i class="conum" data-value="2"></i><b>(2)</b>
+			parameterWithName("page").description("The page to retrieve"), <i class="conum" data-value="3"></i><b>(3)</b>
+			parameterWithName("per_page").description("Entries per page") <i class="conum" data-value="4"></i><b>(4)</b>
+	)));</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Perform a <code>GET</code> request with two parameters, <code>page</code> and <code>per_page</code> in the query
+string.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Configure Spring REST Docs to produce a snippet describing the request&#8217;s parameters.
+Uses the static <code>requestParameters</code> method on
+<code>org.springframework.restdocs.request.RequestDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Document the <code>page</code> parameter. Uses the static <code>parameterWithName</code> method on
+<code>org.springframework.restdocs.request.RequestDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>Document the <code>per_page</code> parameter.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec)
@@ -2374,6 +2850,26 @@ string.</td>
 	.andDo(document("create-user", requestParameters(
 			parameterWithName("username").description("The user's username")
 	)));</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Perform a <code>POST</code> request with a single parameter, <code>username</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">MultiValueMap&lt;String, String&gt; formData = new LinkedMultiValueMap&lt;&gt;();
+formData.add("username", "Tester");
+this.webTestClient.post().uri("/users").body(BodyInserters.fromFormData(formData)) <i class="conum" data-value="1"></i><b>(1)</b>
+	.exchange().expectStatus().isCreated().expectBody()
+	.consumeWith(document("create-user", requestParameters(
+		parameterWithName("username").description("The user's username")
+)));</code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -2470,6 +2966,40 @@ parameters. Uses the static <code>pathParameters</code> method on
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/locations/{latitude}/{longitude}", 51.5072, 0.1275) <i class="conum" data-value="1"></i><b>(1)</b>
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("locations",
+		pathParameters( <i class="conum" data-value="2"></i><b>(2)</b>
+			parameterWithName("latitude").description("The location's latitude"), <i class="conum" data-value="3"></i><b>(3)</b>
+			parameterWithName("longitude").description("The location's longitude")))); <i class="conum" data-value="4"></i><b>(4)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Perform a <code>GET</code> request with two path parameters, <code>latitude</code> and <code>longitude</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Configure Spring REST Docs to produce a snippet describing the request&#8217;s path
+parameters. Uses the static <code>pathParameters</code> method on
+<code>org.springframework.restdocs.request.RequestDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Document the parameter named <code>latitude</code>. Uses the static <code>parameterWithName</code> method on
+<code>org.springframework.restdocs.request.RequestDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>Document the parameter named <code>longitude</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec)
@@ -2514,9 +3044,9 @@ the path parameters that are supported by the resource.</p>
 <i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
-To make the path parameters available for documentation, the request must be
-built using one of the methods on <code>RestDocumentationRequestBuilders</code> rather than
-<code>MockMvcRequestBuilders</code>.
+If you are using MockMvc then, to make the path parameters available for documentation,
+the request must be built using one of the methods on <code>RestDocumentationRequestBuilders</code>
+rather than <code>MockMvcRequestBuilders</code>.
 </td>
 </tr>
 </table>
@@ -2547,10 +3077,41 @@ above.</p>
 <div class="listingblock primary">
 <div class="title">MockMvc</div>
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.mockMvc.perform(fileUpload("/upload").file("file", "example".getBytes())) <i class="conum" data-value="1"></i><b>(1)</b>
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.mockMvc.perform(multipart("/upload").file("file", "example".getBytes())) <i class="conum" data-value="1"></i><b>(1)</b>
 	.andExpect(status().isOk())
 	.andDo(document("upload", requestParts( <i class="conum" data-value="2"></i><b>(2)</b>
 			partWithName("file").description("The file to upload")) <i class="conum" data-value="3"></i><b>(3)</b>
+));</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Perform a <code>POST</code> request with a single part named <code>file</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Configure Spring REST Docs to produce a snippet describing the request&#8217;s parts. Uses
+the static <code>requestParts</code> method on
+<code>org.springframework.restdocs.request.RequestDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Document the part named <code>file</code>. Uses the static <code>partWithName</code> method on
+<code>org.springframework.restdocs.request.RequestDocumentation</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">MultiValueMap&lt;String, Object&gt; multipartData = new LinkedMultiValueMap&lt;&gt;();
+multipartData.add("file", "example".getBytes());
+this.webTestClient.post().uri("/upload").body(BodyInserters.fromMultipartData(multipartData)) <i class="conum" data-value="1"></i><b>(1)</b>
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("upload", requestParts( <i class="conum" data-value="2"></i><b>(2)</b>
+		partWithName("file").description("The file to upload")) <i class="conum" data-value="3"></i><b>(3)</b>
 ));</code></pre>
 </div>
 </div>
@@ -2667,6 +3228,39 @@ payload.</td>
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">MultiValueMap&lt;String, Object&gt; multipartData = new LinkedMultiValueMap&lt;&gt;();
+Resource imageResource = new ByteArrayResource("&lt;&lt;png data&gt;&gt;".getBytes()) {
+
+	@Override
+	public String getFilename() {
+		return "image.png";
+	}
+
+};
+multipartData.add("image", imageResource);
+multipartData.add("metadata", Collections.singletonMap("version",  "1.0"));
+
+this.webTestClient.post().uri("/images").body(BodyInserters.fromMultipartData(multipartData))
+	.accept(MediaType.APPLICATION_JSON).exchange()
+	.expectStatus().isOk().expectBody()
+	.consumeWith(document("image-upload",
+			requestPartBody("metadata"))); <i class="conum" data-value="1"></i><b>(1)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Configure Spring REST docs to produce a snippet containing the body of the
+of the request part named <code>metadata</code>. Uses the static <code>requestPartBody</code> method on
+<code>PayloadDocumentation</code>.
+payload.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();
@@ -2712,6 +3306,44 @@ this.mockMvc.perform(fileUpload("/images").file(image).file(metadata)
 			.accept(MediaType.APPLICATION_JSON))
 	.andExpect(status().isOk())
 	.andDo(document("image-upload", requestPartFields("metadata", <i class="conum" data-value="1"></i><b>(1)</b>
+			fieldWithPath("version").description("The version of the image")))); <i class="conum" data-value="2"></i><b>(2)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Configure Spring REST docs to produce a snippet describing the fields in the payload
+of the request part named <code>metadata</code>. Uses the static <code>requestPartFields</code> method on
+<code>PayloadDocumentation</code>.
+payload.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Expect a field with the path <code>version</code>. Uses the static <code>fieldWithPath</code> method on
+<code>org.springframework.restdocs.payload.PayloadDocumentation</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">MultiValueMap&lt;String, Object&gt; multipartData = new LinkedMultiValueMap&lt;&gt;();
+Resource imageResource = new ByteArrayResource("&lt;&lt;png data&gt;&gt;".getBytes()) {
+
+	@Override
+	public String getFilename() {
+		return "image.png";
+	}
+
+};
+multipartData.add("image", imageResource);
+multipartData.add("metadata", Collections.singletonMap("version",  "1.0"));
+this.webTestClient.post().uri("/images").body(BodyInserters.fromMultipartData(multipartData))
+	.accept(MediaType.APPLICATION_JSON).exchange()
+	.expectStatus().isOk().expectBody()
+	.consumeWith(document("image-upload",
+		requestPartFields("metadata", <i class="conum" data-value="1"></i><b>(1)</b>
 			fieldWithPath("version").description("The version of the image")))); <i class="conum" data-value="2"></i><b>(2)</b></code></pre>
 </div>
 </div>
@@ -2840,6 +3472,48 @@ method on <code>org.springframework.restdocs.headers.HeaderDocumentation</code>.
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient
+	.get().uri("/people").header("Authorization", "Basic dXNlcjpzZWNyZXQ=") <i class="conum" data-value="1"></i><b>(1)</b>
+	.exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("headers",
+		requestHeaders( <i class="conum" data-value="2"></i><b>(2)</b>
+			headerWithName("Authorization").description("Basic auth credentials")), <i class="conum" data-value="3"></i><b>(3)</b>
+		responseHeaders( <i class="conum" data-value="4"></i><b>(4)</b>
+			headerWithName("X-RateLimit-Limit")
+				.description("The total number of requests permitted per period"),
+			headerWithName("X-RateLimit-Remaining")
+				.description("Remaining requests permitted in current period"),
+			headerWithName("X-RateLimit-Reset")
+				.description("Time at which the rate limit period will reset"))));</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Perform a <code>GET</code> request with an <code>Authorization</code> header that uses basic authentication</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Configure Spring REST Docs to produce a snippet describing the request&#8217;s headers.
+Uses the static <code>requestHeaders</code> method on
+<code>org.springframework.restdocs.headers.HeaderDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Document the <code>Authorization</code> header. Uses the static <code>headerWithName</code> method on
+<code>org.springframework.restdocs.headers.HeaderDocumentation</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>Produce a snippet describing the response&#8217;s headers. Uses the static <code>responseHeaders</code>
+method on <code>org.springframework.restdocs.headers.HeaderDocumentation</code>.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec)
@@ -2935,6 +3609,25 @@ to the resource that is being documented.</td>
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/").accept(MediaType.APPLICATION_JSON).exchange()
+	.expectStatus().isOk().expectBody()
+	.consumeWith(document("example", this.pagingLinks.and( <i class="conum" data-value="1"></i><b>(1)</b>
+		linkWithRel("alpha").description("Link to the alpha resource"),
+		linkWithRel("bravo").description("Link to the bravo resource"))));</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Reuse the <code>pagingLinks</code> <code>Snippet</code> calling <code>and</code> to add descriptors that are specific
+to the resource that is being documented.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec)
@@ -3000,7 +3693,7 @@ descriptions; one for the <code>NotNull</code> constraint and one for the <code>
 </table>
 </div>
 <div class="paragraph">
-<p>The <a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-notes-spring-hateoas/src/test/java/com/example/notes/ApiDocumentation.java"><code>ApiDocumentation</code></a>
+<p>The <a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-notes-spring-hateoas/src/test/java/com/example/notes/ApiDocumentation.java"><code>ApiDocumentation</code></a>
 class in the Spring HATEOAS sample shows this functionality in action.</p>
 </div>
 <div class="sect3">
@@ -3016,7 +3709,7 @@ To take complete control of constraint resolution, your own implementation of
 <div class="sect3">
 <h4 id="documenting-your-api-constraints-describing"><a class="link" href="#documenting-your-api-constraints-describing">Describing constraints</a></h4>
 <div class="paragraph">
-<p>Default descriptions are provided for all of the Bean Validation 1.1&#8217;s constraints:</p>
+<p>Default descriptions are provided for all of Bean Validation 2.0&#8217;s constraints:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -3036,13 +3729,31 @@ To take complete control of constraint resolution, your own implementation of
 <p>Digits</p>
 </li>
 <li>
+<p>Email</p>
+</li>
+<li>
 <p>Future</p>
+</li>
+<li>
+<p>FutureOrPresent</p>
 </li>
 <li>
 <p>Max</p>
 </li>
 <li>
 <p>Min</p>
+</li>
+<li>
+<p>Negative</p>
+</li>
+<li>
+<p>NegativeOrZero</p>
+</li>
+<li>
+<p>NotBlank</p>
+</li>
+<li>
+<p>NotEmpty</p>
 </li>
 <li>
 <p>NotNull</p>
@@ -3054,7 +3765,16 @@ To take complete control of constraint resolution, your own implementation of
 <p>Past</p>
 </li>
 <li>
+<p>PastOrPresent</p>
+</li>
+<li>
 <p>Pattern</p>
+</li>
+<li>
+<p>Positive</p>
+</li>
+<li>
+<p>PositiveOrZero</p>
 </li>
 <li>
 <p>Size</p>
@@ -3062,12 +3782,19 @@ To take complete control of constraint resolution, your own implementation of
 </ul>
 </div>
 <div class="paragraph">
-<p>Default descriptions are also provided for constraints from Hibernate Validator:</p>
+<p>Default descriptions are also provided for the following constraints from Hibernate
+Validator:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
+<p>CodePointLength</p>
+</li>
+<li>
 <p>CreditCardNumber</p>
+</li>
+<li>
+<p>Currency</p>
 </li>
 <li>
 <p>EAN</p>
@@ -3094,6 +3821,9 @@ To take complete control of constraint resolution, your own implementation of
 <p>NotEmpty</p>
 </li>
 <li>
+<p>Currency</p>
+</li>
+<li>
 <p>Range</p>
 </li>
 <li>
@@ -3109,7 +3839,7 @@ To take complete control of constraint resolution, your own implementation of
 bundle with the base name
 <code>org.springframework.restdocs.constraints.ConstraintDescriptions</code>.  The Spring
 HATEOAS-based sample contains
-<a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-notes-spring-hateoas/src/test/resources/org/springframework/restdocs/constraints/ConstraintDescriptions.properties">an
+<a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-notes-spring-hateoas/src/test/resources/org/springframework/restdocs/constraints/ConstraintDescriptions.properties">an
 example of such a resource bundle</a>.</p>
 </div>
 <div class="paragraph">
@@ -3137,7 +3867,7 @@ the generated snippets. For example, you may want to include the constraint desc
 as part of a field&#8217;s description. Alternatively, you could include the constraints as
 <a href="#documenting-your-api-customizing-including-extra-information">extra information</a> in
 the request fields snippet. The
-<a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/samples/rest-notes-spring-hateoas/src/test/java/com/example/notes/ApiDocumentation.java"><code>ApiDocumentation</code></a>
+<a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/samples/rest-notes-spring-hateoas/src/test/java/com/example/notes/ApiDocumentation.java"><code>ApiDocumentation</code></a>
 class in the Spring HATEOAS-based sample illustrates the latter approach.</p>
 </div>
 </div>
@@ -3196,8 +3926,11 @@ documented</p></td>
 <div class="sect2">
 <h3 id="documentating-your-api-parameterized-output-directories"><a class="link" href="#documentating-your-api-parameterized-output-directories">Using parameterized output directories</a></h3>
 <div class="paragraph">
-<p>The output directory used by <code>document</code> can be parameterized. The following parameters
-are supported:</p>
+<p>When using MockMvc or REST Assured, the output directory used by <code>document</code> can be
+parameterized. The output directory cannot be parameterized when using WebTestClient.</p>
+</div>
+<div class="paragraph">
+<p>The following parameters are supported:</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
 <colgroup>
@@ -3287,7 +4020,7 @@ sample applications to see this functionality in action.</p>
 <div class="paragraph">
 <p>Spring REST Docs uses <a href="https://mustache.github.io">Mustache</a> templates to produce the
 generated snippets.
-<a href="https://github.com/spring-projects/spring-restdocs/tree/v1.2.5.RELEASE/spring-restdocs-core/src/main/resources/org/springframework/restdocs/templates">Default
+<a href="https://github.com/spring-projects/spring-restdocs/tree/v2.0.3.RELEASE/spring-restdocs-core/src/main/resources/org/springframework/restdocs/templates">Default
 templates</a> are provided for each of the snippets that Spring REST Docs can produce. To
 customize a snippet&#8217;s content, you can provide your own template.</p>
 </div>
@@ -3339,6 +4072,36 @@ each field that you are documenting and to provide a <code>title</code> attribut
 		fieldWithPath("email").description("The user's email address")
 				.attributes(key("constraints")
 						.value("Must be a valid email address"))))); <i class="conum" data-value="3"></i><b>(3)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Configure the <code>title</code> attribute for the request fields snippet</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Set the <code>constraints</code> attribute for the <code>name</code> field</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Set the <code>constraints</code> attribute for the <code>email</code> field</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">.consumeWith(document("create-user",
+	requestFields(
+		attributes(key("title").value("Fields for user creation")), <i class="conum" data-value="1"></i><b>(1)</b>
+		fieldWithPath("name")
+			.description("The user's name")
+			.attributes(key("constraints").value("Must not be null. Must not be empty")), <i class="conum" data-value="2"></i><b>(2)</b>
+		fieldWithPath("email")
+			.description("The user's email address")
+			.attributes(key("constraints").value("Must be a valid email address"))))); <i class="conum" data-value="3"></i><b>(3)</b></code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -3462,6 +4225,27 @@ example:</p>
 </table>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/").exchange().expectStatus().isOk().expectBody()
+	.consumeWith(document("index",
+		preprocessRequest(removeHeaders("Foo")), <i class="conum" data-value="1"></i><b>(1)</b>
+		preprocessResponse(prettyPrint()))); <i class="conum" data-value="2"></i><b>(2)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Apply a request preprocessor that will remove the header named <code>Foo</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Apply a response preprocessor that will pretty print its content.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec)
@@ -3485,26 +4269,22 @@ example:</p>
 </div>
 <div class="paragraph">
 <p>Alternatively, you may want to apply the same preprocessors to every test. You can do
-so by configuring the preprocessors in your <code>@Before</code> method and using the
-<a href="#documentating-your-api-parameterized-output-directories">support for parameterized
-output directories</a>:</p>
+so by configuring the preprocessors using the <code>RestDocumentationConfigurer</code> API in your
+<code>@Before</code> method. For example to remove the <code>Foo</code> header from all requests and pretty print
+all responses:</p>
 </div>
 <div class="listingblock primary">
 <div class="title">MockMvc</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">private MockMvc mockMvc;
 
-private RestDocumentationResultHandler documentationHandler;
-
 @Before
 public void setup() {
-	this.documentationHandler = document("{method-name}", <i class="conum" data-value="1"></i><b>(1)</b>
-			preprocessRequest(removeHeaders("Foo")),
-			preprocessResponse(prettyPrint()));
 	this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
-			.apply(documentationConfiguration(this.restDocumentation))
-			.alwaysDo(this.documentationHandler) <i class="conum" data-value="2"></i><b>(2)</b>
-			.build();
+		.apply(documentationConfiguration(this.restDocumentation).operationPreprocessors()
+			.withRequestDefaults(removeHeaders("Foo")) <i class="conum" data-value="1"></i><b>(1)</b>
+			.withResponseDefaults(prettyPrint())) <i class="conum" data-value="2"></i><b>(2)</b>
+		.build();
 }</code></pre>
 </div>
 </div>
@@ -3512,13 +4292,40 @@ public void setup() {
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>Create a <code>RestDocumentationResultHandler</code>, configured to preprocess the request
-and response.</td>
+<td>Apply a request preprocessor that will remove the header named <code>Foo</code>.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>Create a <code>MockMvc</code> instance, configured to always call the documentation result
-handler.</td>
+<td>Apply a response preprocessor that will pretty print its content.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">private WebTestClient webTestClient;
+
+@Before
+public void setup() {
+	this.webTestClient = WebTestClient.bindToApplicationContext(this.context)
+		.configureClient()
+		.filter(documentationConfiguration(this.restDocumentation)
+			.operationPreprocessors()
+				.withRequestDefaults(removeHeaders("Foo")) <i class="conum" data-value="1"></i><b>(1)</b>
+				.withResponseDefaults(prettyPrint())) <i class="conum" data-value="2"></i><b>(2)</b>
+		.build();
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Apply a request preprocessor that will remove the header named <code>Foo</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Apply a response preprocessor that will pretty print its content.</td>
 </tr>
 </table>
 </div>
@@ -3527,17 +4334,13 @@ handler.</td>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">private RequestSpecification spec;
 
-private RestDocumentationFilter documentationFilter;
-
 @Before
 public void setup() {
-	this.documentationFilter = document("{method-name}",
-			preprocessRequest(removeHeaders("Foo")),
-			preprocessResponse(prettyPrint())); <i class="conum" data-value="1"></i><b>(1)</b>
 	this.spec = new RequestSpecBuilder()
-			.addFilter(documentationConfiguration(this.restDocumentation))
-			.addFilter(this.documentationFilter)<i class="conum" data-value="2"></i><b>(2)</b>
-			.build();
+		.addFilter(documentationConfiguration(this.restDocumentation).operationPreprocessors()
+			.withRequestDefaults(removeHeaders("Foo")) <i class="conum" data-value="1"></i><b>(1)</b>
+			.withResponseDefaults(prettyPrint())) <i class="conum" data-value="2"></i><b>(2)</b>
+		.build();
 }</code></pre>
 </div>
 </div>
@@ -3545,13 +4348,11 @@ public void setup() {
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>Create a <code>RestDocumentationFilter</code>, configured to preprocess the request
-and response.</td>
+<td>Apply a request preprocessor that will remove the header named <code>Foo</code>.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>Create a <code>RequestSpecification</code> instance, configured to always call the documentation
-filter.</td>
+<td>Apply a response preprocessor that will pretty print its content.</td>
 </tr>
 </table>
 </div>
@@ -3561,47 +4362,30 @@ filter.</td>
 <div class="listingblock primary">
 <div class="title">MockMvc</div>
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.mockMvc.perform(get("/")) <i class="conum" data-value="1"></i><b>(1)</b>
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.mockMvc.perform(get("/"))
 		.andExpect(status().isOk())
-		.andDo(this.documentationHandler.document( <i class="conum" data-value="2"></i><b>(2)</b>
+		.andDo(document("index",
 				links(linkWithRel("self").description("Canonical self link"))
 		));</code></pre>
 </div>
 </div>
-<div class="colist arabic">
-<table>
-<tr>
-<td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>The request and response will be preprocessed due to the use of <code>alwaysDo</code> above.</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>Document the links specific to the resource that is being tested</td>
-</tr>
-</table>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient.get().uri("/").exchange().expectStatus().isOk()
+	.expectBody().consumeWith(document("index",
+		links(linkWithRel("self").description("Canonical self link"))));</code></pre>
+</div>
 </div>
 <div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec) <i class="conum" data-value="1"></i><b>(1)</b>
-	.filter(this.documentationFilter.document( <i class="conum" data-value="2"></i><b>(2)</b>
-			links(linkWithRel("self").description("Canonical self link"))))
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">RestAssured.given(this.spec)
+	.filter(document("index",
+		links(linkWithRel("self").description("Canonical self link"))))
 	.when().get("/")
 	.then().assertThat().statusCode(is(200));</code></pre>
 </div>
-</div>
-<div class="colist arabic">
-<table>
-<tr>
-<td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>The request and response will be preprocessed due to the configuration of the
-<code>RequestSpecification</code> in the <code>setUp</code> method.</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>Document the links specific to the resource that is being tested</td>
-</tr>
-</table>
 </div>
 <div class="paragraph">
 <p>Various built in preprocessors, including those illustrated above, are available via the
@@ -3661,16 +4445,17 @@ parameters.</p>
 <i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
-If you are using MockMvc, URIs should be customized by <a href="#configuration-uris">changing
-the configuration</a>.
+If you are using MockMvc or a WebTestClient that is not bound to a server,
+URIs should be customized by <a href="#configuration-uris">changing the configuration</a>.
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p><code>modifyUris</code> on <code>RestAssuredPreprocessors</code> can be used to modify any URIs in a request
-or a response. When using REST Assured, this allows you to customize the URIs that appear
-in the documentation while testing a local instance of the service.</p>
+<p><code>modifyUris</code> on <code>Preprocessors</code> can be used to modify any URIs in a request
+or a response. When using REST Assured or WebTestClient bound to a server, this
+allows you to customize the URIs that appear in the documentation while testing a
+local instance of the service.</p>
 </div>
 </div>
 <div class="sect3">
@@ -3694,21 +4479,8 @@ implementing the <code>ContentModifier</code> interface and using it with the bu
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="configuration-uris"><a class="link" href="#configuration-uris">Documented URIs</a></h3>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-As REST Assured tests a service by making actual HTTP requests, the documented
-URIs cannot be customized in this way. You should use the
-<a href="#customizing-requests-and-responses-preprocessors-modify-uris">REST-Assured specific
-preprocessor</a> instead.
-</td>
-</tr>
-</table>
-</div>
+<div class="sect3">
+<h4 id="configuration-uris-mockmvc"><a class="link" href="#configuration-uris-mockmvc">MockMvc URI customization</a></h4>
 <div class="paragraph">
 <p>When using MockMvc, the default configuration for URIs documented by Spring REST Docs is:</p>
 </div>
@@ -3779,6 +4551,44 @@ To configure a request&#8217;s context path, use the <code>contextPath</code> me
 </table>
 </div>
 </div>
+<div class="sect3">
+<h4 id="configuration-uris-rest-assured"><a class="link" href="#configuration-uris-rest-assured">REST Assured URI customization</a></h4>
+<div class="paragraph">
+<p>REST Assured tests a service by making actual HTTP requests. As a result, URIs must be
+customized once the operation on the service has been performed but before it is
+documented. A <a href="#customizing-requests-and-responses-preprocessors-modify-uris">REST-Assured
+specific preprocessor</a> is provided for this purpose.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="configuration-uris-webtestclient"><a class="link" href="#configuration-uris-webtestclient">WebTestClient URI customization</a></h4>
+<div class="paragraph">
+<p>When using WebTestClient, the default base for URIs documented by Spring REST
+Docs is <code><a href="http://localhost:8080" class="bare">http://localhost:8080</a></code>. This base can be customized using the
+<a href="https://docs.spring.io/spring-framework/docs/5.0.x/javadoc-api/org/springframework/test/web/reactive/server/WebTestClient.Builder.html#baseUrl-java.lang.String-">
+<code>baseUrl(String)</code> method on <code>WebTestClient.Builder</code></a>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">@Before
+public void setUp() {
+	this.webTestClient = WebTestClient.bindToApplicationContext(this.context)
+		.configureClient()
+		.baseUrl("https://api.example.com") <i class="conum" data-value="1"></i><b>(1)</b>
+		.filter(documentationConfiguration(this.restDocumentation)).build();
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Configure the base of documented URIs to be <code><a href="https://api.example.com" class="bare">https://api.example.com</a></code>.</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
 <div class="sect2">
 <h3 id="configuration-snippet-encoding"><a class="link" href="#configuration-snippet-encoding">Snippet encoding</a></h3>
 <div class="paragraph">
@@ -3792,6 +4602,15 @@ using the <code>RestDocumentationConfigurer</code> API. For example, to use <cod
 		.apply(documentationConfiguration(this.restDocumentation)
 				.snippets().withEncoding("ISO-8859-1"))
 		.build();</code></pre>
+</div>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient = WebTestClient.bindToApplicationContext(this.context).configureClient()
+	.filter(documentationConfiguration(this.restDocumentation)
+		.snippets().withEncoding("ISO-8859-1"))
+	.build();</code></pre>
 </div>
 </div>
 <div class="listingblock secondary">
@@ -3832,6 +4651,15 @@ box. You can change the default format using the <code>RestDocumentationConfigur
 		.apply(documentationConfiguration(this.restDocumentation)
 				.snippets().withTemplateFormat(TemplateFormats.markdown()))
 		.build();</code></pre>
+</div>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient = WebTestClient.bindToApplicationContext(this.context).configureClient()
+	.filter(documentationConfiguration(this.restDocumentation)
+		.snippets().withTemplateFormat(TemplateFormats.markdown()))
+	.build();</code></pre>
 </div>
 </div>
 <div class="listingblock secondary">
@@ -3886,6 +4714,16 @@ snippet by default:</p>
 </div>
 </div>
 <div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient = WebTestClient.bindToApplicationContext(this.context)
+	.configureClient().filter(
+		documentationConfiguration(this.restDocumentation)
+			.snippets().withDefaults(curlRequest()))
+	.build();</code></pre>
+</div>
+</div>
+<div class="listingblock secondary">
 <div class="title">REST Assured</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.spec = new RequestSpecBuilder()
@@ -3893,6 +4731,83 @@ snippet by default:</p>
 				.withDefaults(curlRequest()))
 		.build();</code></pre>
 </div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="configuration-default-preprocessors"><a class="link" href="#configuration-default-preprocessors">Default operation preprocessors</a></h3>
+<div class="paragraph">
+<p>You can configure default request and response preprocessors during setup using the
+<code>RestDocumentationConfigurer</code> API. For example, to remove the <code>Foo</code> headers from all requests
+and pretty print all responses:</p>
+</div>
+<div class="listingblock primary">
+<div class="title">MockMvc</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
+		.apply(documentationConfiguration(this.restDocumentation)
+				.operationPreprocessors()
+				.withRequestDefaults(removeHeaders("Foo")) <i class="conum" data-value="1"></i><b>(1)</b>
+				.withResponseDefaults(prettyPrint())) <i class="conum" data-value="2"></i><b>(2)</b>
+		.build();</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Apply a request preprocessor that will remove the header named <code>Foo</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Apply a response preprocessor that will pretty print its content.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">WebTestClient</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.webTestClient = WebTestClient.bindToApplicationContext(this.context)
+	.configureClient()
+	.filter(documentationConfiguration(this.restDocumentation)
+		.operationPreprocessors()
+			.withRequestDefaults(removeHeaders("Foo")) <i class="conum" data-value="1"></i><b>(1)</b>
+			.withResponseDefaults(prettyPrint())) <i class="conum" data-value="2"></i><b>(2)</b>
+	.build();</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Apply a request preprocessor that will remove the header named <code>Foo</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Apply a response preprocessor that will pretty print its content.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock secondary">
+<div class="title">REST Assured</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java hljs" data-lang="java">this.spec = new RequestSpecBuilder()
+	.addFilter(documentationConfiguration(this.restDocumentation).operationPreprocessors()
+		.withRequestDefaults(removeHeaders("Foo")) <i class="conum" data-value="1"></i><b>(1)</b>
+		.withResponseDefaults(prettyPrint())) <i class="conum" data-value="2"></i><b>(2)</b>
+	.build();</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Apply a request preprocessor that will remove the header named <code>Foo</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Apply a response preprocessor that will pretty print its content.</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -4223,8 +5138,8 @@ begins.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 1.2.5.RELEASE<br>
-Last updated 2018-08-03 01:21:05 JST
+Version 2.0.3.RELEASE<br>
+Last updated 2019-10-02 01:41:01 JST
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
